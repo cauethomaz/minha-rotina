@@ -14,6 +14,8 @@
 <meta name="theme-color" content="#0e131d">
 <style>
 :root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+.ext{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--fg);margin-top:4px;cursor:pointer}
+.ext input{accent-color:var(--accent);width:15px;height:15px}
 </style>
 <style>
 /* Layout: Apple Notes shape — folders | list as a notepad | detail drawer. Calendar is another view of the same rows. */
@@ -474,7 +476,7 @@ function parseCapture(raw){
   take(/\s#([eoac])(?=\s)/i,m=>out.type=m[1].toUpperCase());
   take(/\s!([123])(?=\s)/,m=>out.priority=+m[1]);
   take(/\s(\d{2,3})\s?min(?=\s)/i,m=>out.estimated_duration=+m[1]);
-  take(new RegExp('\\sprazo:?\\s+('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d)out.deadline=d});
+  take(new RegExp('\\sprazo:?\\s+('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d){out.deadline=d;out.external=true}});
   // "toda segunda" é ritmo, não data
   take(new RegExp('(?<!tod[ao]s?)\\s('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d)out.planned_date=d});
   take(/\s(?:às\s+)?(\d{1,2})(?:h(\d{2})?|:(\d{2}))(?=\s)/i,m=>{const h=+m[1],mi=+(m[2]||m[3]||0);if(h<24&&mi<60)out.planned_time=`${pad(h)}:${pad(mi)}`});
@@ -487,7 +489,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 function normalize(t){
   return Object.assign({title:'',description:'',type:null,priority:null,status:'pendente',planned_date:null,planned_time:null,
     estimated_duration:null,deadline:null,rhythm:null,repeat:'',responsible:'Cauê',project:'',tags:[],subtasks:[],comments:[],
-    attachments:[],created_at:new Date().toISOString(),completed_at:null,spent_minutes:null,people:[],ai:null},t);
+    attachments:[],created_at:new Date().toISOString(),completed_at:null,spent_minutes:null,people:[],ai:null,external:null},t);
 }
 const newTask=p=>normalize(Object.assign({id:uid()},p));
 const isDone=t=>t.status==='concluida';
@@ -577,9 +579,9 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',()=>Store.flushAll());
 
 /* ---------- UI state ---------- */
-const ui={view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
-try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal}catch(e){}
-const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal}))}catch(e){}};
+const ui={calAll:false,view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
+try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;ui.calAll=!!s.calAll}catch(e){}
+const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,calAll:ui.calAll}))}catch(e){}};
 const listViews=['inbox','hoje','semana','todas','concluidas','tipo:E','tipo:O','tipo:A'];
 const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('proj:')||ui.view.startsWith('ritmo:');
 // Rhythm of a demand: the one you set, or its repetition (Todo dia → Diário…)
@@ -642,7 +644,7 @@ function capture(text,pasted){
     const p=parseCapture(ch[0]);if(!p.title)continue;
     const base={title:p.title};
     if(ch.length>1)base.description=ch.slice(1).join('\n');
-    ['type','priority','estimated_duration','deadline','planned_date','planned_time'].forEach(k=>{if(p[k]!=null)base[k]=p[k]});
+    ['type','priority','estimated_duration','deadline','planned_date','planned_time','external'].forEach(k=>{if(p[k]!=null)base[k]=p[k]});
     if(ui.view==='hoje'&&!base.planned_date&&!aiReady())base.planned_date=today();
     if(ui.view.startsWith('tipo:')&&!base.type)base.type=ui.view.slice(5);
     if(ui.view.startsWith('proj:'))base.project=ui.view.slice(5);
@@ -685,6 +687,7 @@ function applyAI(id,r,by){
   if(typeof r.planned_time==='string'&&/^\d{2}:\d{2}$/.test(r.planned_time))set('planned_time',r.planned_time);
   if(+r.estimated_duration>0)set('estimated_duration',DURS.reduce((a,b)=>Math.abs(b-r.estimated_duration)<Math.abs(a-r.estimated_duration)?b:a));
   if(isDate(r.deadline))set('deadline',r.deadline);
+  if(r.external===true&&t.external==null)set('external',true);
   if(RHYTHM[r.rhythm])set('rhythm',r.rhythm);
   if(typeof r.project==='string'&&r.project){const m=Ctx.data.projects.find(p=>p.toLowerCase()===r.project.toLowerCase());if(m)set('project',m)}
   if(typeof r.responsible==='string'&&r.responsible.trim()&&r.responsible.trim()!=='Cauê')set('responsible',r.responsible.trim());
@@ -758,10 +761,11 @@ function ruleSuggest(t){
   for(const p of c.projects){const f=norm(p).trim().split(' ')[0];if(f&&f.length>=3&&has(x,f+' ')){project=p;break}}
   if(!project&&PESSOAL.some(w=>has(x,w)))project=c.projects.find(p=>/pessoal/i.test(p))||'';
   const dur=type==='E'?90:type==='A'?60:type==='C'?15:30;
+  const external=/ entreg| roteiro| deadline| cliente| apresentar pr| apresentacao pr| enviar pr| mandar pr/.test(x)||undefined;
   const deadline=t.deadline||workDay(priority===1);
   const slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date)
     :(findSlot(dur,type,deadline,t.id)||findSlot(dur,type,null,t.id));
-  return {type,priority,estimated_duration:t.estimated_duration||dur,deadline,planned_date:slot&&slot.date,planned_time:slot&&slot.time,project,people,
+  return {type,priority,external,estimated_duration:t.estimated_duration||dur,deadline,planned_date:slot&&slot.date,planned_time:slot&&slot.time,project,people,
     rhythm:/ diari| todo dia| todos os dias| toda manha/.test(x)?'diario':/ semanal| toda semana| toda (segunda|terca|quarta|quinta|sexta)| semanalmente/.test(x)?'semanal'
       :/ mensal| todo mes| mensalmente| fechamento do mes/.test(x)?'mensal':/ trimestr| trimestre| q[1-4] /.test(x)?'trimestral':''};
 }
@@ -907,7 +911,7 @@ function rowHtml(t){
   if(t.priority)m.push(`<span class="pri pri${t.priority}">P${t.priority}</span>`);
   if(t.planned_date)m.push(`<span class="${!isDone(t)&&t.planned_date<td?'late':''}">${svg('cal')}${fmtDay(t.planned_date)}${t.planned_time?' · '+t.planned_time:''}</span>`);
   else if(t.planned_time)m.push(`<span>${svg('clock')}${t.planned_time}</span>`);
-  if(t.deadline)m.push(`<span class="${!isDone(t)&&t.deadline<=td?'late':''}">${svg('flag')}Prazo ${fmtDay(t.deadline).toLowerCase()}</span>`);
+  if(t.deadline)m.push(`<span class="${!isDone(t)&&t.deadline<=td?'late':''}">${svg('flag')}${t.external?'Entrega':'Prazo'} ${fmtDay(t.deadline).toLowerCase()}</span>`);
   if(t.subtasks.length)m.push(`<span>${svg('sublist')}${t.subtasks.filter(s=>s.done).length}/${t.subtasks.length}</span>`);
   if(isDone(t)&&t.spent_minutes)m.push(`<span>${svg('clock')}${fmtDur(t.spent_minutes)}</span>`);
   if(t.project)m.push(`<span>${svg('folder')}${esc(t.project)}</span>`);
@@ -976,7 +980,7 @@ function renderMain(){
 
 /* ---------- Render: calendar ---------- */
 function calItems(day){
-  const all=Store.all();
+  const all=Store.all().filter(t=>ui.calAll||t.external);
   return {plan:all.filter(t=>t.planned_date===day),dl:all.filter(t=>t.deadline===day)};
 }
 function layoutDay(evs){
@@ -987,7 +991,7 @@ function layoutDay(evs){
 }
 const tcls=t=>t.type||'N';
 function chip(t,kind){
-  return `<button class="chipev ${kind} ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}" data-kind="${kind}" data-act="open" data-id="${t.id}" title="${esc(t.title)}">${kind==='dl'?svg('flag'):`<span class="dot d${tcls(t)}"></span>`}${kind==='dl'?'Prazo: ':''}${esc(t.title)}</button>`;
+  return `<button class="chipev ${kind} ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}" data-kind="${kind}" data-act="open" data-id="${t.id}" title="${esc(t.title)}">${kind==='dl'?svg('flag'):`<span class="dot d${tcls(t)}"></span>`}${kind==='dl'?(t.external?'Entrega: ':'Prazo: '):''}${esc(t.title)}</button>`;
 }
 function renderCalendar(main,banner){
   main.dataset.view='calendario';
@@ -1026,11 +1030,12 @@ function renderCalendar(main,banner){
         ${vis.map(([t,k])=>chip(t,k)).join('')}${items.length>3?`<button class="more" data-act="gotoWeek" data-date="${d}">+${items.length-3} mais</button>`:''}</div>`}).join('');
     body=`<div class="month-wrap"><div class="month">${['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>`<div class="dow">${x}</div>`).join('')}${cells}</div></div>`;
   }
-  main.innerHTML=`<header class="mhead"><div><h1>${esc(title)}</h1><div class="sub">${ui.cal==='semana'?'Arraste para replanejar · duplo clique num horário cria uma demanda':'Clique num dia para abrir a semana · arraste para replanejar'}</div></div><div class="grow"></div>
+  main.innerHTML=`<header class="mhead"><div><h1>${esc(title)}</h1><div class="sub">${ui.calAll?'Todas as demandas planejadas':'Compromissos fixos e entregas combinadas com outras pessoas'} · ${ui.cal==='semana'?'arraste para replanejar · duplo clique num horário cria uma entrega':'clique num dia para abrir a semana'}</div></div><div class="grow"></div>
     <div class="calbar"><div class="seg" role="group" aria-label="Visualização"><button data-act="calmode" data-mode="semana" class="${ui.cal==='semana'?'on':''}">Semana</button><button data-act="calmode" data-mode="mes" class="${ui.cal==='mes'?'on':''}">Mês</button></div>
+    <div class="seg" role="group" aria-label="O que mostrar"><button data-act="calall" data-all="0" class="${ui.calAll?'':'on'}" title="Compromissos fixos e entregas combinadas com outras pessoas">Agenda</button><button data-act="calall" data-all="1" class="${ui.calAll?'on':''}" title="Todas as demandas planejadas">Tudo</button></div>
     <div class="calnav"><button class="ibtn" data-act="calprev" aria-label="Anterior">${svg('left')}</button><button class="btn" data-act="caltoday">Hoje</button><button class="ibtn" data-act="calnext" aria-label="Próximo">${svg('right')}</button></div></div></header>
     ${banner}${body}
-    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Prazo real</span></div>`;
+    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}${ui.calAll?'Prazo real':'Entrega'}</span></div>`;
   const sc=$('#calScroll');if(sc&&!ui.scrolled){sc.scrollTop=(8-H0)*48;ui.scrolled=true}
 }
 
@@ -1196,7 +1201,7 @@ function renderDetail(){
       <div class="fld"><span class="flabel">Prioridade${sg('priority')}</span>${seg('priority',[[1,'P1 · Agora'],[2,'P2 · Semana'],[3,'P3 · Espera']],t.priority)}<small>Impacto no setor × urgência real</small></div>
       <div class="dates">
         <div class="fld"><label for="d-planned">${svg('cal','')}Data planejada${sg('planned_date')}</label><input class="inp" type="date" id="d-planned" data-f="planned_date" value="${t.planned_date||''}"><small>Quando eu me propus a fazer</small></div>
-        <div class="fld"><label for="d-deadline">Prazo real${sg('deadline')}</label><input class="inp" type="date" id="d-deadline" data-f="deadline" value="${t.deadline||''}"><small>Quando precisa estar pronto</small></div>
+        <div class="fld"><label for="d-deadline">Prazo real${sg('deadline')}</label><input class="inp" type="date" id="d-deadline" data-f="deadline" value="${t.deadline||''}"><small>Quando precisa estar pronto</small><label class="ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}> Combinado com outras pessoas${sg('external')}</label></div>
         <div class="fld"><label for="d-time">Horário${sg('planned_time')}</label><input class="inp" type="time" id="d-time" data-f="planned_time" value="${t.planned_time||''}" step="900"></div>
         <div class="fld"><label for="d-dur">Tempo estimado${sg('estimated_duration')}</label><select class="inp" id="d-dur" data-f="estimated_duration"><option value="">—</option>${DURS.map(m=>`<option value="${m}" ${t.estimated_duration===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select></div>
       </div>
@@ -1269,6 +1274,7 @@ main.addEventListener('click',e=>{
   if(act==='ctxLogout'){if(sb)sb.auth.signOut();return}
   if(act==='open')return openTask(id);
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
+  if(act==='calall'){ui.calAll=el.dataset.all==='1';saveUi();return renderMain()}
   if(act==='calprev'||act==='calnext'){const s=act==='calprev'?-1:1;const a=fromIso(ui.anchor);ui.anchor=iso(ui.cal==='semana'?addDays(a,7*s):addMonths(new Date(a.getFullYear(),a.getMonth(),1),s));return renderMain()}
   if(act==='caltoday'){ui.anchor=today();ui.scrolled=false;return renderMain()}
   if(act==='gotoWeek'){ui.anchor=el.dataset.date;ui.cal='semana';ui.scrolled=false;saveUi();return renderMain()}
@@ -1326,7 +1332,7 @@ $('#toast').addEventListener('click',e=>{
 main.addEventListener('dblclick',e=>{
   const col=e.target.closest('[data-drop-day]');if(!col||e.target.closest('.ev'))return;
   const r=col.getBoundingClientRect();const m=Math.max(0,Math.round(((e.clientY-r.top)/48*60)/30)*30)+H0*60;
-  const t=newTask({planned_date:col.dataset.dropDay,planned_time:fromMin(Math.min(m,(H1-1)*60)),estimated_duration:60});
+  const t=newTask({planned_date:col.dataset.dropDay,planned_time:fromMin(Math.min(m,(H1-1)*60)),estimated_duration:60,external:ui.calAll?null:true});
   Store.put(t);openTask(t.id);
 });
 // Drag to reschedule
@@ -1387,6 +1393,7 @@ det.addEventListener('input',e=>{
 });
 det.addEventListener('change',e=>{
   const t=cur();if(!t)return;const el=e.target;const f=el.dataset.f;
+  if(f==='external')return update(t.id,{external:el.checked},{detail:true});
   if(['planned_date','deadline','planned_time','rhythm'].includes(f))return update(t.id,{[f]:el.value||null},{detail:true});
   if(f==='repeat')return update(t.id,{repeat:el.value},{detail:true});
   if(f==='spent_minutes')return update(t.id,{spent_minutes:el.value?+el.value:null},{detail:true});

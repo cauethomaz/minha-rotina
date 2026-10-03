@@ -97,7 +97,8 @@ TIPO
 PRIORIDADE (impacto no setor × urgência real): 1 = fazer agora; 2 = nesta semana; 3 = pode esperar.
 É P1 quando: ${ctx.p1 || 'há risco alto ou urgência real.'}
 
-PRAZO REAL (deadline): se o texto citar prazo ou data de entrega, use-o. Senão: ${ctx.deadlineRule || '1 dia útil a partir de hoje; P1 é hoje.'}
+PRAZO REAL (deadline): se o texto citar prazo ou data de entrega, use-o.
+ENTREGA COMBINADA (external): true só quando o prazo foi combinado com outras pessoas (entregar algo a alguém, ex.: roteiros, materiais para cliente ou mentorado). Essas aparecem na agenda. Nos outros casos, omita. Senão: ${ctx.deadlineRule || '1 dia útil a partir de hoje; P1 é hoje.'}
 
 DATA PLANEJADA (planned_date e planned_time): escolha horário livre na agenda abaixo, dentro do expediente, nunca depois do deadline. Estratégico pede bloco de 90 min ou mais em dia com tempo de produção. Operacional vai em janela curta, perto de outros operacionais. P1 vai para hoje no próximo horário livre. Se o texto citar dia ou horário, respeite.
 
@@ -112,7 +113,7 @@ DEMANDAS (nunca altere o que está em definido_pelo_caue)
 ${items.map(it => JSON.stringify(it)).join('\n')}
 
 Escreva SOMENTE JSON neste formato, um item por demanda, com o mesmo "id":
-{"items":[{"id":"","title":"","description":"","type":"E","priority":2,"planned_date":"AAAA-MM-DD","planned_time":"HH:MM","estimated_duration":30,"deadline":"AAAA-MM-DD","rhythm":"","project":"","responsible":"Cauê","people":[],"tags":[],"subtasks":[]}]}
+{"items":[{"id":"","title":"","description":"","type":"E","priority":2,"planned_date":"AAAA-MM-DD","planned_time":"HH:MM","estimated_duration":30,"deadline":"AAAA-MM-DD","external":false,"rhythm":"","project":"","responsible":"Cauê","people":[],"tags":[],"subtasks":[]}]}
 Regras: type é "E", "O", "A" ou "C". title curto (até 8 palavras), claro, mantendo nomes próprios. description reescreve os detalhes úteis em 1 a 3 frases, ou "" se o texto já é curto. subtasks só se o texto descrever etapas. tags: 0 a 3 palavras minúsculas. people: nomes de pessoas citadas. estimated_duration: um de 15, 30, 45, 60, 90, 120, 180, 240. rhythm: "diario", "semanal", "mensal", "trimestral" ou "".`);
 }
 
@@ -132,6 +133,7 @@ function review(t, r) {
   if (typeof r.planned_time === 'string' && /^\d{2}:\d{2}$/.test(r.planned_time)) set('planned_time', r.planned_time);
   if (+r.estimated_duration > 0) set('estimated_duration', DURS.reduce((a, b) => Math.abs(b - r.estimated_duration) < Math.abs(a - r.estimated_duration) ? b : a));
   if (isDate(r.deadline)) set('deadline', r.deadline);
+  if (r.external === true && t.external == null) set('external', true);
   if (RHYTHM.includes(r.rhythm)) set('rhythm', r.rhythm);
   if (typeof r.project === 'string' && r.project) set('project', r.project);
   if (typeof r.responsible === 'string' && r.responsible.trim() && r.responsible.trim() !== 'Cauê') set('responsible', r.responsible.trim());
