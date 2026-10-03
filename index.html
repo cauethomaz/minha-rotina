@@ -149,7 +149,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .detail{background:var(--panel);border-left:1px solid var(--line);min-height:0;overflow:auto;display:flex;flex-direction:column}
 .app.overlay .detail{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100%;box-shadow:var(--shadow);z-index:20}
 .scrim{position:fixed;inset:0;background:rgba(10,14,22,.28);z-index:19}
-.dtop{display:flex;align-items:center;gap:8px;padding:14px 18px 6px;color:var(--muted);font-size:12px}
+.dtop{display:flex;align-items:center;gap:8px;padding:14px 18px 6px;color:var(--muted);font-size:12px;position:sticky;top:0;z-index:3;background:var(--panel)}
 .dtop .grow{flex:1}
 .ibtn{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted)}
 .ibtn:hover{background:var(--panel2);color:var(--fg)}
@@ -166,6 +166,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
 .inp{background:var(--panel2);border:1px solid transparent;border-radius:8px;padding:7px 9px;outline:0;width:100%;min-width:0}
 .inp:focus{border-color:var(--accent)}
+.inp[type=date],.inp[type=time]{-webkit-appearance:none;appearance:none;display:block;min-height:36px;text-align:left}
 .inp-row{display:flex;gap:6px}
 .inp-row .inp{flex:1}
 textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
@@ -362,6 +363,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   .nav button{white-space:nowrap;padding:6px 10px}
   .nav .cnt{display:none}
   .app .detail,.app.overlay .detail{position:fixed;inset:0;width:auto;z-index:30;border:0}
+  .dtop{padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .dtop .ibtn{width:40px;height:40px}
+  .dwrap{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
   .mhead{padding:14px 16px 8px}
   .scroll{padding:0 16px 40px}
   .week-wrap,.month-wrap{margin:0 16px 14px}
