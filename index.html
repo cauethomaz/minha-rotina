@@ -340,6 +340,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .switch input{width:18px;height:18px;accent-color:var(--accent)}
 
 /* Login */
+.pass{display:flex;gap:6px;min-width:0}
+.pass .inp{flex:1;min-width:0}
+.peek{white-space:nowrap}
 .app.login .side{display:none}
 .app.login{grid-template-columns:minmax(0,1fr)}
 .login{max-width:380px;margin:12vh auto 0;padding:0 16px;display:flex;flex-direction:column;gap:14px}
@@ -1148,7 +1151,7 @@ function renderContext(main,banner){
       <p class="meta-line" style="margin:8px 0 0">Ao criar uma demanda, o app preenche na hora tipo, prioridade, prazos, horário, projeto e pessoas, usando as regras abaixo e o que aprendeu com as suas correções (${Object.keys(c.learned||{}).length} palavras aprendidas). Depois, a revisão do Claude no seu Mac melhora título, descrição e subtarefas. Tudo vem marcado como sugerido, com botão de desfazer.</p></section>
     <section class="card"><h2>Conta e backup</h2>
       <p class="help">${currentUser?'Conectado como '+esc(currentUser.email):'Sem conta conectada: salvando só neste navegador.'}</p>
-      ${currentUser?`<div class="inp-row" style="flex-wrap:wrap;margin-bottom:10px;max-width:460px"><input class="inp" type="password" id="ctx-pass" autocomplete="new-password" placeholder="Nova senha (mín. 8 caracteres)"><button class="btn" data-act="ctxPass">Definir senha</button></div><p class="meta-line" style="margin:-4px 0 12px">A senha serve para entrar pelo app na tela inicial do iPhone, onde o link do e-mail não funciona.</p>`:''}
+      ${currentUser?`<div class="inp-row" style="flex-wrap:wrap;margin-bottom:10px;max-width:460px"><div class="pass" style="flex:1"><input class="inp" type="password" id="ctx-pass" autocomplete="off" placeholder="Nova senha (mín. 8 caracteres)"><button type="button" class="btn peek" data-peek="ctx-pass">Mostrar</button></div><button class="btn" data-act="ctxPass">Definir senha</button></div><p class="meta-line" style="margin:-4px 0 12px">A senha serve para entrar pelo app na tela inicial do iPhone, onde o link do e-mail não funciona.</p>`:''}
       <div class="inp-row" style="flex-wrap:wrap"><button class="btn" data-act="ctxExport">Baixar backup</button><label class="btn" for="ctx-import" style="cursor:pointer">Importar backup</label><input type="file" id="ctx-import" accept="application/json,.json" hidden>${currentUser?'<button class="btn danger" data-act="ctxLogout">Sair</button>':''}</div></section>
     <section class="card"><h2>Meta de tempo estratégico</h2><div class="inp-row" style="max-width:220px;align-items:center"><input class="inp" type="number" min="0" max="100" step="5" id="ctx-goal" data-ctx="goalE" value="${c.goalE}"><span>% da semana</span></div>
       <label class="switch" style="font-weight:500;font-size:13px;margin-top:12px"><input type="checkbox" id="ctx-cf" data-ctx="countFixed" ${c.countFixed!==false?'checked':''}> Contar compromissos fixos no tempo da semana</label></section>
@@ -1421,6 +1424,9 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('resize',()=>{$('#scrim').hidden=!(ui.sel&&!isList()&&innerWidth>820)});
 setInterval(()=>{if(ui.view==='calendario'&&!ui.sel)renderMain()},60000);
 
+/* Show/hide password while typing */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-peek]');if(!b)return;const i=document.getElementById(b.dataset.peek);if(!i)return;
+  const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ocultar':'Mostrar'});
 /* ---------- Backup ---------- */
 function exportBackup(){
   const body=JSON.stringify({version:1,exported_at:new Date().toISOString(),tasks:Store.all(),settings:Ctx.data},null,2);
@@ -1477,7 +1483,7 @@ function renderLogin(msg){
   $('#app').classList.add('login');
   $('#main').innerHTML=`<div class="login"><h1>Minha Rotina</h1><p>Entre com e-mail e senha. Sem senha ainda? Deixe em branco e receba um link de acesso por e-mail.</p>
     <form id="loginForm"><input class="inp" type="email" id="loginEmail" required placeholder="seu@email.com" autocomplete="username">
-      <input class="inp" type="password" id="loginPass" placeholder="Senha" autocomplete="current-password">
+      <div class="pass"><input class="inp" type="password" id="loginPass" placeholder="Senha" autocomplete="current-password"><button type="button" class="btn peek" data-peek="loginPass">Mostrar</button></div>
       <button class="btn pri-b" type="submit" id="loginBtn">Entrar</button></form>
     <p id="loginMsg">${esc(msg||'')}</p></div>`;
   const m=$('#loginMsg');
@@ -1488,7 +1494,7 @@ function renderLogin(msg){
     if(password){
       m.textContent='Entrando…';
       const {error}=await sb.auth.signInWithPassword({email,password});
-      if(error)m.textContent='E-mail ou senha incorretos. Sem senha? Deixe o campo vazio e use o link.';
+      if(error)m.textContent='Senha incorreta. Para redefinir: deixe a senha vazia, entre pelo link do e-mail e crie a senha de novo em Contexto → Conta e backup.';
       return;
     }
     m.textContent='Enviando…';
