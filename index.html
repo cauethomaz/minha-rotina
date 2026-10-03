@@ -14,8 +14,9 @@
 <meta name="theme-color" content="#0e131d">
 <style>
 :root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
-.ext{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--fg);margin-top:4px;cursor:pointer}
-.ext input{accent-color:var(--accent);width:15px;height:15px}
+.ext-row{grid-column:1/-1;display:flex;gap:10px;align-items:flex-start;background:var(--panel);border-radius:9px;padding:9px 11px;cursor:pointer;font-size:13.5px}
+.ext-row input{accent-color:var(--accent);width:18px;height:18px;margin:1px 0 0;flex:none}
+.ext-row small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 </style>
 <style>
 /* Layout: Apple Notes shape — folders | list as a notepad | detail drawer. Calendar is another view of the same rows. */
@@ -1200,10 +1201,11 @@ function renderDetail(){
       <div class="fld"><span class="flabel">Tipo${sg('type')}</span>${seg('type',[['E','<span class="dot dE"></span>Estratégico'],['O','<span class="dot dO"></span>Operacional'],['A','<span class="dot dA"></span>Analítico'],['C','<span class="dot dC"></span>Conversas']],t.type)}</div>
       <div class="fld"><span class="flabel">Prioridade${sg('priority')}</span>${seg('priority',[[1,'P1 · Agora'],[2,'P2 · Semana'],[3,'P3 · Espera']],t.priority)}<small>Impacto no setor × urgência real</small></div>
       <div class="dates">
-        <div class="fld"><label for="d-planned">${svg('cal','')}Data planejada${sg('planned_date')}</label><input class="inp" type="date" id="d-planned" data-f="planned_date" value="${t.planned_date||''}"><small>Quando eu me propus a fazer</small></div>
-        <div class="fld"><label for="d-deadline">Prazo real${sg('deadline')}</label><input class="inp" type="date" id="d-deadline" data-f="deadline" value="${t.deadline||''}"><small>Quando precisa estar pronto</small><label class="ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}> Combinado com outras pessoas${sg('external')}</label></div>
+        <div class="fld"><label for="d-planned">Data planejada${sg('planned_date')}</label><input class="inp" type="date" id="d-planned" data-f="planned_date" value="${t.planned_date||''}"><small>Quando eu me propus a fazer</small></div>
+        <div class="fld"><label for="d-deadline">Prazo real${sg('deadline')}</label><input class="inp" type="date" id="d-deadline" data-f="deadline" value="${t.deadline||''}"><small>Quando precisa estar pronto</small></div>
         <div class="fld"><label for="d-time">Horário${sg('planned_time')}</label><input class="inp" type="time" id="d-time" data-f="planned_time" value="${t.planned_time||''}" step="900"></div>
         <div class="fld"><label for="d-dur">Tempo estimado${sg('estimated_duration')}</label><select class="inp" id="d-dur" data-f="estimated_duration"><option value="">—</option>${DURS.map(m=>`<option value="${m}" ${t.estimated_duration===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select></div>
+        <label class="ext-row" for="d-ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}><span><b>Mostrar na agenda</b>${sg('external')}<small>Entrega ou prazo combinado com outras pessoas. Desmarque para tirar do modo Agenda do calendário.</small></span></label>
       </div>
       <div class="insights">${insights(t).map(([c,txt,btn,act])=>`<div class="ins ${c}"><span>${esc(txt)}</span>${btn?`<button data-dact="${act}">${esc(btn)}</button>`:''}</div>`).join('')}</div>
       <div class="grid2">
