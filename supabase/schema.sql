@@ -14,6 +14,9 @@ create table if not exists public.settings (
   updated_at  timestamptz not null default now()
 );
 
+-- O app acessa as tabelas como usuário logado.
+grant select, insert, update, delete on public.tasks, public.settings to authenticated;
+
 -- Cada pessoa só lê e escreve os próprios dados.
 alter table public.tasks    enable row level security;
 alter table public.settings enable row level security;
