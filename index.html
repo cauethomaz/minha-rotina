@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Minha Rotina</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rotina">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e131d">
 <style>
 :root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
 </style>
@@ -1115,6 +1123,7 @@ function renderContext(main,banner){
       <p class="meta-line" style="margin:8px 0 0">Ao criar uma demanda, o app preenche na hora tipo, prioridade, prazos, horário, projeto e pessoas, usando as regras abaixo e o que aprendeu com as suas correções (${Object.keys(c.learned||{}).length} palavras aprendidas). Depois, a revisão do Claude no seu Mac melhora título, descrição e subtarefas. Tudo vem marcado como sugerido, com botão de desfazer.</p></section>
     <section class="card"><h2>Conta e backup</h2>
       <p class="help">${currentUser?'Conectado como '+esc(currentUser.email):'Sem conta conectada: salvando só neste navegador.'}</p>
+      ${currentUser?`<div class="inp-row" style="flex-wrap:wrap;margin-bottom:10px;max-width:460px"><input class="inp" type="password" id="ctx-pass" autocomplete="new-password" placeholder="Nova senha (mín. 8 caracteres)"><button class="btn" data-act="ctxPass">Definir senha</button></div><p class="meta-line" style="margin:-4px 0 12px">A senha serve para entrar pelo app na tela inicial do iPhone, onde o link do e-mail não funciona.</p>`:''}
       <div class="inp-row" style="flex-wrap:wrap"><button class="btn" data-act="ctxExport">Baixar backup</button><label class="btn" for="ctx-import" style="cursor:pointer">Importar backup</label><input type="file" id="ctx-import" accept="application/json,.json" hidden>${currentUser?'<button class="btn danger" data-act="ctxLogout">Sair</button>':''}</div></section>
     <section class="card"><h2>Meta de tempo estratégico</h2><div class="inp-row" style="max-width:220px;align-items:center"><input class="inp" type="number" min="0" max="100" step="5" id="ctx-goal" data-ctx="goalE" value="${c.goalE}"><span>% da semana</span></div>
       <label class="switch" style="font-weight:500;font-size:13px;margin-top:12px"><input type="checkbox" id="ctx-cf" data-ctx="countFixed" ${c.countFixed!==false?'checked':''}> Contar compromissos fixos no tempo da semana</label></section>
@@ -1235,6 +1244,8 @@ main.addEventListener('click',e=>{
     return}
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
   if(act==='ctxExport')return exportBackup();
+  if(act==='ctxPass'){const v=$('#ctx-pass').value;if(v.length<8)return toast('A senha precisa de pelo menos 8 caracteres.');
+    sb.auth.updateUser({password:v}).then(({error})=>{toast(error?'Não consegui salvar a senha: '+error.message:'Senha definida. Use-a para entrar no app do iPhone.');if(!error)$('#ctx-pass').value=''});return}
   if(act==='ctxLogout'){if(sb)sb.auth.signOut();return}
   if(act==='open')return openTask(id);
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
@@ -1437,12 +1448,24 @@ function supaDb(uid){
 }
 function renderLogin(msg){
   $('#app').classList.add('login');
-  $('#main').innerHTML=`<div class="login"><h1>Minha Rotina</h1><p>Entre com o seu e-mail. Enviamos um link de acesso, sem senha.</p>
-    <form id="loginForm"><input class="inp" type="email" id="loginEmail" required placeholder="seu@email.com" autocomplete="email"><button class="btn pri-b" type="submit">Enviar link de acesso</button></form>
+  $('#main').innerHTML=`<div class="login"><h1>Minha Rotina</h1><p>Entre com e-mail e senha. Sem senha ainda? Deixe em branco e receba um link de acesso por e-mail.</p>
+    <form id="loginForm"><input class="inp" type="email" id="loginEmail" required placeholder="seu@email.com" autocomplete="username">
+      <input class="inp" type="password" id="loginPass" placeholder="Senha" autocomplete="current-password">
+      <button class="btn pri-b" type="submit" id="loginBtn">Entrar</button></form>
     <p id="loginMsg">${esc(msg||'')}</p></div>`;
+  const m=$('#loginMsg');
+  $('#loginPass').addEventListener('input',e=>{$('#loginBtn').textContent=e.target.value?'Entrar':'Enviar link de acesso'});
+  $('#loginBtn').textContent='Enviar link de acesso';
   $('#loginForm').addEventListener('submit',async e=>{
-    e.preventDefault();const email=$('#loginEmail').value.trim();const m=$('#loginMsg');m.textContent='Enviando…';
-    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+    e.preventDefault();const email=$('#loginEmail').value.trim(),password=$('#loginPass').value;
+    if(password){
+      m.textContent='Entrando…';
+      const {error}=await sb.auth.signInWithPassword({email,password});
+      if(error)m.textContent='E-mail ou senha incorretos. Sem senha? Deixe o campo vazio e use o link.';
+      return;
+    }
+    m.textContent='Enviando…';
+    const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});
     m.textContent=error?'Não consegui enviar: '+error.message:`Link enviado para ${email}. Abra o e-mail neste mesmo navegador.`;
   });
 }
