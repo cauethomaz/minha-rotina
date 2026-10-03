@@ -20,8 +20,8 @@
 :root{
   --bg:#f5f6f8; --panel:#ffffff; --panel2:#eef0f4; --line:#e1e4ea; --fg:#171a21; --muted:#6b7385; --faint:#9aa1b1;
   --accent:#c98a00; --accent-soft:#fff3d1; --on-accent:#1b1400;
-  --tE:#b83c96; --tO:#2f6fe4; --tA:#12876f;
-  --tE-soft:#f8e5f2; --tO-soft:#e7efff; --tA-soft:#dcf3ec;
+  --tE:#b83c96; --tO:#2f6fe4; --tA:#12876f; --tC:#c8571f;
+  --tE-soft:#f8e5f2; --tO-soft:#e7efff; --tA-soft:#dcf3ec; --tC-soft:#fbe8dd;
   --p1:#e0453f; --p2:#c98a00; --p3:#7c859b;
   --warn-soft:#fdecea; --ok-soft:#e5f6ee; --ok:#178a5a;
   --shadow:0 12px 40px rgba(20,24,34,.14);
@@ -32,8 +32,8 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e131d; --panel:#141a26; --panel2:#1a2131; --line:#252e42; --fg:#e7eaf1; --muted:#8d95a9; --faint:#5f677b;
   --accent:#f5b638; --accent-soft:#3a2f12; --on-accent:#1b1400;
-  --tE:#cf5fae; --tO:#4d86e8; --tA:#2ea37f;
-  --tE-soft:#3a1d33; --tO-soft:#1a2a4a; --tA-soft:#12302a;
+  --tE:#cf5fae; --tO:#4d86e8; --tA:#2ea37f; --tC:#d06a30;
+  --tE-soft:#3a1d33; --tO-soft:#1a2a4a; --tA-soft:#12302a; --tC-soft:#3a2216;
   --p1:#ff6a63; --p2:#f5b638; --p3:#8189a0;
   --warn-soft:#3a1f22; --ok-soft:#153024; --ok:#46c98d;
   --shadow:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
@@ -41,8 +41,8 @@
 :root[data-theme="dark"]{
   --bg:#0e131d; --panel:#141a26; --panel2:#1a2131; --line:#252e42; --fg:#e7eaf1; --muted:#8d95a9; --faint:#5f677b;
   --accent:#f5b638; --accent-soft:#3a2f12; --on-accent:#1b1400;
-  --tE:#cf5fae; --tO:#4d86e8; --tA:#2ea37f;
-  --tE-soft:#3a1d33; --tO-soft:#1a2a4a; --tA-soft:#12302a;
+  --tE:#cf5fae; --tO:#4d86e8; --tA:#2ea37f; --tC:#d06a30;
+  --tE-soft:#3a1d33; --tO-soft:#1a2a4a; --tA-soft:#12302a; --tC-soft:#3a2216;
   --p1:#ff6a63; --p2:#f5b638; --p3:#8189a0;
   --warn-soft:#3a1f22; --ok-soft:#153024; --ok:#46c98d;
   --shadow:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
@@ -73,7 +73,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .nav .lbl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav .cnt{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
-.dE{background:var(--tE)}.dO{background:var(--tO)}.dA{background:var(--tA)}.dN{background:var(--faint)}
+.dE{background:var(--tE)}.dO{background:var(--tO)}.dA{background:var(--tA)}.dC{background:var(--tC)}.dN{background:var(--faint)}
 .side-foot{margin-top:auto;padding:16px 10px 0}
 .lev-mini{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;text-align:left;width:100%}
 .lev-mini:hover{background:var(--panel2)}
@@ -132,7 +132,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .rmeta .late{color:var(--p1)}
 .rmeta svg{width:12px;height:12px;vertical-align:-1px;margin-right:3px}
 .pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
-.pE{background:var(--tE-soft);color:var(--tE)}.pO{background:var(--tO-soft);color:var(--tO)}.pA{background:var(--tA-soft);color:var(--tA)}
+.pE{background:var(--tE-soft);color:var(--tE)}.pO{background:var(--tO-soft);color:var(--tO)}.pA{background:var(--tA-soft);color:var(--tA)}.pC{background:var(--tC-soft);color:var(--tC)}
 .pri{font-weight:700;font-size:11px;letter-spacing:.02em}
 .pri1{color:var(--p1)}.pri2{color:var(--p2)}.pri3{color:var(--p3)}
 .tag{font-size:11.5px;color:var(--muted)}
@@ -222,6 +222,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .ev{position:absolute;left:3px;right:3px;border-radius:7px;padding:3px 6px;font-size:11.5px;line-height:1.25;overflow:hidden;cursor:pointer;border-left:3px solid;text-align:left}
 .ev .tm{display:block;font-size:10.5px;opacity:.8;font-variant-numeric:tabular-nums}
 .ev.E{background:var(--tE-soft);border-color:var(--tE)}
+.ev.C{background:var(--tC-soft);border-color:var(--tC)}
 .ev.O{background:var(--tO-soft);border-color:var(--tO)}
 .ev.A{background:var(--tA-soft);border-color:var(--tA)}
 .ev.N{background:var(--panel2);border-color:var(--faint)}
@@ -279,7 +280,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .rhythm div{background:var(--panel2);border-radius:10px;padding:10px 12px;min-width:96px}
 .rhythm b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
 .rhythm span{font-size:12px;color:var(--muted)}
-.principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .principles div{border-top:3px solid;padding-top:8px;font-size:12.5px;color:var(--muted)}
 .principles b{display:block;color:var(--fg);font-size:13.5px;margin-bottom:2px}
 
@@ -391,7 +392,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 (function(){
 'use strict';
 /* ---------- Vocabulary ---------- */
-const TYPES={E:'Estratégico',O:'Operacional',A:'Analítico'};
+const TYPES={E:'Estratégico',O:'Operacional',A:'Analítico',C:'Conversas'};
+const TK=Object.keys(TYPES),TKN=TK.concat(['N']);
 const PRI={1:'Fazer agora',2:'Nesta semana',3:'Pode esperar'};
 const STATUS={pendente:'Pendente',andamento:'Em andamento',concluida:'Concluída'};
 const RHYTHM={diario:'Diário',semanal:'Semanal',mensal:'Mensal',trimestral:'Trimestral'};
@@ -469,7 +471,7 @@ function parseCapture(raw){
   else s=s.replace(/^[-*•]\s+/,'');
   s=' '+s+' ';
   const take=(re,fn)=>{s=s.replace(re,(...m)=>{fn(m);return ' '})};
-  take(/\s#([eoa])(?=\s)/i,m=>out.type=m[1].toUpperCase());
+  take(/\s#([eoac])(?=\s)/i,m=>out.type=m[1].toUpperCase());
   take(/\s!([123])(?=\s)/,m=>out.priority=+m[1]);
   take(/\s(\d{2,3})\s?min(?=\s)/i,m=>out.estimated_duration=+m[1]);
   take(new RegExp('\\sprazo:?\\s+('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d)out.deadline=d});
@@ -578,7 +580,7 @@ const ui={view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmD
 try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal}catch(e){}
 const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal}))}catch(e){}};
 const listViews=['inbox','hoje','semana','todas','concluidas','tipo:E','tipo:O','tipo:A'];
-const isList=()=>listViews.includes(ui.view);
+const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('proj:');
 
 function showBanner(msg){ui.banner=msg;renderMain()}
 let toastTimer;
@@ -640,6 +642,7 @@ function capture(text,pasted){
     ['type','priority','estimated_duration','deadline','planned_date','planned_time'].forEach(k=>{if(p[k]!=null)base[k]=p[k]});
     if(ui.view==='hoje'&&!base.planned_date&&!aiReady())base.planned_date=today();
     if(ui.view.startsWith('tipo:')&&!base.type)base.type=ui.view.slice(5);
+    if(ui.view.startsWith('proj:'))base.project=ui.view.slice(5);
     if(p.done){base.status='concluida';base.completed_at=new Date().toISOString()}
     const t=newTask(base);Store.put(t);made.push(t.id);
   }
@@ -672,7 +675,7 @@ function applyAI(id,r,by){
   };
   if(typeof r.title==='string'&&r.title.trim())set('title',r.title.trim().slice(0,140));
   if(by!=='regras'&&!t.description){const d=typeof r.description==='string'?r.description.trim():'';set('description',d||(t.title.length>70?t.title:''))}
-  if(['E','O','A'].includes(r.type))set('type',r.type);
+  if(TK.includes(r.type))set('type',r.type);
   if([1,2,3].includes(+r.priority))set('priority',+r.priority);
   if(isDate(r.planned_date))set('planned_date',r.planned_date);
   if(typeof r.planned_time==='string'&&/^\d{2}:\d{2}$/.test(r.planned_time))set('planned_time',r.planned_time);
@@ -710,7 +713,8 @@ const has=(x,k)=>x.includes(' '+k);
 const KW={
   E:['estrateg','processo','estrutur','planejament','planejar','contrat','demit','promov','cargo','okr','metas','direcao','aposta','sistema','fluxo','reorganiz','reestrutur','playbook','cultura','visao','desenhar','definir','pensar','novo modelo','escalar','onboarding','politica','decisao','lideranca','treinamento'],
   A:['analis','metrica','indicador','numero','dados','dashboard','relatorio','resultado','diagnost','kpi','planilha','conversao','taxa','performance','benchmark','pesquisa','levantament','auditar','auditoria','medir','avaliar'],
-  O:['enviar','mandar','cobrar','follow','responder','corrigir','marcar','agendar','ver ','resolver','destravar','ligar','falar com','avisar','postar','subir','nf ','nota fiscal','pagar','revisar','ajustar','conferir','checar','gravar','imprimir','reuniao com','alinhar','atualizar','organizar','preencher','acompanhar','caso ']
+  O:['enviar','corrigir','marcar','agendar','ver ','resolver','destravar','postar','subir','nf ','nota fiscal','pagar','revisar','ajustar','conferir','checar','gravar','imprimir','reuniao','alinhamento','atualizar','organizar','preencher','acompanhar'],
+  C:['mensagem','msg','mandar','responder','resposta','retornar','retorno','falar com','falar pro','falar pra','conversar','conversa com','ligar','ligacao','avisar','lembrar','cobrar','follow','whats','zap','direct','dm ','caso d','caso ','perguntar','pedir','alinhar com','feedback pro','feedback pra','feedback para','combinar com','chamar']
 };
 const P1W=['urgente','agora','imediat','churn','cancel','insatisf','reclam','chatead','bravo','irritad','risco','reembolso','travad','bloquead','parado'];
 const P3W=['quando der','um dia','ideia','talvez','futuro','sem pressa','eventualmente','algum dia'];
@@ -738,8 +742,8 @@ function findSlot(dur,type,deadline,selfId,onlyDate){
 }
 function ruleSuggest(t){
   const x=norm([t.title,t.description].join(' '));const c=Ctx.data;
-  const sc={E:0,O:0,A:0};
-  Object.keys(KW).forEach(k=>KW[k].forEach(w=>{if(has(x,w))sc[k]+=1}));
+  const sc={E:0,O:0,A:0,C:0};
+  Object.keys(KW).forEach(k=>KW[k].forEach(w=>{if(has(x,w))sc[k]+=k==='C'?1.2:1}));
   wordsOf(x).forEach(w=>{const l=c.learned&&c.learned[w];if(l)Object.keys(sc).forEach(k=>sc[k]+=(l[k]||0)*0.8)});
   let type=Object.keys(sc).sort((a,b)=>sc[b]-sc[a])[0];if(!sc[type])type='O';
   const p1People=c.people.filter(p=>p.name&&/p1/i.test(p.role||'')).map(p=>norm(p.name).trim());
@@ -749,7 +753,7 @@ function ruleSuggest(t){
   let project='';
   for(const p of c.projects){const f=norm(p).trim().split(' ')[0];if(f&&f.length>=3&&has(x,f+' ')){project=p;break}}
   if(!project&&PESSOAL.some(w=>has(x,w)))project=c.projects.find(p=>/pessoal/i.test(p))||'';
-  const dur=type==='E'?90:type==='A'?60:30;
+  const dur=type==='E'?90:type==='A'?60:type==='C'?15:30;
   const deadline=t.deadline||workDay(priority===1);
   const slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date)
     :(findSlot(dur,type,deadline,t.id)||findSlot(dur,type,null,t.id));
@@ -775,12 +779,12 @@ function askSpent(t){
 }
 const spentOf=t=>t.spent_minutes||t.estimated_duration||30;
 function weekTime(wsIso){
-  const ws=fromIso(wsIso),we=iso(addDays(ws,7)),now=new Date();const m={E:0,O:0,A:0,N:0};let est=0,tasks=0;
+  const ws=fromIso(wsIso),we=iso(addDays(ws,7)),now=new Date();const m={E:0,O:0,A:0,C:0,N:0};let est=0,tasks=0;
   Store.all().forEach(t=>{if(!isDone(t)||!t.completed_at)return;const d=iso(new Date(t.completed_at));if(d<wsIso||d>=we)return;
     m[t.type||'N']+=spentOf(t);tasks++;if(!t.spent_minutes)est++});
   if(Ctx.data.countFixed!==false)Ctx.data.fixed.forEach(f=>{if(!f.title)return;const day=addDays(ws,(+f.wd+6)%7);const mm=toMin(f.time)||0;
     const st=new Date(day.getFullYear(),day.getMonth(),day.getDate(),Math.floor(mm/60),mm%60);if(st<=now)m[f.type||'N']+=(+f.dur||60)});
-  const typed=m.E+m.O+m.A;return {m,typed,total:typed+m.N,est,tasks};
+  const typed=m.E+m.O+m.A+m.C;return {m,typed,total:typed+m.N,est,tasks};
 }
 function openTask(id){ui.sel=id;ui.confirmDel=false;renderAll();
   const el=$('#d-title');if(el&&!Store.get(id).title)el.focus();}
@@ -805,7 +809,7 @@ function buckets(){
 function groups(){
   const t=today(),all=Store.all().filter(matchQ);const open=all.filter(x=>!isDone(x)).sort(cmp);
   const lateF=x=>(x.planned_date&&x.planned_date<t)||(x.deadline&&x.deadline<t);
-  switch(ui.view){
+  switch(ui.view.startsWith('proj:')?'proj':ui.view){
     case 'inbox':return [{items:open.filter(isInbox)}];
     case 'hoje':{
       const late=open.filter(lateF);
@@ -824,22 +828,24 @@ function groups(){
     }
     case 'todas':return [...Object.keys(TYPES).map(k=>({title:TYPES[k],dot:k,items:open.filter(x=>x.type===k)})),
       {title:'Sem tipo',dot:'N',items:open.filter(x=>!x.type)}];
+    case 'proj':{const pr=ui.view.slice(5);const o=open.filter(x=>x.project===pr);
+      return [...TK.map(k=>({title:TYPES[k],dot:k,items:o.filter(x=>x.type===k)})),{title:'Sem tipo',dot:'N',items:o.filter(x=>!x.type)}];}
     case 'concluidas':return [{items:all.filter(isDone).sort((a,b)=>String(b.completed_at).localeCompare(String(a.completed_at)))}];
     default:{const k=ui.view.slice(5);const o=open.filter(x=>x.type===k);
       return [1,2,3].map(p=>({title:`P${p} · ${PRI[p]}`,items:o.filter(x=>x.priority===p)})).concat([{title:'Sem prioridade',items:o.filter(x=>!x.priority)}]);}
   }
 }
 function leverage(list){
-  const c={E:0,O:0,A:0,N:0};list.forEach(t=>c[t.type||'N']++);
-  const typed=c.E+c.O+c.A;
+  const c={E:0,O:0,A:0,C:0,N:0};list.forEach(t=>c[t.type||'N']++);
+  const typed=c.E+c.O+c.A+c.C;
   let verdict,cls,text;
   if(!typed){verdict='Sem dados';cls='mid';text='Classifique algumas demandas como estratégicas, operacionais ou analíticas para ver o equilíbrio.'}
-  else if(c.O/typed>=.6){verdict='Modo operador';cls='op';text=`${Math.round(c.O/typed*10)} de cada 10 demandas classificadas são operacionais. Agrupe o operacional em janelas curtas e passe o que der pelo filtro do Sanchez.`}
+  else if((c.O+c.C)/typed>=.6){verdict='Modo operador';cls='op';text=`${Math.round((c.O+c.C)/typed*10)} de cada 10 demandas classificadas são operacionais ou conversas. Agrupe o operacional em janelas curtas e passe o que der pelo filtro do Sanchez.`}
   else if(c.E/typed>=.3){verdict='Modo líder de setor';cls='lead';text='Boa parte das suas demandas mexe na direção do setor. Proteja blocos longos para elas na agenda.'}
   else {verdict='Em transição';cls='mid';text='O operacional ainda pesa mais que o estratégico. Escolha uma demanda estratégica para ganhar um bloco de 90 minutos nesta semana.'}
   return {c,typed,verdict,cls,text};
 }
-const stackBar=c=>{const tot=c.E+c.O+c.A||1;return `<div class="stack">${['E','O','A'].map(k=>c[k]?`<i class="d${k}" style="width:${c[k]/tot*100}%"></i>`:'').join('')}</div>`};
+const stackBar=c=>{const tot=c.E+c.O+c.A+(c.C||0)||1;return `<div class="stack">${TK.map(k=>c[k]?`<i class="d${k}" style="width:${c[k]/tot*100}%"></i>`:'').join('')}</div>`};
 
 /* ---------- Render: sidebar ---------- */
 function renderSide(){
@@ -856,7 +862,9 @@ function renderSide(){
       ${item('todas','Todas as notas',svg('notes','ico'),b.open.length)}
       ${item('concluidas','Concluídas',svg('check','ico'),b.done.length||'')}
       <div class="nav-label">Tipos</div>
-      ${['E','O','A'].map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join('')}
+      ${TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join('')}
+      ${Ctx.data.projects.length?'<div class="nav-label">Projetos</div>':''}
+      ${Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')}
       <div class="nav-label">Visão</div>
       ${item('calendario','Calendário',svg('cal','ico'))}
       ${item('alavancagem','Alavancagem',svg('gauge','ico'))}
@@ -878,6 +886,7 @@ function headFor(){
   const map={inbox:['Caixa de entrada','Despeje aqui. Organize depois.'],hoje:['Hoje',fmtDay(today(),true).replace(/^Hoje$/,'')||`${WDL[t.getDay()]}, ${t.getDate()} de ${MON[t.getMonth()]}`],
     semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
   if(ui.view.startsWith('tipo:'))return [TYPES[ui.view.slice(5)],'Abertas, por prioridade'];
+  if(ui.view.startsWith('proj:'))return [ui.view.slice(5),'Projeto · abertas, por tipo'];
   return map[ui.view];
 }
 function rowHtml(t){
@@ -1011,7 +1020,7 @@ function renderCalendar(main,banner){
     <div class="calbar"><div class="seg" role="group" aria-label="Visualização"><button data-act="calmode" data-mode="semana" class="${ui.cal==='semana'?'on':''}">Semana</button><button data-act="calmode" data-mode="mes" class="${ui.cal==='mes'?'on':''}">Mês</button></div>
     <div class="calnav"><button class="ibtn" data-act="calprev" aria-label="Anterior">${svg('left')}</button><button class="btn" data-act="caltoday">Hoje</button><button class="ibtn" data-act="calnext" aria-label="Próximo">${svg('right')}</button></div></div></header>
     ${banner}${body}
-    <div class="legend">${['E','O','A'].map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Prazo real</span></div>`;
+    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Prazo real</span></div>`;
   const sc=$('#calScroll');if(sc&&!ui.scrolled){sc.scrollTop=(8-H0)*48;ui.scrolled=true}
 }
 
@@ -1020,7 +1029,7 @@ function historyChart(goal){
   const cur=startOfWeek(new Date());const first=Store.all().reduce((m,t)=>{const c=t.created_at&&iso(startOfWeek(new Date(t.created_at)));return c&&c<m?c:m},iso(cur));
   const weeks=[];for(let i=7;i>=0;i--){const w=iso(addDays(cur,-7*i));if(w>=first)weeks.push({w,...weekTime(w)})}
   const W=600,H=200,padL=34,padB=26,top=12,ch=H-padB-top,slot=(W-padL)/8,bw=Math.min(44,slot*.62);
-  const order=['E','O','A','N'];const y=v=>top+ch*(1-v);
+  const order=TKN;const y=v=>top+ch*(1-v);
   let bars='',labels='';
   weeks.forEach((wk,i)=>{
     const x=padL+slot*(8-weeks.length+i)+(slot-bw)/2;let acc=0;
@@ -1044,17 +1053,17 @@ function renderLeverage(main,banner){
   main.dataset.view='alavancagem';
   const b=buckets();const L=leverage(b.open);const td=today();const goal=+Ctx.data.goalE||30;
   const ws=iso(startOfWeek(new Date())),we=iso(addDays(startOfWeek(new Date()),6));
-  const wt=weekTime(ws);const eShare=wt.typed?Math.round(wt.m.E/wt.typed*100):0;const oShare=wt.typed?wt.m.O/wt.typed:0;
+  const wt=weekTime(ws);const eShare=wt.typed?Math.round(wt.m.E/wt.typed*100):0;const oShare=wt.typed?(wt.m.O+wt.m.C)/wt.typed:0;
   let verdict=L.verdict,cls=L.cls,text=L.text;
   if(wt.typed){
     if(eShare>=goal){verdict='Modo líder de setor';cls='lead';text=`${eShare}% do seu tempo nesta semana foi estratégico, dentro da meta de ${goal}%.`}
-    else if(oShare>=.6){verdict='Modo operador';cls='op';text=`${Math.round(oShare*100)}% do seu tempo nesta semana foi operacional e só ${eShare}% estratégico (meta: ${goal}%). Agrupe o operacional em janelas e passe o que der pelo Sanchez.`}
+    else if(oShare>=.6){verdict='Modo operador';cls='op';text=`${Math.round(oShare*100)}% do seu tempo nesta semana foi operacional ou em conversas e só ${eShare}% estratégico (meta: ${goal}%). Agrupe o operacional em janelas e passe o que der pelo Sanchez.`}
     else{verdict='Em transição';cls='mid';text=`${eShare}% do seu tempo nesta semana foi estratégico. Faltam ${goal-eShare} pontos para a meta de ${goal}%. Reserve um bloco de 90 minutos para uma demanda estratégica.`}
   }
   const thisWeek=Store.all().filter(t=>t.planned_date&&t.planned_date>=ws&&t.planned_date<=we);
-  const plan={E:0,O:0,A:0,N:0};thisWeek.forEach(t=>{plan[t.type||'N']+=t.estimated_duration||30});
+  const plan={E:0,O:0,A:0,C:0,N:0};thisWeek.forEach(t=>{plan[t.type||'N']+=t.estimated_duration||30});
   Ctx.data.fixed.forEach(f=>{if(f.title)plan[f.type||'N']+=(+f.dur||60)});
-  const maxPF=Math.max(1,...['E','O','A','N'].map(k=>Math.max(plan[k],wt.m[k])));
+  const maxPF=Math.max(1,...TKN.map(k=>Math.max(plan[k],wt.m[k])));
   const pf=k=>`<div class="bar-row"><span class="nm"><span class="dot d${k}"></span>${k==='N'?'Sem tipo':TYPES[k]}</span><span style="display:flex;flex-direction:column;gap:3px"><span class="track" title="Planejado"><i style="width:${plan[k]/maxPF*100}%;background:color-mix(in srgb,var(--${k==='N'?'faint':'t'+k}) 35%,transparent)"></i></span><span class="track" title="Feito"><i class="d${k}" style="width:${wt.m[k]/maxPF*100}%"></i></span></span><span class="val">${fmtDur(wt.m[k])||'0'} / ${fmtDur(plan[k])||'0'}</span></div>`;
   const doneWeek=Store.all().filter(t=>isDone(t)&&t.completed_at&&iso(new Date(t.completed_at))>=ws&&iso(new Date(t.completed_at))<=we);
   const interrupts=doneWeek.filter(t=>t.type==='O'&&t.created_at&&iso(new Date(t.created_at))===iso(new Date(t.completed_at))&&(!t.planned_date||t.planned_date===iso(new Date(t.created_at))));
@@ -1076,10 +1085,10 @@ function renderLeverage(main,banner){
     <section class="card wide"><div class="verdict"><span class="badge ${cls}">${verdict}</span><div style="flex:1;min-width:240px"><div class="q">Estou usando meu tempo como líder de setor ou como operador?</div><p>${esc(text)}</p></div></div></section>
     <section class="card"><h2>Onde foi seu tempo nesta semana</h2>
       <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="stat-big">${eShare}%</span><span>estratégico</span><span class="status ${eShare>=goal?'ok':'bad'}">${eShare>=goal?'✓ dentro da meta':'↓ abaixo da meta'} de ${goal}%</span></div>
-      <div class="stack big-stack" style="margin-top:14px">${['E','O','A','N'].map(k=>wt.m[k]?`<i class="d${k}" style="width:${wt.m[k]/tot*100}%"></i>`:'').join('')}</div>
-      <div class="legend-row">${['E','O','A','N'].map(k=>`<span><span class="dot d${k}"></span>${k==='N'?'Sem tipo':TYPES[k]} <b>${fmtDur(wt.m[k])||'0'}</b></span>`).join('')}</div>
+      <div class="stack big-stack" style="margin-top:14px">${TKN.map(k=>wt.m[k]?`<i class="d${k}" style="width:${wt.m[k]/tot*100}%"></i>`:'').join('')}</div>
+      <div class="legend-row">${TKN.map(k=>`<span><span class="dot d${k}"></span>${k==='N'?'Sem tipo':TYPES[k]} <b>${fmtDur(wt.m[k])||'0'}</b></span>`).join('')}</div>
       <p class="meta-line" style="margin:10px 0 0">${wt.tasks} demanda${wt.tasks===1?'':'s'} concluída${wt.tasks===1?'':'s'}${wt.est?`, ${wt.est} com tempo estimado (sem confirmação)`:''}${Ctx.data.countFixed!==false&&Ctx.data.fixed.length?' · inclui compromissos fixos que já aconteceram':''}.</p></section>
-    <section class="card"><h2>Feito × planejado nesta semana</h2><div class="bars">${['E','O','A','N'].map(pf).join('')}</div>
+    <section class="card"><h2>Feito × planejado nesta semana</h2><div class="bars">${TKN.map(pf).join('')}</div>
       <p class="meta-line" style="margin:12px 0 0">Barra clara: planejado (estimativas + compromissos fixos). Barra cheia: feito.</p></section>
     <section class="card wide"><h2>Evolução semanal · % do tempo por tipo</h2>${historyChart(goal)}</section>
     <section class="card"><h2>Interrupções nesta semana</h2>
@@ -1088,7 +1097,7 @@ function renderLeverage(main,banner){
     <section class="card"><h2>Tempo por pessoa</h2><div class="bars">${topList(byWho)}</div></section>
     <section class="card"><h2>Tempo por projeto</h2><div class="bars">${topList(byProj)}</div></section>
     <section class="card"><h2>Demandas abertas por tipo</h2><div class="bars">
-      ${['E','O','A','N'].map(k=>`<div class="bar-row"><span class="nm"><span class="dot d${k}"></span>${k==='N'?'Sem tipo':TYPES[k]}</span><span class="track"><i class="d${k}" style="width:${L.c[k]/Math.max(1,...Object.values(L.c))*100}%"></i></span><span class="val">${L.c[k]}</span></div>`).join('')}</div></section>
+      ${TKN.map(k=>`<div class="bar-row"><span class="nm"><span class="dot d${k}"></span>${k==='N'?'Sem tipo':TYPES[k]}</span><span class="track"><i class="d${k}" style="width:${L.c[k]/Math.max(1,...Object.values(L.c))*100}%"></i></span><span class="val">${L.c[k]}</span></div>`).join('')}</div></section>
     <section class="card wide"><h2>Pontos de atenção</h2><div class="att-list">
       ${watch.map(w=>`<div><h4>${esc(w.title)} <span class="n">${w.list.length}</span></h4><p>${esc(w.why)}</p><div class="mini-rows">${w.list.slice(0,6).map(t=>`<button data-act="open" data-id="${t.id}"><span class="dot d${tcls(t)}"></span>${esc(t.title)}</button>`).join('')}</div></div>`).join('')||'<p>Nada pedindo atenção agora.</p>'}
     </div></section>
@@ -1097,7 +1106,8 @@ function renderLeverage(main,banner){
     <section class="card"><h2>Como cada tipo usa o tempo</h2><div class="principles">
       <div style="border-color:var(--tE)"><b>Estratégico</b>Blocos de 90 min ou mais, protegidos, sem interrupção.</div>
       <div style="border-color:var(--tO)"><b>Operacional</b>Janelas curtas e agrupadas. Não fica aberto o dia inteiro.</div>
-      <div style="border-color:var(--tA)"><b>Analítico</b>Ritual com dia e horário fixos. Ex.: segunda, indicadores.</div></div></section>
+      <div style="border-color:var(--tA)"><b>Analítico</b>Ritual com dia e horário fixos. Ex.: segunda, indicadores.</div>
+      <div style="border-color:var(--tC)"><b>Conversas</b>Responda em lote, em uma ou duas janelas por dia. Não fique respondendo o tempo todo.</div></div></section>
   </div></div>`;
   const hist=$('#hist'),tip=$('#histTip');
   if(hist)hist.addEventListener('mousemove',e=>{
@@ -1172,7 +1182,7 @@ function renderDetail(){
         :aiState==='on'&&!isDone(t)&&(!t.type||!t.priority||!t.deadline)?'<div class="aibar"><span>Faltam campos nesta demanda.</span><button data-dact="aiorg">✦ Organizar</button></div>':''}
       <textarea id="d-title" class="dtitle" rows="1" data-f="title" placeholder="Título da demanda" aria-label="Título">${esc(t.title)}</textarea>
       ${seg('status',Object.entries(STATUS),t.status)}
-      <div class="fld"><span class="flabel">Tipo${sg('type')}</span>${seg('type',[['E','<span class="dot dE"></span>Estratégico'],['O','<span class="dot dO"></span>Operacional'],['A','<span class="dot dA"></span>Analítico']],t.type)}</div>
+      <div class="fld"><span class="flabel">Tipo${sg('type')}</span>${seg('type',[['E','<span class="dot dE"></span>Estratégico'],['O','<span class="dot dO"></span>Operacional'],['A','<span class="dot dA"></span>Analítico'],['C','<span class="dot dC"></span>Conversas']],t.type)}</div>
       <div class="fld"><span class="flabel">Prioridade${sg('priority')}</span>${seg('priority',[[1,'P1 · Agora'],[2,'P2 · Semana'],[3,'P3 · Espera']],t.priority)}<small>Impacto no setor × urgência real</small></div>
       <div class="dates">
         <div class="fld"><label for="d-planned">${svg('cal','')}Data planejada${sg('planned_date')}</label><input class="inp" type="date" id="d-planned" data-f="planned_date" value="${t.planned_date||''}"><small>Quando eu me propus a fazer</small></div>

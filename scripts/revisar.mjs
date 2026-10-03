@@ -92,6 +92,7 @@ TIPO
 - E (estratégico): direção do setor, processos, pessoas, decisões estruturais, apostas, projetos importantes, mudanças de sistema.
 - O (operacional): destravar o time, decisões rápidas, follow-ups, dia a dia, problemas pontuais, correções, cobranças, acompanhamentos, tarefas administrativas e pessoais.
 - A (analítico): métricas, indicadores, leitura de resultados, diagnósticos, análises para decisão.
+- C (conversas): resolver algo mandando mensagem ou falando com alguém: responder quem ficou sem resposta, mandar lembrete, cobrar, dar retorno, alinhar com alguém, resolver o caso de um mentorado por conversa. Costuma levar 15 min e vai em lote, numa janela de mensagens.
 
 PRIORIDADE (impacto no setor × urgência real): 1 = fazer agora; 2 = nesta semana; 3 = pode esperar.
 É P1 quando: ${ctx.p1 || 'há risco alto ou urgência real.'}
@@ -112,7 +113,7 @@ ${items.map(it => JSON.stringify(it)).join('\n')}
 
 Escreva SOMENTE JSON neste formato, um item por demanda, com o mesmo "id":
 {"items":[{"id":"","title":"","description":"","type":"E","priority":2,"planned_date":"AAAA-MM-DD","planned_time":"HH:MM","estimated_duration":30,"deadline":"AAAA-MM-DD","rhythm":"","project":"","responsible":"Cauê","people":[],"tags":[],"subtasks":[]}]}
-Regras: title curto (até 8 palavras), claro, mantendo nomes próprios. description reescreve os detalhes úteis em 1 a 3 frases, ou "" se o texto já é curto. subtasks só se o texto descrever etapas. tags: 0 a 3 palavras minúsculas. people: nomes de pessoas citadas. estimated_duration: um de 15, 30, 45, 60, 90, 120, 180, 240. rhythm: "diario", "semanal", "mensal", "trimestral" ou "".`);
+Regras: type é "E", "O", "A" ou "C". title curto (até 8 palavras), claro, mantendo nomes próprios. description reescreve os detalhes úteis em 1 a 3 frases, ou "" se o texto já é curto. subtasks só se o texto descrever etapas. tags: 0 a 3 palavras minúsculas. people: nomes de pessoas citadas. estimated_duration: um de 15, 30, 45, 60, 90, 120, 180, 240. rhythm: "diario", "semanal", "mensal", "trimestral" ou "".`);
 }
 
 function review(t, r) {
@@ -125,7 +126,7 @@ function review(t, r) {
   const strs = (a, n) => Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim()).slice(0, n) : [];
   if (typeof r.title === 'string' && r.title.trim()) set('title', r.title.trim().slice(0, 140));
   if (!t.description) set('description', (typeof r.description === 'string' && r.description.trim()) || (String(t.title).length > 70 ? t.title : ''));
-  if (['E', 'O', 'A'].includes(r.type)) set('type', r.type);
+  if (['E', 'O', 'A', 'C'].includes(r.type)) set('type', r.type);
   if ([1, 2, 3].includes(+r.priority)) set('priority', +r.priority);
   if (isDate(r.planned_date)) set('planned_date', r.planned_date);
   if (typeof r.planned_time === 'string' && /^\d{2}:\d{2}$/.test(r.planned_time)) set('planned_time', r.planned_time);
