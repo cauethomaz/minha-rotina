@@ -475,7 +475,8 @@ function parseCapture(raw){
   take(/\s!([123])(?=\s)/,m=>out.priority=+m[1]);
   take(/\s(\d{2,3})\s?min(?=\s)/i,m=>out.estimated_duration=+m[1]);
   take(new RegExp('\\sprazo:?\\s+('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d)out.deadline=d});
-  take(new RegExp('\\s('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d)out.planned_date=d});
+  // "toda segunda" é ritmo, não data
+  take(new RegExp('(?<!tod[ao]s?)\\s('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d)out.planned_date=d});
   take(/\s(?:às\s+)?(\d{1,2})(?:h(\d{2})?|:(\d{2}))(?=\s)/i,m=>{const h=+m[1],mi=+(m[2]||m[3]||0);if(h<24&&mi<60)out.planned_time=`${pad(h)}:${pad(mi)}`});
   out.title=s.replace(/\s+/g,' ').trim();
   return out;
@@ -580,7 +581,9 @@ const ui={view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmD
 try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal}catch(e){}
 const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal}))}catch(e){}};
 const listViews=['inbox','hoje','semana','todas','concluidas','tipo:E','tipo:O','tipo:A'];
-const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('proj:');
+const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('proj:')||ui.view.startsWith('ritmo:');
+// Rhythm of a demand: the one you set, or its repetition (Todo dia → Diário…)
+const rhythmOf=t=>t.rhythm||t.repeat||'';
 
 function showBanner(msg){ui.banner=msg;renderMain()}
 let toastTimer;
@@ -643,6 +646,7 @@ function capture(text,pasted){
     if(ui.view==='hoje'&&!base.planned_date&&!aiReady())base.planned_date=today();
     if(ui.view.startsWith('tipo:')&&!base.type)base.type=ui.view.slice(5);
     if(ui.view.startsWith('proj:'))base.project=ui.view.slice(5);
+    if(ui.view.startsWith('ritmo:'))base.rhythm=ui.view.slice(6);
     if(p.done){base.status='concluida';base.completed_at=new Date().toISOString()}
     const t=newTask(base);Store.put(t);made.push(t.id);
   }
@@ -742,7 +746,7 @@ function findSlot(dur,type,deadline,selfId,onlyDate){
 }
 function ruleSuggest(t){
   const x=norm([t.title,t.description].join(' '));const c=Ctx.data;
-  const sc={E:0,O:0,A:0,C:0};
+  const sc={E:0,A:0,C:0,O:0}; // empate: operacional fica por último
   Object.keys(KW).forEach(k=>KW[k].forEach(w=>{if(has(x,w))sc[k]+=k==='C'?1.2:1}));
   wordsOf(x).forEach(w=>{const l=c.learned&&c.learned[w];if(l)Object.keys(sc).forEach(k=>sc[k]+=(l[k]||0)*0.8)});
   let type=Object.keys(sc).sort((a,b)=>sc[b]-sc[a])[0];if(!sc[type])type='O';
@@ -758,7 +762,8 @@ function ruleSuggest(t){
   const slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date)
     :(findSlot(dur,type,deadline,t.id)||findSlot(dur,type,null,t.id));
   return {type,priority,estimated_duration:t.estimated_duration||dur,deadline,planned_date:slot&&slot.date,planned_time:slot&&slot.time,project,people,
-    rhythm:type==='A'&&/semanal|toda semana|toda segunda/.test(x)?'semanal':''};
+    rhythm:/ diari| todo dia| todos os dias| toda manha/.test(x)?'diario':/ semanal| toda semana| toda (segunda|terca|quarta|quinta|sexta)| semanalmente/.test(x)?'semanal'
+      :/ mensal| todo mes| mensalmente| fechamento do mes/.test(x)?'mensal':/ trimestr| trimestre| q[1-4] /.test(x)?'trimestral':''};
 }
 function classify(ids,manual){
   const done=[];
@@ -809,7 +814,7 @@ function buckets(){
 function groups(){
   const t=today(),all=Store.all().filter(matchQ);const open=all.filter(x=>!isDone(x)).sort(cmp);
   const lateF=x=>(x.planned_date&&x.planned_date<t)||(x.deadline&&x.deadline<t);
-  switch(ui.view.startsWith('proj:')?'proj':ui.view){
+  switch(ui.view.startsWith('proj:')?'proj':ui.view.startsWith('ritmo:')?'ritmo':ui.view){
     case 'inbox':return [{items:open.filter(isInbox)}];
     case 'hoje':{
       const late=open.filter(lateF);
@@ -828,6 +833,8 @@ function groups(){
     }
     case 'todas':return [...Object.keys(TYPES).map(k=>({title:TYPES[k],dot:k,items:open.filter(x=>x.type===k)})),
       {title:'Sem tipo',dot:'N',items:open.filter(x=>!x.type)}];
+    case 'ritmo':{const r=ui.view.slice(6);const o=open.filter(x=>rhythmOf(x)===r);
+      return [...TK.map(k=>({title:TYPES[k],dot:k,items:o.filter(x=>x.type===k)})),{title:'Sem tipo',dot:'N',items:o.filter(x=>!x.type)}];}
     case 'proj':{const pr=ui.view.slice(5);const o=open.filter(x=>x.project===pr);
       return [...TK.map(k=>({title:TYPES[k],dot:k,items:o.filter(x=>x.type===k)})),{title:'Sem tipo',dot:'N',items:o.filter(x=>!x.type)}];}
     case 'concluidas':return [{items:all.filter(isDone).sort((a,b)=>String(b.completed_at).localeCompare(String(a.completed_at)))}];
@@ -863,6 +870,8 @@ function renderSide(){
       ${item('concluidas','Concluídas',svg('check','ico'),b.done.length||'')}
       <div class="nav-label">Tipos</div>
       ${TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join('')}
+      <div class="nav-label">Ritmos</div>
+      ${Object.keys(RHYTHM).map(k=>item('ritmo:'+k,RHYTHM[k],svg('clock','ico'),b.open.filter(t=>rhythmOf(t)===k).length||'')).join('')}
       ${Ctx.data.projects.length?'<div class="nav-label">Projetos</div>':''}
       ${Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')}
       <div class="nav-label">Visão</div>
@@ -887,6 +896,7 @@ function headFor(){
     semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
   if(ui.view.startsWith('tipo:'))return [TYPES[ui.view.slice(5)],'Abertas, por prioridade'];
   if(ui.view.startsWith('proj:'))return [ui.view.slice(5),'Projeto · abertas, por tipo'];
+  if(ui.view.startsWith('ritmo:'))return [RHYTHM[ui.view.slice(6)],({diario:'O que se repete ou acontece todo dia',semanal:'Rituais e acompanhamentos da semana',mensal:'Processos, pessoas e planejamento do mês',trimestral:'Direção, estrutura e grandes apostas'})[ui.view.slice(6)]+' · abertas, por tipo'];
   return map[ui.view];
 }
 function rowHtml(t){
@@ -1078,7 +1088,7 @@ function renderLeverage(main,banner){
   add('Prazos vencidos','O prazo real já passou.',b.open.filter(t=>t.deadline&&t.deadline<td));
   add('Podem passar pelo filtro do Sanchez','Operacionais sem urgência máxima que ainda estão com você.',b.open.filter(t=>t.type==='O'&&t.priority!==1&&(t.responsible||'Cauê')==='Cauê'));
   add('Analíticas sem ritual','Análise funciona melhor com dia e horário fixos. Defina uma repetição.',b.open.filter(t=>t.type==='A'&&!t.repeat));
-  const rc={diario:0,semanal:0,mensal:0,trimestral:0,none:0};b.open.forEach(t=>rc[t.rhythm||'none']++);
+  const rc={diario:0,semanal:0,mensal:0,trimestral:0,none:0};b.open.forEach(t=>rc[rhythmOf(t)||'none']++);
   const tot=wt.total||1;
   main.innerHTML=`<header class="mhead"><div><h1>Alavancagem</h1><div class="sub">O que multiplica o resultado do time?</div></div></header>${banner}
   <div class="scroll"><div class="lev">
