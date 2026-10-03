@@ -580,9 +580,9 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',()=>Store.flushAll());
 
 /* ---------- UI state ---------- */
-const ui={calAll:false,view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
-try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;ui.calAll=!!s.calAll}catch(e){}
-const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,calAll:ui.calAll}))}catch(e){}};
+const ui={view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
+try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal}catch(e){}
+const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal}))}catch(e){}};
 const listViews=['inbox','hoje','semana','todas','concluidas','tipo:E','tipo:O','tipo:A'];
 const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('proj:')||ui.view.startsWith('ritmo:');
 // Rhythm of a demand: the one you set, or its repetition (Todo dia → Diário…)
@@ -981,8 +981,8 @@ function renderMain(){
 
 /* ---------- Render: calendar ---------- */
 function calItems(day){
-  const all=Store.all().filter(t=>ui.calAll||t.external);
-  return {plan:all.filter(t=>t.planned_date===day),dl:all.filter(t=>t.deadline===day)};
+  const all=Store.all();
+  return {plan:all.filter(t=>t.planned_date===day),dl:all.filter(t=>t.deadline===day&&t.external)};
 }
 function layoutDay(evs){
   evs.sort((a,b)=>a.s-b.s||b.e-a.e);let cluster=[],end=-1;const out=[];
@@ -992,7 +992,7 @@ function layoutDay(evs){
 }
 const tcls=t=>t.type||'N';
 function chip(t,kind){
-  return `<button class="chipev ${kind} ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}" data-kind="${kind}" data-act="open" data-id="${t.id}" title="${esc(t.title)}">${kind==='dl'?svg('flag'):`<span class="dot d${tcls(t)}"></span>`}${kind==='dl'?(t.external?'Entrega: ':'Prazo: '):''}${esc(t.title)}</button>`;
+  return `<button class="chipev ${kind} ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}" data-kind="${kind}" data-act="open" data-id="${t.id}" title="${esc(t.title)}">${kind==='dl'?svg('flag'):`<span class="dot d${tcls(t)}"></span>`}${kind==='dl'?'Prazo: ':''}${esc(t.title)}</button>`;
 }
 function renderCalendar(main,banner){
   main.dataset.view='calendario';
@@ -1031,12 +1031,11 @@ function renderCalendar(main,banner){
         ${vis.map(([t,k])=>chip(t,k)).join('')}${items.length>3?`<button class="more" data-act="gotoWeek" data-date="${d}">+${items.length-3} mais</button>`:''}</div>`}).join('');
     body=`<div class="month-wrap"><div class="month">${['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>`<div class="dow">${x}</div>`).join('')}${cells}</div></div>`;
   }
-  main.innerHTML=`<header class="mhead"><div><h1>${esc(title)}</h1><div class="sub">${ui.calAll?'Todas as demandas planejadas':'Compromissos fixos e entregas combinadas com outras pessoas'} · ${ui.cal==='semana'?'arraste para replanejar · duplo clique num horário cria uma entrega':'clique num dia para abrir a semana'}</div></div><div class="grow"></div>
+  main.innerHTML=`<header class="mhead"><div><h1>${esc(title)}</h1><div class="sub">${ui.cal==='semana'?'Arraste para replanejar · duplo clique num horário cria uma demanda':'Clique num dia para abrir a semana · arraste para replanejar'}</div></div><div class="grow"></div>
     <div class="calbar"><div class="seg" role="group" aria-label="Visualização"><button data-act="calmode" data-mode="semana" class="${ui.cal==='semana'?'on':''}">Semana</button><button data-act="calmode" data-mode="mes" class="${ui.cal==='mes'?'on':''}">Mês</button></div>
-    <div class="seg" role="group" aria-label="O que mostrar"><button data-act="calall" data-all="0" class="${ui.calAll?'':'on'}" title="Compromissos fixos e entregas combinadas com outras pessoas">Agenda</button><button data-act="calall" data-all="1" class="${ui.calAll?'on':''}" title="Todas as demandas planejadas">Tudo</button></div>
     <div class="calnav"><button class="ibtn" data-act="calprev" aria-label="Anterior">${svg('left')}</button><button class="btn" data-act="caltoday">Hoje</button><button class="ibtn" data-act="calnext" aria-label="Próximo">${svg('right')}</button></div></div></header>
     ${banner}${body}
-    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}${ui.calAll?'Prazo real':'Entrega'}</span></div>`;
+    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Prazo real (avisos ligados)</span></div>`;
   const sc=$('#calScroll');if(sc&&!ui.scrolled){sc.scrollTop=(8-H0)*48;ui.scrolled=true}
 }
 
@@ -1205,7 +1204,7 @@ function renderDetail(){
         <div class="fld"><label for="d-deadline">Prazo real${sg('deadline')}</label><input class="inp" type="date" id="d-deadline" data-f="deadline" value="${t.deadline||''}"><small>Quando precisa estar pronto</small></div>
         <div class="fld"><label for="d-time">Horário${sg('planned_time')}</label><input class="inp" type="time" id="d-time" data-f="planned_time" value="${t.planned_time||''}" step="900"></div>
         <div class="fld"><label for="d-dur">Tempo estimado${sg('estimated_duration')}</label><select class="inp" id="d-dur" data-f="estimated_duration"><option value="">—</option>${DURS.map(m=>`<option value="${m}" ${t.estimated_duration===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select></div>
-        <label class="ext-row" for="d-ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}><span><b>Mostrar na agenda</b>${sg('external')}<small>Entrega ou prazo combinado com outras pessoas. Desmarque para tirar do modo Agenda do calendário.</small></span></label>
+        <label class="ext-row" for="d-ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}><span><b>Avisar prazo no calendário</b>${sg('external')}<small>Mostra o prazo real como aviso vermelho no topo do dia. Use para entregas combinadas com outras pessoas.</small></span></label>
       </div>
       <div class="insights">${insights(t).map(([c,txt,btn,act])=>`<div class="ins ${c}"><span>${esc(txt)}</span>${btn?`<button data-dact="${act}">${esc(btn)}</button>`:''}</div>`).join('')}</div>
       <div class="grid2">
@@ -1276,7 +1275,6 @@ main.addEventListener('click',e=>{
   if(act==='ctxLogout'){if(sb)sb.auth.signOut();return}
   if(act==='open')return openTask(id);
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
-  if(act==='calall'){ui.calAll=el.dataset.all==='1';saveUi();return renderMain()}
   if(act==='calprev'||act==='calnext'){const s=act==='calprev'?-1:1;const a=fromIso(ui.anchor);ui.anchor=iso(ui.cal==='semana'?addDays(a,7*s):addMonths(new Date(a.getFullYear(),a.getMonth(),1),s));return renderMain()}
   if(act==='caltoday'){ui.anchor=today();ui.scrolled=false;return renderMain()}
   if(act==='gotoWeek'){ui.anchor=el.dataset.date;ui.cal='semana';ui.scrolled=false;saveUi();return renderMain()}
@@ -1334,7 +1332,7 @@ $('#toast').addEventListener('click',e=>{
 main.addEventListener('dblclick',e=>{
   const col=e.target.closest('[data-drop-day]');if(!col||e.target.closest('.ev'))return;
   const r=col.getBoundingClientRect();const m=Math.max(0,Math.round(((e.clientY-r.top)/48*60)/30)*30)+H0*60;
-  const t=newTask({planned_date:col.dataset.dropDay,planned_time:fromMin(Math.min(m,(H1-1)*60)),estimated_duration:60,external:ui.calAll?null:true});
+  const t=newTask({planned_date:col.dataset.dropDay,planned_time:fromMin(Math.min(m,(H1-1)*60)),estimated_duration:60});
   Store.put(t);openTask(t.id);
 });
 // Drag to reschedule
