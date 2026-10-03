@@ -21,7 +21,11 @@ if (!BASE || !KEY) {
   process.exit(0);
 }
 // Chaves novas (sb_secret_...) vão só no header apikey; as antigas (JWT) também no Authorization.
-const headers = { apikey: KEY, 'Content-Type': 'application/json', ...(KEY.startsWith('sb_') ? {} : { Authorization: `Bearer ${KEY}` }) };
+if (KEY.startsWith('sb_publishable_')) {
+  console.log('CHAVE_ERRADA: o .env tem a chave publicável. Use a chave secreta (sb_secret_...), em Project Settings → API Keys → Secret keys.');
+  process.exit(0);
+}
+const headers ={ apikey: KEY, 'Content-Type': 'application/json', ...(KEY.startsWith('sb_') ? {} : { Authorization: `Bearer ${KEY}` }) };
 async function api(p, opt = {}) {
   const r = await fetch(`${BASE}/rest/v1/${p}`, { ...opt, headers: { ...headers, ...(opt.headers || {}) } });
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
