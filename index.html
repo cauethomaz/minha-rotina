@@ -1261,6 +1261,11 @@ main.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;
   const act=el.dataset.act;const id=el.dataset.id||(el.closest('[data-id]')||{}).dataset?.id;
   if(act==='toggle')return toggleDone(id);
+  // Ações de conta e backup antes do bloco genérico de Contexto (que só edita listas)
+  if(act==='ctxExport')return exportBackup();
+  if(act==='ctxPass'){const v=$('#ctx-pass').value;if(v.length<8)return toast('A senha precisa de pelo menos 8 caracteres.');
+    sb.auth.updateUser({password:v}).then(({error})=>{toast(error?'Não consegui salvar a senha: '+error.message:'Senha definida. Use-a para entrar no app do iPhone.');if(!error)$('#ctx-pass').value=''});return}
+  if(act==='ctxLogout'){if(sb)sb.auth.signOut();return}
   if(act&&act.startsWith('ctx')){const c=Ctx.data,i=+el.dataset.i;
     if(act==='ctxAddPerson')c.people.push({name:'',role:''});
     if(act==='ctxRmPerson')c.people.splice(i,1);
@@ -1272,10 +1277,6 @@ main.addEventListener('click',e=>{
     if(act==='ctxAddFixed'){const n=$('#ctx-fn-'+(c.fixed.length-1));n&&n.focus()}
     return}
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
-  if(act==='ctxExport')return exportBackup();
-  if(act==='ctxPass'){const v=$('#ctx-pass').value;if(v.length<8)return toast('A senha precisa de pelo menos 8 caracteres.');
-    sb.auth.updateUser({password:v}).then(({error})=>{toast(error?'Não consegui salvar a senha: '+error.message:'Senha definida. Use-a para entrar no app do iPhone.');if(!error)$('#ctx-pass').value=''});return}
-  if(act==='ctxLogout'){if(sb)sb.auth.signOut();return}
   if(act==='open')return openTask(id);
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
   if(act==='calprev'||act==='calnext'){const s=act==='calprev'?-1:1;const a=fromIso(ui.anchor);ui.anchor=iso(ui.cal==='semana'?addDays(a,7*s):addMonths(new Date(a.getFullYear(),a.getMonth(),1),s));return renderMain()}
