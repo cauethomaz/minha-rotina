@@ -340,6 +340,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .switch{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600}
 .switch input{width:18px;height:18px;accent-color:var(--accent)}
 
+/* Review tab */
+.okbtn{align-self:center;flex:none;padding:5px 10px;font-size:12.5px;color:var(--ok);background:var(--ok-soft)}
+#reviewBar{justify-content:space-between}
 /* Login */
 .pass{display:flex;gap:6px;min-width:0}
 .pass .inp{flex:1;min-width:0}
@@ -590,8 +593,10 @@ window.addEventListener('pagehide',()=>Store.flushAll());
 const ui={view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
 try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal}catch(e){}
 const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal}))}catch(e){}};
-const listViews=['inbox','hoje','semana','todas','concluidas','tipo:E','tipo:O','tipo:A'];
-const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('proj:')||ui.view.startsWith('ritmo:');
+const listViews=['inbox','revisar','hoje','semana','todas','concluidas'];
+// Organized automatically (rules or Claude) and not confirmed yet
+const toReview=t=>!isDone(t)&&!!(t.ai&&t.ai.fields&&t.ai.fields.length);
+const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('tipo:')||ui.view.startsWith('proj:')||ui.view.startsWith('ritmo:');
 // Rhythm of a demand: the one you set, or its repetition (Todo dia → Diário…)
 const rhythmOf=t=>t.rhythm||t.repeat||'';
 
@@ -828,6 +833,8 @@ function groups(){
   const lateF=x=>(x.planned_date&&x.planned_date<t)||(x.deadline&&x.deadline<t);
   switch(ui.view.startsWith('proj:')?'proj':ui.view.startsWith('ritmo:')?'ritmo':ui.view){
     case 'inbox':return [{items:open.filter(isInbox)}];
+    case 'revisar':{const r=open.filter(toReview).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+      return [{title:'Revisadas pelo Claude',items:r.filter(t=>t.ai.by==='claude')},{title:'Preenchidas automaticamente',items:r.filter(t=>t.ai.by!=='claude')}];}
     case 'hoje':{
       const late=open.filter(lateF);
       return [{title:'Ficaram para trás',warn:true,items:late},
@@ -876,6 +883,7 @@ function renderSide(){
     <div class="brand"><div class="brand-mark">${svg('notes','ico')}</div><div><b>Minha Rotina</b><small>Growth Ops · Core</small></div></div>
     <nav class="nav">
       ${item('inbox','Caixa de entrada',svg('inbox','ico'),b.inbox.length||'')}
+      ${item('revisar','A revisar',svg('sublist','ico'),Store.all().filter(toReview).length||'')}
       ${item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')}
       ${item('semana','Semana',svg('week','ico'),b.week.length||'')}
       ${item('todas','Todas as notas',svg('notes','ico'),b.open.length)}
@@ -904,7 +912,7 @@ function renderSide(){
 /* ---------- Render: main ---------- */
 function headFor(){
   const t=new Date();
-  const map={inbox:['Caixa de entrada','Despeje aqui. Organize depois.'],hoje:['Hoje',fmtDay(today(),true).replace(/^Hoje$/,'')||`${WDL[t.getDay()]}, ${t.getDate()} de ${MON[t.getMonth()]}`],
+  const map={inbox:['Caixa de entrada','Despeje aqui. Organize depois.'],revisar:['A revisar','Organizadas automaticamente. Confira e confirme.'],hoje:['Hoje',fmtDay(today(),true).replace(/^Hoje$/,'')||`${WDL[t.getDay()]}, ${t.getDate()} de ${MON[t.getMonth()]}`],
     semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
   if(ui.view.startsWith('tipo:'))return [TYPES[ui.view.slice(5)],'Abertas, por prioridade'];
   if(ui.view.startsWith('proj:'))return [ui.view.slice(5),'Projeto · abertas, por tipo'];
@@ -928,13 +936,14 @@ function rowHtml(t){
   return `<div class="row ${isDone(t)?'done':''} ${ui.sel===t.id?'sel':''}" data-id="${t.id}">
     <button class="chk" data-act="toggle" aria-label="${isDone(t)?'Reabrir':'Concluir'}: ${esc(t.title)}">${svg('tick')}</button>
     <div class="rbody" data-act="open" tabindex="0" role="button"><div class="rtitle">${esc(t.title)||'<span style="color:var(--faint)">Sem título</span>'}</div><div class="rmeta">${m.join('')}</div></div>
+    ${ui.view==='revisar'&&toReview(t)?`<button class="btn okbtn" data-act="accept" aria-label="Marcar como revisada: ${esc(t.title)}">✓ Ok</button>`:''}
   </div>`;
 }
 function emptyFor(){
   const any=Store.all().length;
   if(ui.q)return `<div class="empty"><h2>Nada encontrado</h2><p>Nenhuma demanda com “${esc(ui.q)}”.</p></div>`;
   if(!any)return `<div class="empty"><h2>Comece escrevendo uma linha</h2><p>Escreva qualquer coisa no campo acima e aperte Enter. Não precisa escolher categoria, prazo nem prioridade agora.</p><p>Pode colar uma lista inteira do seu bloco de notas: cada linha vira uma demanda.</p></div>`;
-  const msg={inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
+  const msg={revisar:'Tudo revisado. As demandas organizadas automaticamente aparecem aqui até você confirmar.',inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
   return `<div class="empty"><p>${msg[ui.view]||'Nenhuma demanda aberta deste tipo.'}</p></div>`;
 }
 function renderList(){
@@ -963,6 +972,7 @@ function renderMain(){
       <div class="scroll">
         ${showLev?'<div class="levstrip" id="levstrip"></div>':''}
         ${ui.view==='inbox'?'<div class="toolbar" id="inboxBar"></div>':''}
+        ${ui.view==='revisar'?'<div class="toolbar" id="reviewBar"></div>':''}
         ${ui.view!=='concluidas'?`<div class="capture"><div class="capture-row"><span class="plus" aria-hidden="true"></span>
           <textarea id="cap" rows="1" placeholder="${ui.view==='hoje'?'Nova demanda para hoje…':'Nova demanda…'}" aria-label="Nova demanda"></textarea></div>
           <div class="chips" id="capPreview"></div>
@@ -978,6 +988,9 @@ function renderMain(){
   const ib=$('#inboxBar');
   if(ib){const n=buckets().inbox.filter(t=>!ui.aiPending.has(t.id)).length;
     ib.innerHTML=aiState==='on'&&n?`<button class="btn pri-b" data-act="organizeInbox">✦ Organizar ${n===1?'1 demanda':n+' demandas'}</button>`:''}
+  const rb=$('#reviewBar');
+  if(rb){const n=Store.all().filter(toReview).length;
+    rb.innerHTML=n?`<span class="meta-line">Toque em ✓ Ok para confirmar, ou abra a demanda para ajustar. Ao editar um campo, ele deixa de ser sugestão.</span><button class="btn" data-act="acceptAll">✓ Marcar todas (${n}) como revisadas</button>`:''}
   const ls=$('#levstrip');
   if(ls){
     const scope=ui.view==='hoje'?buckets().late.concat(buckets().tod):buckets().week;const L=leverage(scope);
@@ -1265,6 +1278,10 @@ main.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;
   const act=el.dataset.act;const id=el.dataset.id||(el.closest('[data-id]')||{}).dataset?.id;
   if(act==='toggle')return toggleDone(id);
+  if(act==='accept'){update(id,{ai:null},{keepAi:true,detail:ui.sel===id});return toast('Revisada')}
+  if(act==='acceptAll'){const list=Store.all().filter(toReview).map(t=>({id:t.id,ai:t.ai,ai_review:t.ai_review}));
+    list.forEach(x=>Store.put(Object.assign({},Store.get(x.id),{ai:null,ai_review:null})));renderAll();
+    return toast(`${list.length} demandas revisadas`,'Desfazer',()=>{list.forEach(x=>{const t=Store.get(x.id);if(t)Store.put(Object.assign({},t,{ai:x.ai,ai_review:x.ai_review}))});renderAll()})}
   // Ações de conta e backup antes do bloco genérico de Contexto (que só edita listas)
   if(act==='ctxExport')return exportBackup();
   if(act==='ctxPass'){const v=$('#ctx-pass').value;if(v.length<8)return toast('A senha precisa de pelo menos 8 caracteres.');
