@@ -340,6 +340,16 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .switch{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600}
 .switch input{width:18px;height:18px;accent-color:var(--accent)}
 
+/* Priority toggles */
+.focus{display:flex;gap:4px;align-self:center;flex:none}
+.focus button{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
+.focus button svg{width:12px;height:12px}
+.focus button:hover{color:var(--fg)}
+.focus button.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.focus button.on svg path{fill:currentColor}
+.focus.big{align-self:flex-start}
+.focus.big button{font-size:12.5px;padding:5px 11px}
+@media (max-width:520px){.row .focus button{padding:3px 6px}.row .focus{flex-direction:column}}
 /* Review tab */
 .okbtn{align-self:center;flex:none;padding:5px 10px;font-size:12.5px;color:var(--ok);background:var(--ok-soft)}
 #reviewBar{justify-content:space-between}
@@ -437,6 +447,7 @@ const I={
   right:'<path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   clip:'<path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L13 4a3.3 3.3 0 0 1 4.7 4.7l-8.4 8.4a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   person:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 21c1-4.5 4.3-6.5 8-6.5s7 2 8 6.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  star:'<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>'
 };
 const svg=(n,c='')=>`<svg viewBox="0 0 24 24" class="${c}" aria-hidden="true">${I[n]}</svg>`;
@@ -500,7 +511,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 function normalize(t){
   return Object.assign({title:'',description:'',type:null,priority:null,status:'pendente',planned_date:null,planned_time:null,
     estimated_duration:null,deadline:null,rhythm:null,repeat:'',responsible:'Cauê',project:'',tags:[],subtasks:[],comments:[],
-    attachments:[],created_at:new Date().toISOString(),completed_at:null,spent_minutes:null,people:[],ai:null,external:null},t);
+    attachments:[],created_at:new Date().toISOString(),completed_at:null,spent_minutes:null,people:[],ai:null,external:null,focus_day:null,focus_week:null},t);
 }
 const newTask=p=>normalize(Object.assign({id:uid()},p));
 const isDone=t=>t.status==='concluida';
@@ -593,7 +604,9 @@ window.addEventListener('pagehide',()=>Store.flushAll());
 const ui={view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
 try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal}catch(e){}
 const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal}))}catch(e){}};
-const listViews=['inbox','revisar','hoje','semana','todas','concluidas'];
+const listViews=['inbox','revisar','pdia','psemana','hoje','semana','todas','concluidas'];
+const weekKey=()=>iso(startOfWeek(new Date()));
+const inDay=t=>t.focus_day===today(),inWeek=t=>t.focus_week===weekKey();
 // Organized automatically (rules or Claude) and not confirmed yet
 const toReview=t=>!isDone(t)&&!!(t.ai&&t.ai.fields&&t.ai.fields.length);
 const isList=()=>listViews.includes(ui.view)||ui.view.startsWith('tipo:')||ui.view.startsWith('proj:')||ui.view.startsWith('ritmo:');
@@ -661,6 +674,8 @@ function capture(text,pasted){
     if(ui.view==='hoje'&&!base.planned_date&&!aiReady())base.planned_date=today();
     if(ui.view.startsWith('tipo:')&&!base.type)base.type=ui.view.slice(5);
     if(ui.view.startsWith('proj:'))base.project=ui.view.slice(5);
+    if(ui.view==='pdia')base.focus_day=today();
+    if(ui.view==='psemana')base.focus_week=weekKey();
     if(ui.view.startsWith('ritmo:'))base.rhythm=ui.view.slice(6);
     if(p.done){base.status='concluida';base.completed_at=new Date().toISOString()}
     const t=newTask(base);Store.put(t);made.push(t.id);
@@ -833,6 +848,14 @@ function groups(){
   const lateF=x=>(x.planned_date&&x.planned_date<t)||(x.deadline&&x.deadline<t);
   switch(ui.view.startsWith('proj:')?'proj':ui.view.startsWith('ritmo:')?'ritmo':ui.view){
     case 'inbox':return [{items:open.filter(isInbox)}];
+    case 'pdia':{const t0=today();
+      return [{title:'Prioridades de hoje',items:open.filter(inDay)},
+        {title:'Ficaram de dias anteriores',warn:true,items:open.filter(x=>x.focus_day&&x.focus_day<t0)},
+        {title:'Concluídas hoje',items:all.filter(x=>isDone(x)&&inDay(x))}];}
+    case 'psemana':{const wk=weekKey();
+      return [{title:'Prioridades desta semana',items:open.filter(inWeek)},
+        {title:'Ficaram da semana passada',warn:true,items:open.filter(x=>x.focus_week&&x.focus_week<wk)},
+        {title:'Concluídas nesta semana',items:all.filter(x=>isDone(x)&&inWeek(x))}];}
     case 'revisar':{const r=open.filter(toReview).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
       return [{title:'Revisadas pelo Claude',items:r.filter(t=>t.ai.by==='claude')},{title:'Preenchidas automaticamente',items:r.filter(t=>t.ai.by!=='claude')}];}
     case 'hoje':{
@@ -884,6 +907,9 @@ function renderSide(){
     <nav class="nav">
       ${item('inbox','Caixa de entrada',svg('inbox','ico'),b.inbox.length||'')}
       ${item('revisar','A revisar',svg('sublist','ico'),Store.all().filter(toReview).length||'')}
+      <div class="nav-label">Prioridades</div>
+      ${item('pdia','Prioridades do dia',svg('star','ico'),b.open.filter(inDay).length||'')}
+      ${item('psemana','Prioridades da semana',svg('star','ico'),b.open.filter(inWeek).length||'')}
       ${item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')}
       ${item('semana','Semana',svg('week','ico'),b.week.length||'')}
       ${item('todas','Todas as notas',svg('notes','ico'),b.open.length)}
@@ -912,7 +938,7 @@ function renderSide(){
 /* ---------- Render: main ---------- */
 function headFor(){
   const t=new Date();
-  const map={inbox:['Caixa de entrada','Despeje aqui. Organize depois.'],revisar:['A revisar','Organizadas automaticamente. Confira e confirme.'],hoje:['Hoje',fmtDay(today(),true).replace(/^Hoje$/,'')||`${WDL[t.getDay()]}, ${t.getDate()} de ${MON[t.getMonth()]}`],
+  const map={inbox:['Caixa de entrada','Despeje aqui. Organize depois.'],pdia:['Prioridades do dia','O que precisa sair hoje'],psemana:['Prioridades da semana','O que precisa sair até domingo'],revisar:['A revisar','Organizadas automaticamente. Confira e confirme.'],hoje:['Hoje',fmtDay(today(),true).replace(/^Hoje$/,'')||`${WDL[t.getDay()]}, ${t.getDate()} de ${MON[t.getMonth()]}`],
     semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
   if(ui.view.startsWith('tipo:'))return [TYPES[ui.view.slice(5)],'Abertas, por prioridade'];
   if(ui.view.startsWith('proj:'))return [ui.view.slice(5),'Projeto · abertas, por tipo'];
@@ -936,6 +962,7 @@ function rowHtml(t){
   return `<div class="row ${isDone(t)?'done':''} ${ui.sel===t.id?'sel':''}" data-id="${t.id}">
     <button class="chk" data-act="toggle" aria-label="${isDone(t)?'Reabrir':'Concluir'}: ${esc(t.title)}">${svg('tick')}</button>
     <div class="rbody" data-act="open" tabindex="0" role="button"><div class="rtitle">${esc(t.title)||'<span style="color:var(--faint)">Sem título</span>'}</div><div class="rmeta">${m.join('')}</div></div>
+    ${isDone(t)?'':`<div class="focus" role="group" aria-label="Prioridade"><button data-act="fday" class="${inDay(t)?'on':''}" aria-pressed="${inDay(t)}" title="Prioridade do dia">${svg('star')}Dia</button><button data-act="fweek" class="${inWeek(t)?'on':''}" aria-pressed="${inWeek(t)}" title="Prioridade da semana">${svg('star')}Semana</button></div>`}
     ${ui.view==='revisar'&&toReview(t)?`<button class="btn okbtn" data-act="accept" aria-label="Marcar como revisada: ${esc(t.title)}">✓ Ok</button>`:''}
   </div>`;
 }
@@ -943,7 +970,7 @@ function emptyFor(){
   const any=Store.all().length;
   if(ui.q)return `<div class="empty"><h2>Nada encontrado</h2><p>Nenhuma demanda com “${esc(ui.q)}”.</p></div>`;
   if(!any)return `<div class="empty"><h2>Comece escrevendo uma linha</h2><p>Escreva qualquer coisa no campo acima e aperte Enter. Não precisa escolher categoria, prazo nem prioridade agora.</p><p>Pode colar uma lista inteira do seu bloco de notas: cada linha vira uma demanda.</p></div>`;
-  const msg={revisar:'Tudo revisado. As demandas organizadas automaticamente aparecem aqui até você confirmar.',inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
+  const msg={pdia:'Nenhuma prioridade para hoje. Toque em “Dia” nos cards das demandas que precisam sair hoje.',psemana:'Nenhuma prioridade para a semana. Toque em “Semana” nos cards das demandas que precisam sair nesta semana.',revisar:'Tudo revisado. As demandas organizadas automaticamente aparecem aqui até você confirmar.',inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
   return `<div class="empty"><p>${msg[ui.view]||'Nenhuma demanda aberta deste tipo.'}</p></div>`;
 }
 function renderList(){
@@ -1217,6 +1244,7 @@ function renderDetail(){
         :aiState==='on'&&!isDone(t)&&(!t.type||!t.priority||!t.deadline)?'<div class="aibar"><span>Faltam campos nesta demanda.</span><button data-dact="aiorg">✦ Organizar</button></div>':''}
       <textarea id="d-title" class="dtitle" rows="1" data-f="title" placeholder="Título da demanda" aria-label="Título">${esc(t.title)}</textarea>
       ${seg('status',Object.entries(STATUS),t.status)}
+      <div class="focus big" role="group" aria-label="Prioridade"><button data-dact="fday" class="${inDay(t)?'on':''}" aria-pressed="${inDay(t)}">${svg('star')}Prioridade do dia</button><button data-dact="fweek" class="${inWeek(t)?'on':''}" aria-pressed="${inWeek(t)}">${svg('star')}Prioridade da semana</button></div>
       <div class="fld"><span class="flabel">Tipo${sg('type')}</span>${seg('type',[['E','<span class="dot dE"></span>Estratégico'],['O','<span class="dot dO"></span>Operacional'],['A','<span class="dot dA"></span>Analítico'],['C','<span class="dot dC"></span>Conversas']],t.type)}</div>
       <div class="fld"><span class="flabel">Prioridade${sg('priority')}</span>${seg('priority',[[1,'P1 · Agora'],[2,'P2 · Semana'],[3,'P3 · Espera']],t.priority)}<small>Impacto no setor × urgência real</small></div>
       <div class="dates">
@@ -1278,6 +1306,8 @@ main.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;
   const act=el.dataset.act;const id=el.dataset.id||(el.closest('[data-id]')||{}).dataset?.id;
   if(act==='toggle')return toggleDone(id);
+  if(act==='fday'){const t=Store.get(id);update(id,{focus_day:inDay(t)?null:today()},{detail:ui.sel===id});return}
+  if(act==='fweek'){const t=Store.get(id);update(id,{focus_week:inWeek(t)?null:weekKey()},{detail:ui.sel===id});return}
   if(act==='accept'){update(id,{ai:null},{keepAi:true,detail:ui.sel===id});return toast('Revisada')}
   if(act==='acceptAll'){const list=Store.all().filter(toReview).map(t=>({id:t.id,ai:t.ai,ai_review:t.ai_review}));
     list.forEach(x=>Store.put(Object.assign({},Store.get(x.id),{ai:null,ai_review:null})));renderAll();
@@ -1401,6 +1431,8 @@ det.addEventListener('click',e=>{
     case 'del':ui.confirmDel=true;return renderDetail();
     case 'delcancel':ui.confirmDel=false;return renderDetail();
     case 'delok':return removeTask(t.id);
+    case 'fday':return update(t.id,{focus_day:inDay(t)?null:today()},{detail:true});
+    case 'fweek':return update(t.id,{focus_week:inWeek(t)?null:weekKey()},{detail:true});
     case 'aiundo':undoAI(t.id);return renderAll();
     case 'aiaccept':return update(t.id,{ai:null},{detail:true,keepAi:true});
     case 'aiorg':return classify([t.id],true);
