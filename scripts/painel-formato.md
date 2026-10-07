@@ -18,6 +18,12 @@ Textos aceitam só `**negrito**` e `[rótulo](https://link)`. Níveis: `crit` (v
     "candidatos": [{ "nome": "Vilton Soares", "texto": "Meta de 150 mil, reel em [28,8 mil](https://www.instagram.com/...)." }],
     "nota": "Quem está na foto de abertura e provas dos virais."
   },
+  "plano": {
+    "meta": "Para chegar a **65% (sênior)** faltam **3 destravamentos** até dia 31.",
+    "apostar": [{ "nome": "Vilton Soares", "texto": "Motivos com números: melhor vídeo em % da meta, dias que restam da janela de 45 dias, frequência de postagem.", "acao": "→ Ação concreta do mentor nesta semana (não é mensagem)." }],
+    "nao_apostar": [{ "nome": "Josi Falco", "texto": "Por que não vale gastar energia este mês, em uma linha." }],
+    "fecho": "Se esses 3 destravarem, a carteira vai de **43%** para **86%**."
+  },
   "atencao": [{
     "nivel": "crit", "selo": "Crítico", "nome": "Josi Falco",
     "texto": "Situação com números.", "acao": "→ O que fazer hoje.",
@@ -36,3 +42,7 @@ Textos aceitam só `**negrito**` e `[rótulo](https://link)`. Níveis: `crit` (v
   "rodape": ["Horário da leitura, fontes lidas e o que falhou."]
 }
 ```
+
+Notas sobre a tabela `ativos`: a tela mostra as colunas Cliente, Produto · etapa, Seguidores, Views (média 30 dias), Melhor reel da semana, Último post e WhatsApp. `seguidores_sub` leva a variação da semana (ou "desde ontem" enquanto não houver 7 dias de leitura). `dias_sem_postar` vai só com o número; a tela escreve "há N dias". `var7` não é mais exibido. Mande os ativos já ordenados por urgência (vermelho, depois amarelo, depois o resto) e a legenda da tabela em `notas`.
+
+`plano` é opcional. Quando vier, a tela mostra a seção "Plano de ação" logo depois da Carteira; nesse caso não mande `carteira.candidatos`.

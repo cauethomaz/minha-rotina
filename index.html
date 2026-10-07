@@ -366,6 +366,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .pmarks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .pmarks div{background:var(--panel2);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--muted)}
 .pmarks b{display:block;color:var(--fg)}
+.pmeta{margin:0 0 4px;font-size:14.5px}
+.psub{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
 .pcand{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13.5px}
 .plist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .pi{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:9px;background:var(--panel2);border-left:4px solid var(--line)}
@@ -376,7 +378,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .psug p{margin:0;flex:1 1 240px;min-width:0;font-size:13.5px}
 .psug .flabel{display:block;margin-bottom:2px}
 .pactions{margin-top:8px}
-.ptable{border-collapse:collapse;width:100%;min-width:860px;font-size:13.5px}
+.ptable{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
 .ptable th,.ptable td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .ptable th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .ptable .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1243,11 +1245,13 @@ function renderMentorados(main,banner){
   const d=Painel.data;
   const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${d?`Painel CORE · leitura de ${esc(d.titulo_data||d.data||'')}${Painel.updated?' · atualizado '+fmtStamp(Painel.updated):''}`:'Painel CORE'}</div></div></header>${banner}`;
   if(!d){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O painel ainda não chegou</h2><p>${Painel.loading?'Carregando…':'Ele aparece aqui depois da próxima leitura diária da rotina “Dashboard CORE”, às 9h.'}</p></div></div>`;return}
-  const r=d.resumo||{},c=d.carteira;
-  const tbl=(d.ativos||[]).map(a=>`<tr><td class="cli">${esc(a.nome)}<span class="sub">${esc(a.sub||'')}</span></td><td>${esc(a.produto||'')}</td><td>${esc(a.etapa||'')}${a.etapa_selo?` <span class="pselo ${esc(a.etapa_selo.nivel||'warn')}">${esc(a.etapa_selo.txt)}</span>`:''}</td>
-    <td class="r">${esc(a.seguidores||'—')}<span class="sub">${esc(a.seguidores_sub||'')}</span></td><td class="r">${esc(a.var7||'—')}</td><td class="r">${esc(a.media30||'—')}${a.media30_sub?`<span class="sub">${esc(a.media30_sub)}</span>`:''}</td>
+  const r=d.resumo||{},c=d.carteira,pl=d.plano;
+  // "Último post": a rotina manda só o número de dias; aqui vira "há N dias"
+  const ultimo=v=>v==null||v===''?'—':/^\d+$/.test(String(v))?(+v===0?'hoje':+v===1?'há 1 dia':`há ${v} dias`):String(v);
+  const tbl=(d.ativos||[]).map(a=>`<tr><td class="cli">${esc(a.nome)}<span class="sub">${esc(a.sub||'')}</span></td><td>${esc(a.produto||'')}<span class="sub">${esc(a.etapa||'')}${a.etapa_selo?` <span class="pselo ${esc(a.etapa_selo.nivel||'warn')}">${esc(a.etapa_selo.txt)}</span>`:''}</span></td>
+    <td class="r">${esc(a.seguidores||'—')}<span class="sub">${esc(a.seguidores_sub||'')}</span></td><td class="r">${esc(a.media30||'—')}${a.media30_sub?`<span class="sub">${esc(a.media30_sub)}</span>`:''}</td>
     <td class="r">${a.maior7_url&&/^https?:/.test(a.maior7_url)?`<a href="${esc(a.maior7_url)}" target="_blank" rel="noopener">${esc(a.maior7||'')}</a>`:esc(a.maior7||'—')}</td>
-    <td class="r">${a.dias_nivel?`<span class="pselo ${esc(a.dias_nivel)}">${esc(a.dias_sem_postar)}</span>`:esc(a.dias_sem_postar??'—')}</td><td>${a.whatsapp?`<span class="pselo ${esc(a.whatsapp_nivel||'mute')}">${esc(a.whatsapp)}</span>`:'—'}</td></tr>`).join('');
+    <td class="r">${a.dias_nivel?`<span class="pselo ${esc(a.dias_nivel)}">${esc(ultimo(a.dias_sem_postar))}</span>`:esc(ultimo(a.dias_sem_postar))}</td><td>${a.whatsapp?`<span class="pselo ${esc(a.whatsapp_nivel||'mute')}">${esc(a.whatsapp)}</span>`:'—'}</td></tr>`).join('');
   main.innerHTML=head+`<div class="scroll"><div class="painel">
     <section class="card wide"><h2>Hoje: ${(d.top3||[]).length} coisas pra fazer</h2><ol class="top3">${(d.top3||[]).map((x,i)=>`<li><span class="num">${i+1}</span><div><strong>${esc(x.nome)}</strong><p>${md(x.texto)}</p></div><button class="btn" data-act="mkTask" data-list="top3" data-i="${i}">+ Demanda</button></li>`).join('')}</ol>
       <div class="presumo">${r.criticos!=null?`<span class="pselo crit">${r.criticos} críticos</span>`:''}${r.atencao!=null?`<span class="pselo warn">${r.atencao} em atenção</span>`:''}${r.oportunidades!=null?`<span class="pselo ok">${r.oportunidades} oportunidades</span>`:''}${r.ativos!=null?`<span class="pselo mute">${r.ativos} ativos</span>`:''}</div>
@@ -1257,10 +1261,14 @@ function renderMentorados(main,banner){
       <div class="pmarks">${(c.marcas||[]).map(m=>`<div><b>${esc(m.nome)}</b>${esc(m.status||'')}</div>`).join('')}</div>
       ${(c.candidatos||[]).length?`<p class="meta-line" style="margin:12px 0 6px">Candidatos mais prováveis até o fim do mês:</p><ul class="pcand">${c.candidatos.map(x=>`<li><b>${esc(x.nome)}:</b> ${md(x.texto)}</li>`).join('')}</ul>`:''}
       ${c.nota?`<p class="meta-line" style="margin:10px 0 0">${md(c.nota)}</p>`:''}</section>`:''}
+    ${pl?`<section class="card wide"><h2>Plano de ação</h2>${pl.meta?`<p class="pmeta">${md(pl.meta)}</p>`:''}
+      ${(pl.apostar||[]).length?`<h3 class="psub">Onde apostar</h3><ul class="plist">${pl.apostar.map((x,i)=>`<li class="pi ok"><span class="pselo ok">${i+1}º</span><div class="pbody"><strong>${esc(x.nome)}</strong><p>${md(x.texto)}</p>${x.acao?`<p class="pacao">${md(x.acao)}</p>`:''}<div class="pactions"><button class="btn" data-act="mkTask" data-list="plano" data-i="${i}">+ Criar demanda</button></div></div></li>`).join('')}</ul>`:''}
+      ${(pl.nao_apostar||[]).length?`<h3 class="psub">Onde não vale apostar agora</h3><ul class="pcand">${pl.nao_apostar.map(x=>`<li><b>${esc(x.nome)}:</b> ${md(x.texto)}</li>`).join('')}</ul>`:''}
+      ${pl.fecho?`<p class="pmeta" style="margin-top:12px">${md(pl.fecho)}</p>`:''}</section>`:''}
     <section class="card wide"><h2>Atenção · clientes em risco</h2><ul class="plist">${(d.atencao||[]).map((x,i)=>painelItem(x,'atencao',i)).join('')||'<p class="meta-line">Nenhum cliente em risco.</p>'}</ul></section>
     <section class="card wide"><h2>Oportunidades · o que aproveitar hoje</h2><ul class="plist">${(d.oportunidades||[]).map((x,i)=>painelItem(x,'oportunidades',i)).join('')||'<p class="meta-line">Nenhuma oportunidade hoje.</p>'}</ul></section>
     ${(d.estrelas||[]).length?`<section class="card wide"><h2>Estrelas · clientes CLUB</h2><ul class="plist">${d.estrelas.map((x,i)=>painelItem(Object.assign({selo:'CLUB'},x),'estrelas',i)).join('')}</ul></section>`:''}
-    <section class="card wide"><h2>Todos os ativos · ${(d.ativos||[]).length}</h2><div class="tbl-wrap"><table class="ptable"><thead><tr><th>Cliente</th><th>Produto</th><th>Etapa</th><th class="r">Seguidores</th><th class="r">Var. 7 dias</th><th class="r">Média 30 d</th><th class="r">Maior reel 7 d</th><th class="r">Dias sem postar</th><th>WhatsApp</th></tr></thead><tbody>${tbl}</tbody></table></div>
+    <section class="card wide"><h2>Todos os ativos · ${(d.ativos||[]).length}</h2><div class="tbl-wrap"><table class="ptable"><thead><tr><th>Cliente</th><th>Produto · etapa</th><th class="r">Seguidores</th><th class="r">Views (média 30 dias)</th><th class="r">Melhor reel da semana</th><th class="r">Último post</th><th>WhatsApp</th></tr></thead><tbody>${tbl}</tbody></table></div>
       ${(d.notas||[]).map(n=>`<p class="meta-line" style="margin:10px 0 0">${md(n)}</p>`).join('')}</section>
     ${(d.rodape||[]).length?`<section class="card wide pfoot">${d.rodape.map(n=>`<p>${md(n)}</p>`).join('')}</section>`:''}
   </div></div>`;
@@ -1396,7 +1404,7 @@ main.addEventListener('click',e=>{
     const done=()=>{el.textContent='Copiado';setTimeout(()=>el.textContent='Copiar',1600)};
     const sel=()=>{const r=document.createRange();r.selectNodeContents(t);const s_=getSelection();s_.removeAllRanges();s_.addRange(r);el.textContent='Selecionado'};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,sel);else sel();return}
-  if(act==='mkTask'){const d=Painel.data;const it=d&&(d[el.dataset.list]||[])[+el.dataset.i];if(!it)return;
+  if(act==='mkTask'){const d=Painel.data;const it=d&&((el.dataset.list==='plano'?(d.plano||{}).apostar:d[el.dataset.list])||[])[+el.dataset.i];if(!it)return;
     const plain=v=>String(v||'').replace(/\*\*/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/^→\s*/,'').trim();
     const acao=plain(it.acao)||plain(it.texto).split('. ')[0];
     const proj=Ctx.data.projects.find(p=>/core/i.test(p))||'';
