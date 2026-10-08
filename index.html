@@ -74,7 +74,9 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .nav-sec{display:flex;flex-direction:column;gap:2px}
 @media (min-width:821px){.nav-sec.collapsed{display:none}}
 .nav button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;text-align:left;color:var(--fg)}
-.nav button:hover{background:var(--panel2)}
+.nav button:hover,.nav a.navlink:hover{background:var(--panel2)}
+.nav a.navlink{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:var(--fg);text-decoration:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .nav button.on{background:var(--accent-soft)}
 .nav button.on .ico{color:var(--accent)}
 .nav .ico{width:18px;height:18px;color:var(--muted);flex:none}
@@ -420,7 +422,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   .brand,.nav .nav-label,.side-foot{display:none}
   .nav{flex-direction:row;gap:4px}
   .nav-sec{display:contents}
-  .nav button{white-space:nowrap;padding:6px 10px}
+  .nav button,.nav a.navlink{white-space:nowrap;padding:6px 10px}
   .nav .cnt{display:none}
   .app .detail,.app.overlay .detail{position:fixed;inset:0;width:auto;z-index:30;border:0}
   .dtop{padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px;border-bottom:1px solid var(--line)}
@@ -496,6 +498,7 @@ const I={
   person:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 21c1-4.5 4.3-6.5 8-6.5s7 2 8 6.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
   star:'<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
   gear:'<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  film:'<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m10 9.2 5 2.8-5 2.8z" fill="currentColor"/>',
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>'
 };
 const svg=(n,c='')=>`<svg viewBox="0 0 24 24" class="${c}" aria-hidden="true">${I[n]}</svg>`;
@@ -957,6 +960,8 @@ function renderSide(){
   const b=buckets();
   const sec=(key,label,html)=>{const c=ui.collapsed.includes(key);
     return `<button class="nav-label" data-sec="${key}" aria-expanded="${!c}">${label}<svg viewBox="0 0 24 24" class="chev" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="nav-sec${c?' collapsed':''}">${html}</div>`};
+  // Atalho externo (abre em nova aba), no mesmo estilo dos itens
+  const link=(href,label,icon)=>`<a class="navlink" href="${href}" target="_blank" rel="noopener">${icon}<span class="lbl">${label}</span><span class="cnt" aria-hidden="true">↗</span><span class="sr">(abre em nova aba)</span></a>`;
   const item=(id,label,icon,n)=>`<button data-view="${id}" class="${ui.view===id?'on':''}" ${ui.view===id?'aria-current="page"':''}>${icon}<span class="lbl">${label}</span><span class="cnt">${n==null?'':n}</span></button>`;
   const lev=leverage(b.open);const wt=weekTime(iso(startOfWeek(new Date())));const goal=+Ctx.data.goalE||30;
   const eShare=wt.typed?Math.round(wt.m.E/wt.typed*100):null;
@@ -970,7 +975,7 @@ function renderSide(){
       ${sec('tipos','Tipos',TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join(''))}
       ${sec('ritmos','Ritmos',Object.keys(RHYTHM).map(k=>item('ritmo:'+k,RHYTHM[k],svg('clock','ico'),b.open.filter(t=>rhythmOf(t)===k).length||'')).join(''))}
       ${Ctx.data.projects.length?sec('projetos','Projetos',Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')):''}
-      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.data?(Painel.data.resumo&&Painel.data.resumo.criticos)||'':'')+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
+      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.data?(Painel.data.resumo&&Painel.data.resumo.criticos)||'':'')+link('https://claude.ai/artifact/489pkWS6KxD461xWpd1UvG','Conteúdos',svg('film','ico'))+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
     </nav>
     <div class="side-foot">
       <button class="lev-mini" data-view="alavancagem">
