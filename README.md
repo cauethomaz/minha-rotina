@@ -6,6 +6,10 @@ Sistema pessoal de organização de demandas. Simples na superfície, completo n
 - **Calendário:** semana e mês, com os mesmos dados das notas. Os compromissos fixos e o expediente aparecem no calendário.
 - **Alavancagem:** quanto do seu tempo foi para estratégico, operacional e analítico, comparado com a meta, e a evolução semana a semana.
 - **Contexto:** pessoas, projetos, o que é P1, expediente e compromissos fixos.
+- **Mentorados:** painel diário CORE, gravado pela rotina "Dashboard CORE".
+- **Conteúdos:** Esteira de Conteúdo (aprovar roteiros, gravar, revisar vídeo, fila de postagem), abastecida pela rotina "Roteiros da semana".
+
+Linhas especiais da tabela `tasks` (fora das listas de demandas): `painel:core`, `roteiro:<id>` e `esteira:config`.
 
 Site estático (`index.html`) + Supabase (login e banco). A revisão pelo Claude roda no seu Mac, usando o seu plano, sem chave de API.
 
@@ -55,4 +59,6 @@ Site estático (`index.html`) + Supabase (login e banco). A revisão pelo Claude
 | `config.js` | URL e anon key do Supabase (públicas) |
 | `supabase/schema.sql` | Tabelas e regras de acesso |
 | `scripts/revisar.mjs` | Revisão pelo Claude, roda no seu Mac |
+| `scripts/publicar-painel.mjs` | Grava o painel dos mentorados (rotina Dashboard CORE) |
+| `scripts/esteira.mjs` | Lê e grava a Esteira de Conteúdo (rotina Roteiros da semana) |
 | `backup/` | Backup dos dados (não vai para o GitHub) |
