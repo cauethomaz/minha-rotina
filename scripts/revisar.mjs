@@ -55,7 +55,7 @@ async function loadAll() {
   const st = (await api('settings?select=user_id,data&limit=1'))[0];
   const uid = ENV.USER_ID || (st && st.user_id);
   const rows = await api(`tasks?select=id,data${uid ? `&user_id=eq.${uid}` : ''}`);
-  return { ctx: (st && st.data) || {}, tasks: rows.filter(r => !r.id.startsWith('painel:')).map(r => ({ ...r.data, id: r.id })) };
+  return { ctx: (st && st.data) || {}, tasks: rows.filter(r => !r.id.includes(':')).map(r => ({ ...r.data, id: r.id })) };
 }
 
 function agenda(ctx, tasks) {
