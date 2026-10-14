@@ -14,7 +14,7 @@ if ! command -v brew >/dev/null 2>&1; then
 fi
 
 echo "2/5 ffmpeg e whisper.cpp"
-brew install ffmpeg whisper-cpp
+brew install ffmpeg-full whisper-cpp   # ffmpeg-full tem libass (legendas)
 
 echo "3/5 Modelo de transcrição (large-v3-turbo, ~550 MB)"
 M="$BASE/modelos/ggml-large-v3-turbo-q5_0.bin"
@@ -30,6 +30,6 @@ echo "5/5 Python (numpy para achar os pontos de corte)"
 "$BASE/venv/bin/pip" install -q --upgrade pip numpy
 
 echo
-ffmpeg -hide_banner -filters 2>/dev/null | grep -q " ass " && echo "ffmpeg com legendas (libass): ok" || echo "ATENÇÃO: ffmpeg sem libass"
+"$(brew --prefix ffmpeg-full)/bin/ffmpeg" -hide_banner -filters 2>/dev/null | grep -q " ass " && echo "ffmpeg com legendas (libass): ok" || echo "ATENÇÃO: ffmpeg sem libass"
 command -v whisper-cli >/dev/null && echo "whisper-cli: ok"
 echo "INSTALACAO_OK — pode avisar o Claude."
