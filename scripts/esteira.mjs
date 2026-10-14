@@ -4,6 +4,7 @@
 //
 //   node scripts/esteira.mjs contexto              → JSON com config, guia, ajustes pedidos (texto completo) e roteiros existentes (resumo)
 //   node scripts/esteira.mjs decisoes              → tudo que o Cauê decidiu (aprovou, ajustou, descartou, com motivos), para a rotina aprender
+//   node scripts/esteira.mjs fila-edicao           → roteiros que podem receber vídeo (aprovado/gravado, com texto completo) e pedidos de ajuste na edição
 //   node scripts/esteira.mjs listar [status]       → resumo dos roteiros (opcional: só um status)
 //   node scripts/esteira.mjs mostrar <id>          → um roteiro completo
 //   node scripts/esteira.mjs gravar <arquivo.json> → cria/atualiza: {"roteiros":[{id,...campos}], "config":{geral?,estilo?,apresentacao?}}
@@ -94,6 +95,14 @@ try {
       aprovados: decididos.filter(r => APROV.includes(r.status)).map(item),
       descartados: decididos.filter(r => r.status === 'descartado').map(item),
       ajustados: decididos.filter(r => (r.historico || []).some(h => /ajuste/.test(h.acao))).map(item),
+    }, null, 2));
+  } else if (cmd === 'fila-edicao') {
+    const rs = await todos();
+    const pick = r => ({ id: r.id, status: r.status, headline: r.headline || r.titulo, roteiro: r.roteiro, brolls: r.brolls || [],
+      videoArquivo: r.videoArquivo || null, versaoEdicao: r.versaoEdicao || 0, nota: r.nota || null });
+    console.log(JSON.stringify({
+      aguardando_video: rs.filter(r => ['aprovado', 'gravado'].includes(r.status)).map(pick),
+      ajustes_de_edicao: rs.filter(r => r.status === 'editando' && r.nota).map(pick),
     }, null, 2));
   } else if (cmd === 'listar') {
     const rs = (await todos()).filter(r => !arg || r.status === arg);

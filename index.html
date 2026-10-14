@@ -1347,7 +1347,10 @@ function drawerRoteiro(){
     ${blocoTxt('Linha de conteúdo',i.linha)}${blocoTxt('Roteiro',i.roteiro,true)}${blocoTxt('Legenda do post',i.legenda,true)}
     ${r?`<div class="cbloco cref"><span class="flabel">Referência modelada</span><div class="inp-row" style="align-items:center;flex-wrap:wrap">${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(r.perfil||'Abrir referência')}</a>`:`<b>${esc(r.perfil||'Referência')}</b>`}${r.views?`<span class="pselo warn">${esc(String(r.views))} views</span>`:''}</div>${r.modelado?`<p class="meta-line" style="margin:4px 0 0">${esc(r.modelado)}</p>`:''}</div>`:''}
     ${Array.isArray(i.fontes)&&i.fontes.length?`<div class="cbloco"><span class="flabel">Fontes para checar</span><ul class="cfontes">${i.fontes.map(f=>`<li>${esc(String(f))}</li>`).join('')}</ul></div>`:''}
-    ${i.agendadoPara?blocoTxt('Horário de postagem',fmtQuando(i.agendadoPara)):''}${i.videoArquivo?blocoTxt('Arquivo do vídeo',i.videoArquivo):''}
+    ${Array.isArray(i.brolls)&&i.brolls.length?`<div class="cbloco"><span class="flabel">B-rolls sugeridos</span><ul class="cfontes">${i.brolls.map(b=>`<li>${esc(b.frase||'')}${b.frase?' → ':''}${b.url&&/^https:\/\//.test(b.url)?`<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.descricao||'abrir')}</a>`:esc(b.descricao||'')}</li>`).join('')}</ul></div>`:''}
+    ${i.videoArquivo?`<div class="cbloco cref"><span class="flabel">Vídeo editado${i.versaoEdicao?' · versão '+esc(String(i.versaoEdicao)):''}</span><b>${esc(String(i.videoArquivo).split('/').pop())}</b><span class="meta-line">No iPhone: Arquivos → iCloud Drive → Esteira de Conteúdo → Prontos.</span></div>`:''}
+    ${i.edicaoResumo?blocoTxt('Notas da edição',i.edicaoResumo):''}
+    ${i.agendadoPara?blocoTxt('Horário de postagem',fmtQuando(i.agendadoPara)):''}
     ${fbBox}<div class="dfoot cacoes">${acoes}</div></div>`;
 }
 function drawerCfg(){
@@ -1711,9 +1714,9 @@ function routeSpecial(row){
 /* ---------- Esteira de Conteúdo ---------- */
 const ETAPAS=[
   {id:'aprovar',nome:'Para aprovar',status:['ideia','ajuste'],dica:'Roteiros novos. Leia, aprove, peça ajuste ou descarte.'},
-  {id:'gravar',nome:'Para gravar',status:['aprovado'],dica:'Aprovados esperando gravação. Depois de gravar, jogue os vídeos na pasta Brutos e marque “Gravei”.'},
-  {id:'edicao',nome:'Em edição',status:['gravado','editando'],dica:'Vídeos em edição no seu template.'},
-  {id:'revisar',nome:'Revisar vídeo',status:['revisao'],dica:'Edições prontas para você assistir e aprovar.'},
+  {id:'gravar',nome:'Para gravar',status:['aprovado'],dica:'Aprovados esperando gravação. Salve cada vídeo em iCloud Drive → Esteira de Conteúdo → Brutos. A edição começa sozinha; marcar “Gravei” é opcional.'},
+  {id:'edicao',nome:'Em edição',status:['gravado','editando'],dica:'Vídeos na fila de edição automática (padrão AT_V01). Quando ficarem prontos, vão para Revisar vídeo.'},
+  {id:'revisar',nome:'Revisar vídeo',status:['revisao'],dica:'Edições prontas. Assista em Arquivos → iCloud Drive → Esteira de Conteúdo → Prontos e aprove ou peça ajuste aqui.'},
   {id:'fila',nome:'Fila de postagem',status:['pronto','agendado'],dica:'Aprovados aguardando o horário. Na hora, o post é preparado e espera o seu ok.'},
   {id:'postados',nome:'Postados',status:['postado'],dica:'Histórico do que já foi ao ar.'},
   {id:'descartados',nome:'Descartados',status:['descartado'],dica:'Roteiros que você descartou.'}];
