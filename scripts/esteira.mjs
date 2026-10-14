@@ -3,6 +3,7 @@
 // Roteiros ficam na tabela tasks com id "roteiro:<id>"; ajustes e guia de estilo em "esteira:config".
 //
 //   node scripts/esteira.mjs contexto              → JSON com config, guia, ajustes pedidos (texto completo) e roteiros existentes (resumo)
+//   node scripts/esteira.mjs decisoes              → tudo que o Cauê decidiu (aprovou, ajustou, descartou, com motivos), para a rotina aprender
 //   node scripts/esteira.mjs listar [status]       → resumo dos roteiros (opcional: só um status)
 //   node scripts/esteira.mjs mostrar <id>          → um roteiro completo
 //   node scripts/esteira.mjs gravar <arquivo.json> → cria/atualiza: {"roteiros":[{id,...campos}], "config":{geral?,estilo?,apresentacao?}}
@@ -28,7 +29,8 @@ const headers = { apikey: KEY, 'Content-Type': 'application/json', ...(KEY.start
 async function api(p, opt = {}) {
   const r = await fetch(`${BASE}/rest/v1/${p}`, { ...opt, headers: { ...headers, ...(opt.headers || {}) } });
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-  return r.status === 201 || r.status === 204 ? null : r.json();
+  const txt = await r.text(); // upsert de registro existente responde 200 sem corpo
+  return txt ? JSON.parse(txt) : null;
 }
 let uidCache;
 async function uid() {
@@ -67,9 +69,31 @@ try {
     const [cfg, rs] = await Promise.all([config(), todos()]);
     console.log(JSON.stringify({
       config: cfg.geral || {}, apresentacao: cfg.apresentacao || '', guia: (cfg.estilo && cfg.estilo.guia) || '',
+      aprendizado: cfg.aprendizado || {},
       ajustes: rs.filter(r => r.status === 'ajuste'),
       edicao_pedida: rs.filter(r => r.status === 'editando' && r.nota).map(resumo),
       existentes: rs.map(resumo),
+    }, null, 2));
+  } else if (cmd === 'decisoes') {
+    const [cfg, rs] = await Promise.all([config(), todos()]);
+    const APROV = ['aprovado', 'gravado', 'editando', 'revisao', 'pronto', 'agendado', 'postado'];
+    const decididos = rs.filter(r => r.status !== 'ideia' || r.feedback || (r.historico || []).length);
+    const item = r => ({
+      id: r.id, status: r.status, headline: r.headline || r.titulo, linha: r.linha, semana: r.semana,
+      abertura: String(r.roteiro || '').split('\n').filter(Boolean).slice(0, 2).join(' ').slice(0, 320),
+      fechamento: (String(r.roteiro || '').split('\n').filter(Boolean).filter(l => !/me segue e comenta|Eu sou Cauê/i.test(l)).slice(-1)[0] || '').slice(0, 200),
+      palavras: String(r.roteiro || '').split(/\s+/).filter(Boolean).length,
+      referencia: r.referencia ? { perfil: r.referencia.perfil, views: r.referencia.views, modelado: r.referencia.modelado } : null,
+      feedback: r.feedback || null, ajustes_pedidos: (r.historico || []).filter(h => /ajuste/.test(h.acao)).map(h => h.nota),
+      reescrito: !!r.reescritoEm,
+    });
+    console.log(JSON.stringify({
+      aprendizado_atual: cfg.aprendizado || {},
+      totais: { aprovados: rs.filter(r => APROV.includes(r.status)).length, descartados: rs.filter(r => r.status === 'descartado').length,
+        com_ajuste: rs.filter(r => (r.historico || []).some(h => /ajuste/.test(h.acao))).length, sem_decisao: rs.filter(r => r.status === 'ideia' && !r.historico).length },
+      aprovados: decididos.filter(r => APROV.includes(r.status)).map(item),
+      descartados: decididos.filter(r => r.status === 'descartado').map(item),
+      ajustados: decididos.filter(r => (r.historico || []).some(h => /ajuste/.test(h.acao))).map(item),
     }, null, 2));
   } else if (cmd === 'listar') {
     const rs = (await todos()).filter(r => !arg || r.status === arg);
