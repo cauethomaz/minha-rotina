@@ -7,9 +7,10 @@ Sistema pessoal de organização de demandas. Simples na superfície, completo n
 - **Alavancagem:** quanto do seu tempo foi para estratégico, operacional e analítico, comparado com a meta, e a evolução semana a semana.
 - **Contexto:** pessoas, projetos, o que é P1, expediente e compromissos fixos.
 - **Mentorados:** painel diário CORE, gravado pela rotina "Dashboard CORE".
+- **Produção:** prazos e pontos de atenção da carteira, a partir da exportação diária do Controle de Produção (rotina "Produção: exportar e atualizar").
 - **Conteúdos:** Esteira de Conteúdo (aprovar roteiros, gravar, revisar vídeo, fila de postagem), abastecida pela rotina "Roteiros da semana".
 
-Linhas especiais da tabela `tasks` (fora das listas de demandas): `painel:core`, `roteiro:<id>` e `esteira:config`.
+Linhas especiais da tabela `tasks` (fora das listas de demandas): `painel:core`, `painel:producao`, `painel:producao-hist`, `roteiro:<id>` e `esteira:config`.
 
 Site estático (`index.html`) + Supabase (login e banco). A revisão pelo Claude roda no seu Mac, usando o seu plano, sem chave de API.
 
@@ -61,4 +62,5 @@ Site estático (`index.html`) + Supabase (login e banco). A revisão pelo Claude
 | `scripts/revisar.mjs` | Revisão pelo Claude, roda no seu Mac |
 | `scripts/publicar-painel.mjs` | Grava o painel dos mentorados (rotina Dashboard CORE) |
 | `scripts/esteira.mjs` | Lê e grava a Esteira de Conteúdo (rotina Roteiros da semana) |
+| `scripts/producao.mjs` | Grava a exportação de clientes do Controle de Produção (tela Produção) |
 | `backup/` | Backup dos dados (não vai para o GitHub) |
