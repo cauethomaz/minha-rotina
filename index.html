@@ -415,6 +415,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .pkpi b{font-family:var(--display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
 .pkpi span{font-size:12.5px;color:var(--muted)}
 .pkpi.bad b{color:var(--p1)}
+.pkpi.mentor{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.pdonos{margin-bottom:6px}
+.pdono{padding:4px 8px;min-width:150px}
 .pachados{margin:14px 0 0;padding-left:18px;display:grid;gap:6px;max-width:90ch}
 .ph3{font-family:var(--display);font-size:14px;margin:18px 0 6px}
 .pduas{display:grid;grid-template-columns:1fr 1fr;gap:18px}
@@ -1335,6 +1338,16 @@ const pctf=(a,b)=>b?(a/b*100).toFixed(1).replace('.',',')+'%':'—';
 const normE=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\b(de|da|do|das|dos)\b/g,' ').replace(/s\b/g,'').replace(/\s+/g,' ').trim();
 const levaNum=l=>{const m=String(l||'').match(/(\d+)\s*de\s*(\d+)/);return m?[+m[1],+m[2]]:null};
 const aDefinir=v=>!v||/^a definir$/i.test(v);
+// Quem responde pela etapa atual (padrão por palavra-chave; o Cauê ajusta em "Quem responde por cada etapa")
+const DONOS=[['mentor','Mentor'],['cs','CS e operação'],['copy','Copy'],['edicao','Edição'],['cliente','Cliente']];
+function donoPadrao(e){const t=normE(e);
+  if(!t)return 'cs';
+  if(/mentor|call|acompanhamento|diagnostic|apresentacao|mapa estrategico/.test(t)&&!/cliente|mentorado/.test(t))return 'mentor';
+  if(/cliente|mentorado|aprovacao roteiro|aprovacao edicao/.test(t))return 'cliente';
+  if(/edicao|upload/.test(t))return 'edicao';
+  if(/roteiro/.test(t))return 'copy';
+  return 'cs';}
+const donoEtapa=e=>((Ctx.data.prodDonos||{})[normE(e)])||donoPadrao(e);
 function contar(arr,key){const m=new Map();arr.forEach(x=>{const k=key(x)||'—';m.set(k,(m.get(k)||0)+1)});return [...m].sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0])))}
 function prodCalc(rows,base){
   const dias=z=>Math.round((fromIso(base)-fromIso(z))/864e5);
@@ -1396,6 +1409,23 @@ function sparkVenc(hist){
     <circle cx="${xs[xs.length-1]}" cy="${ys[ys.length-1]}" r="4" fill="var(--p1)"/>${hist.map((h,i)=>`<circle cx="${xs[i]}" cy="${ys[i]}" r="9" fill="transparent"><title>${brData(h.data)}: ${h.vencidos} vencidos de ${h.ativos} ativos</title></circle>`).join('')}
     <text x="${p}" y="${H-6}" font-size="11" fill="var(--muted)">${brData(hist[0].data)}</text><text x="${W-p}" y="${H-6}" font-size="11" fill="var(--muted)" text-anchor="end">${brData(last.data)} · ${last.vencidos}</text></svg>`;
 }
+function cardDonos(R){
+  const v=R.venc.length;if(!v)return '';
+  const por=Object.fromEntries(DONOS.map(([k])=>[k,R.venc.filter(c=>donoEtapa(c.e)===k)]));
+  const mt=por.mentor,semMentor=mt.filter(c=>aDefinir(c.m));
+  const kpi=(n,l,cls)=>`<div class="pkpi ${cls||''}"><b>${n}</b><span>${l}</span></div>`;
+  const outros=DONOS.filter(([k])=>k!=='mentor').map(([k,n])=>kpi(por[k].length,`${n} (${pctf(por[k].length,v)})`)).join('');
+  const porM=contar(mt,c=>c.m),cart=new Map(contar(R.venc,c=>c.m)),etM=contar(mt,c=>c.e);
+  const etapas=[...new Map(R.venc.map(c=>[normE(c.e),c.e||''])).values()].sort((a,b)=>a.localeCompare(b));
+  const nEt=e=>R.venc.filter(c=>normE(c.e)===normE(e)).length;
+  const cfg=etapas.map(e=>`<tr><td>${esc(e||'(sem etapa)')}</td><td class="r">${nEt(e)}</td><td><select class="inp pdono" data-etapa="${esc(normE(e))}">${DONOS.map(([k,n])=>`<option value="${k}" ${donoEtapa(e)===k?'selected':''}>${n}${donoPadrao(e)===k?' (padrão)':''}</option>`).join('')}</select></td></tr>`);
+  return `<section class="card wide"><h2>Com quem está o atraso</h2><p class="meta-line">Pela etapa atual de cada cliente vencido. Mentor é quem precisa agir para a etapa andar.</p>
+    <div class="pkpis pdonos">${kpi(v,'ativos com prazo vencido','bad')}${kpi(mt.length,`com os mentores (${pctf(mt.length,v)})${semMentor.length?` · ${semMentor.length} com mentor “A definir”`:''}`,'mentor')}${outros}</div>
+    <div class="pduas">${tbl([{t:'Mentor'},{t:'Vencidos com ele',r:1},{t:'Vencidos na carteira',r:1}],porM.map(([k,n])=>`<tr><td>${esc(k)}</td><td class="r"><b>${n}</b></td><td class="r">${cart.get(k)||0}</td></tr>`))}
+      ${contTbl(`Etapas desses ${mt.length}`,etM,mt.length)}</div>
+    <details class="panexo"><summary><b>Quem responde por cada etapa</b> <span class="meta-line">(ajuste se alguma etapa estiver no dono errado)</span></summary>${tbl([{t:'Etapa atual'},{t:'Vencidos',r:1},{t:'Responsável'}],cfg)}</details>
+    <details class="panexo"><summary><b>Lista dos ${mt.length} vencidos com os mentores</b></summary>${listaClientes(mt,R,{dias:1})}</details></section>`;
+}
 function renderProducao(main,banner){
   main.dataset.view='producao';
   const D=Producao.data;
@@ -1437,6 +1467,7 @@ function renderProducao(main,banner){
     <section class="card wide">${filtro}
       <div class="pkpis">${kpi(v,`ativos com prazo vencido (${pctf(v,a)} dos ${a} ativos)`,1)}${kpi(R.hoje.length,`vencem hoje, ${brData(D.base)}`)}${kpi(R.prox.length,'vencem nos próximos 7 dias')}${kpi(R.pcVenc.length,'pausados e churn com prazo vencido')}${kpi(R.semPrazo.total,`sem prazo (${R.semTudo.length} ativos sem etapa, mentor e prazo)`)}</div>
       <ul class="pachados">${prodAchados(R).map(x=>`<li>${x}</li>`).join('')}</ul></section>
+    ${cardDonos(R)}
     ${!ui.prodFiltro?`<section class="card wide"><h2>Evolução dos ativos vencidos</h2>${sparkVenc(Producao.hist)}</section>`:''}
     <section class="card wide"><h2>Prazos</h2>
       <h3 class="ph3">Tempo de atraso dos ${v} ativos vencidos</h3>${tbl([{t:'Faixa'},{t:''},{t:'Clientes',r:1},{t:'%',r:1}],R.fx.map(x=>`<tr><td>${x.f}</td><td style="width:45%"><span class="pbarra" style="width:${x.n/maxF*100}%"></span></td><td class="r">${x.n}</td><td class="r">${pctf(x.n,v)}</td></tr>`))}
@@ -1730,6 +1761,7 @@ function ctxField(el){
 }
 main.addEventListener('change',e=>{
   if(e.target.id==='prod-filtro'){ui.prodFiltro=e.target.value;return renderMain()}
+  if(e.target.matches('.pdono')){const d=Ctx.data.prodDonos=Ctx.data.prodDonos||{},k=e.target.dataset.etapa;if(e.target.value===donoPadrao(k))delete d[k];else d[k]=e.target.value;Ctx.save();return renderMain()}
   if(e.target.id==='ctx-import'){const f=e.target.files&&e.target.files[0];if(f)importBackup(f);return}
   const r=ctxField(e.target);if(r===null)return;Ctx.save();if(r){ui.ctxForce=true;renderMain();renderSide()}
 });
