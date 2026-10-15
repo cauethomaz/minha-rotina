@@ -30,6 +30,10 @@ Textos aceitam só `**negrito**` e `[rótulo](https://link)`. Níveis: `crit` (v
     "sugestao": "Texto pronto para copiar e mandar (opcional)."
   }],
   "oportunidades": [{ "selo": "Semana forte", "nome": "Vilton Soares", "texto": "...", "acao": "→ ...", "sugestao": "..." }],
+  "contato": [{
+    "nome": "Vilton Soares", "sub": "@viltonsoares", "ultima_minha": "2026-10-06", "ultima_cliente": "2026-10-12",
+    "texto": "Último assunto do grupo em uma frase (opcional).", "sugestao": "Mensagem pronta para retomar o contato (opcional)."
+  }],
   "estrelas": [{ "nome": "Cliente CLUB", "texto": "...", "acao": "→ ..." }],
   "ativos": [{
     "nome": "Ana Sueli Pinho", "sub": "@anasuelipinho · BOPE", "produto": "Experience 90",
@@ -46,3 +50,5 @@ Textos aceitam só `**negrito**` e `[rótulo](https://link)`. Níveis: `crit` (v
 Notas sobre a tabela `ativos`: a tela mostra as colunas Cliente, Produto · etapa, Seguidores, Views (média 30 dias), Melhor reel da semana, Último post e WhatsApp. `seguidores_sub` leva a variação da semana (ou "desde ontem" enquanto não houver 7 dias de leitura). `dias_sem_postar` vai só com o número; a tela escreve "há N dias". `var7` não é mais exibido. Mande os ativos já ordenados por urgência (vermelho, depois amarelo, depois o resto) e a legenda da tabela em `notas`.
 
 `plano` é opcional. Quando vier, a tela mostra a seção "Plano de ação" logo depois da Carteira; nesse caso não mande `carteira.candidatos`.
+
+`contato` lista **todos** os ativos com grupo de WhatsApp, com `ultima_minha` = data (AAAA-MM-DD) da última mensagem enviada pelo Cauê (pela conta dele) no grupo, ou `null` se não houver nenhuma no histórico. `ultima_cliente` = data da última mensagem do cliente. A tela conta os dias corridos até hoje e mostra no card "Sem mensagem minha há 7 dias ou mais" quem passou de 7 dias (vermelho a partir de 14), e cita quem está com 5 ou 6. Mande `sugestao` para quem está com 5 dias ou mais.

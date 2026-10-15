@@ -1294,6 +1294,21 @@ function painelItem(it,lista,i){
     ${it.sugestao?`<div class="psug"><p><span class="flabel">Sugestão de mensagem</span><span id="sug-${lista}-${i}">${esc(it.sugestao)}</span></p><button class="btn" data-act="copySug" data-target="sug-${lista}-${i}">Copiar</button></div>`:''}
     <div class="pactions"><button class="btn" data-act="mkTask" data-list="${lista}" data-i="${i}">+ Criar demanda</button></div></div></li>`;
 }
+// Grupos onde o Cauê não manda mensagem há 7+ dias corridos (contato[].ultima_minha vem da rotina; os dias são contados aqui)
+function cardContato(d){
+  if(!Array.isArray(d.contato))return `<section class="card wide"><h2>Sem mensagem minha há 7 dias ou mais</h2><p class="meta-line">Aparece a partir da próxima leitura da rotina “Dashboard CORE”.</p></section>`;
+  const hj=new Date(today()+'T12:00:00'),dias=v=>/^\d{4}-\d{2}-\d{2}/.test(v||'')?Math.round((hj-new Date(v.slice(0,10)+'T12:00:00'))/864e5):null;
+  const L=d.contato.map((x,i)=>({x,i,n:dias(x.ultima_minha)})).sort((a,b)=>(b.n??1e9)-(a.n??1e9));
+  const atras=L.filter(o=>o.n==null||o.n>=7),quase=L.filter(o=>o.n!=null&&o.n>=5&&o.n<7);
+  const quando=n=>n==null?'sem mensagem sua no histórico':n===1?'há 1 dia':`há ${n} dias`;
+  const item=({x,i,n})=>`<li class="pi ${n==null||n>=14?'crit':'warn'}"><span class="pselo ${n==null||n>=14?'crit':'warn'}">${n==null?'—':n+' dias'}</span><div class="pbody"><strong>${esc(x.nome)}</strong>${x.sub?`<span class="sub"> ${esc(x.sub)}</span>`:''}
+    <p>Sua última mensagem no grupo: <b>${quando(n)}</b>${x.ultima_minha?` (${brData(x.ultima_minha.slice(0,10))})`:''}.${x.ultima_cliente?` Última do cliente: ${brData(x.ultima_cliente.slice(0,10))}.`:''}</p>${x.texto?`<p>${md(x.texto)}</p>`:''}
+    ${x.sugestao?`<div class="psug"><p><span class="flabel">Sugestão de mensagem</span><span id="sug-contato-${i}">${esc(x.sugestao)}</span></p><button class="btn" data-act="copySug" data-target="sug-contato-${i}">Copiar</button></div>`:''}
+    <div class="pactions"><button class="btn" data-act="mkTask" data-list="contato" data-i="${i}">+ Criar demanda</button></div></div></li>`;
+  return `<section class="card wide"><h2>Sem mensagem minha há 7 dias ou mais · ${atras.length}</h2><p class="meta-line" style="margin:0 0 10px">Dias corridos desde a sua última mensagem em cada grupo (fim de semana conta).</p>
+    <ul class="plist">${atras.map(item).join('')||'<p class="meta-line">Você falou em todos os grupos nos últimos 7 dias.</p>'}</ul>
+    ${quase.length?`<p class="meta-line" style="margin:10px 0 0">Entram nos próximos dias: ${quase.map(o=>`<b>${esc(o.x.nome)}</b> (${o.n} dias)`).join(', ')}.</p>`:''}</section>`;
+}
 function renderMentorados(main,banner){
   main.dataset.view='mentorados';
   const d=Painel.data;
@@ -1319,6 +1334,7 @@ function renderMentorados(main,banner){
       ${(pl.apostar||[]).length?`<h3 class="psub">Onde apostar</h3><ul class="plist">${pl.apostar.map((x,i)=>`<li class="pi ok"><span class="pselo ok">${i+1}º</span><div class="pbody"><strong>${esc(x.nome)}</strong><p>${md(x.texto)}</p>${x.acao?`<p class="pacao">${md(x.acao)}</p>`:''}<div class="pactions"><button class="btn" data-act="mkTask" data-list="plano" data-i="${i}">+ Criar demanda</button></div></div></li>`).join('')}</ul>`:''}
       ${(pl.nao_apostar||[]).length?`<h3 class="psub">Onde não vale apostar agora</h3><ul class="pcand">${pl.nao_apostar.map(x=>`<li><b>${esc(x.nome)}:</b> ${md(x.texto)}</li>`).join('')}</ul>`:''}
       ${pl.fecho?`<p class="pmeta" style="margin-top:12px">${md(pl.fecho)}</p>`:''}</section>`:''}
+    ${cardContato(d)}
     <section class="card wide"><h2>Atenção · clientes em risco</h2><ul class="plist">${(d.atencao||[]).map((x,i)=>painelItem(x,'atencao',i)).join('')||'<p class="meta-line">Nenhum cliente em risco.</p>'}</ul></section>
     <section class="card wide"><h2>Oportunidades · o que aproveitar hoje</h2><ul class="plist">${(d.oportunidades||[]).map((x,i)=>painelItem(x,'oportunidades',i)).join('')||'<p class="meta-line">Nenhuma oportunidade hoje.</p>'}</ul></section>
     ${(d.estrelas||[]).length?`<section class="card wide"><h2>Estrelas · clientes CLUB</h2><ul class="plist">${d.estrelas.map((x,i)=>painelItem(Object.assign({selo:'CLUB'},x),'estrelas',i)).join('')}</ul></section>`:''}
@@ -1708,7 +1724,7 @@ main.addEventListener('click',e=>{
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,sel);else sel();return}
   if(act==='mkTask'){const d=Painel.data;const it=d&&((el.dataset.list==='plano'?(d.plano||{}).apostar:d[el.dataset.list])||[])[+el.dataset.i];if(!it)return;
     const plain=v=>String(v||'').replace(/\*\*/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/^→\s*/,'').trim();
-    const acao=plain(it.acao)||plain(it.texto).split('. ')[0];
+    const acao=el.dataset.list==='contato'?'mandar mensagem no grupo':plain(it.acao)||plain(it.texto).split('. ')[0];
     const proj=Ctx.data.projects.find(p=>/core/i.test(p))||'';
     const t=newTask({title:`${it.nome}: ${acao}`.slice(0,140),description:plain(it.texto)+(it.sugestao?'\n\nSugestão de mensagem: '+it.sugestao:''),people:[it.nome],project:proj});
     Store.put(t);if(aiReady())classify([t.id]);else renderAll();
