@@ -408,6 +408,25 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .cacoes{gap:8px}
 .cnota{display:grid;gap:8px;width:100%}
 @media (max-width:820px){.cdrawer{width:100%}.cdrawer .dtop{padding-top:calc(10px + env(safe-area-inset-top,0px))}}
+/* Produção */
+.pfiltro{display:grid;gap:4px;max-width:420px;margin-bottom:12px}
+.pkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.pkpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:2px}
+.pkpi b{font-family:var(--display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.pkpi span{font-size:12.5px;color:var(--muted)}
+.pkpi.bad b{color:var(--p1)}
+.pachados{margin:14px 0 0;padding-left:18px;display:grid;gap:6px;max-width:90ch}
+.ph3{font-family:var(--display);font-size:14px;margin:18px 0 6px}
+.pduas{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.prod .ptable{min-width:0}
+.prod .ptable.pcli{min-width:860px}
+.ppontos{padding-left:20px;display:grid;gap:12px;max-width:95ch}
+.ptot td{font-weight:700}
+.pbarra{display:inline-block;height:9px;background:var(--p1);border-radius:0 3px 3px 0}
+.panexo{border-top:1px solid var(--line);padding:10px 0}
+.panexo summary{cursor:pointer}
+.pspark{width:100%;height:auto;max-width:700px}
+@media (max-width:820px){.pduas{grid-template-columns:1fr}}
 /* Feedback da esteira */
 .cfb{display:grid;gap:8px;background:var(--accent-soft);border-radius:12px;padding:12px 14px}
 .cchips{display:flex;flex-wrap:wrap;gap:6px}
@@ -677,7 +696,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',()=>Store.flushAll());
 
 /* ---------- UI state ---------- */
-const ui={estFb:null,estAba:'aprovar',estOpen:null,estCfg:false,estNota:false,collapsed:[],view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
+const ui={prodFiltro:'',estFb:null,estAba:'aprovar',estOpen:null,estCfg:false,estNota:false,collapsed:[],view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
 try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;if(Array.isArray(s.collapsed))ui.collapsed=s.collapsed;if(s.estAba)ui.estAba=s.estAba}catch(e){}
 const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,collapsed:ui.collapsed,estAba:ui.estAba}))}catch(e){}};
 const listViews=['inbox','revisar','pdia','psemana','hoje','semana','todas','concluidas'];
@@ -1000,7 +1019,7 @@ function renderSide(){
       ${sec('tipos','Tipos',TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join(''))}
       ${sec('ritmos','Ritmos',Object.keys(RHYTHM).map(k=>item('ritmo:'+k,RHYTHM[k],svg('clock','ico'),b.open.filter(t=>rhythmOf(t)===k).length||'')).join(''))}
       ${Ctx.data.projects.length?sec('projetos','Projetos',Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')):''}
-      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.data?(Painel.data.resumo&&Painel.data.resumo.criticos)||'':'')+item('conteudos','Conteúdos',svg('film','ico'),(Esteira.count('aprovar')+Esteira.count('revisar'))||'')+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
+      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.data?(Painel.data.resumo&&Painel.data.resumo.criticos)||'':'')+item('producao','Produção',svg('sublist','ico'),Producao.meusVencidos()||'')+item('conteudos','Conteúdos',svg('film','ico'),(Esteira.count('aprovar')+Esteira.count('revisar'))||'')+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
     </nav>
     <div class="side-foot">
       <button class="lev-mini" data-view="alavancagem">
@@ -1068,6 +1087,7 @@ function renderMain(){
   if(ui.view==='contexto')return renderContext(main,banner);
   if(ui.view==='mentorados')return renderMentorados(main,banner);
   if(ui.view==='conteudos')return renderConteudos(main,banner);
+  if(ui.view==='producao')return renderProducao(main,banner);
   const [h,sub]=headFor();
   // Keep capture + search DOM alive while typing; rebuild only the list body.
   if(main.dataset.view!==ui.view||!$('#listBody')){
@@ -1302,6 +1322,137 @@ function renderMentorados(main,banner){
     <section class="card wide"><h2>Todos os ativos · ${(d.ativos||[]).length}</h2><div class="tbl-wrap"><table class="ptable"><thead><tr><th>Cliente</th><th>Produto · etapa</th><th class="r">Seguidores</th><th class="r">Views (média 30 dias)</th><th class="r">Melhor reel da semana</th><th class="r">Último post</th><th>WhatsApp</th></tr></thead><tbody>${tbl}</tbody></table></div>
       ${(d.notas||[]).map(n=>`<p class="meta-line" style="margin:10px 0 0">${md(n)}</p>`).join('')}</section>
     ${(d.rodape||[]).length?`<section class="card wide pfoot">${d.rodape.map(n=>`<p>${md(n)}</p>`).join('')}</section>`:''}
+  </div></div>`;
+}
+
+/* ---------- Produção: relatório de prazos e pontos de atenção (export do cp.corestudio.ai) ---------- */
+const Producao={data:null,hist:[],updated:null,cache:null,
+  meuNome(){const r=(this.data&&this.data.clientes)||[];const m=r.find(c=>/^cau[eê]\b/i.test(c.m||''));return m?m.m:''},
+  meusVencidos(){const d=this.data;if(!d)return 0;const eu=this.meuNome();return eu?d.clientes.filter(c=>c.s==='ativo'&&c.m===eu&&c.z&&c.z<d.base).length:0}};
+const brData=z=>z?z.split('-').reverse().join('/'):'—';
+const MESES_C=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const pctf=(a,b)=>b?(a/b*100).toFixed(1).replace('.',',')+'%':'—';
+const normE=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\b(de|da|do|das|dos)\b/g,' ').replace(/s\b/g,'').replace(/\s+/g,' ').trim();
+const levaNum=l=>{const m=String(l||'').match(/(\d+)\s*de\s*(\d+)/);return m?[+m[1],+m[2]]:null};
+const aDefinir=v=>!v||/^a definir$/i.test(v);
+function contar(arr,key){const m=new Map();arr.forEach(x=>{const k=key(x)||'—';m.set(k,(m.get(k)||0)+1)});return [...m].sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0])))}
+function prodCalc(rows,base){
+  const dias=z=>Math.round((fromIso(base)-fromIso(z))/864e5);
+  const at=rows.filter(c=>c.s==='ativo'),venc=at.filter(c=>c.z&&c.z<base).sort((a,b)=>a.z.localeCompare(b.z));
+  const b7=iso(addDays(fromIso(base),7));
+  const hoje=at.filter(c=>c.z===base),prox=at.filter(c=>c.z>base&&c.z<=b7).sort((a,b)=>a.z.localeCompare(b.z));
+  const pcVenc=rows.filter(c=>(c.s==='pausado'||c.s==='churn')&&c.z&&c.z<base).sort((a,b)=>a.z.localeCompare(b.z));
+  const semTudo=at.filter(c=>!c.e&&aDefinir(c.m)&&!c.z);
+  const fx=[['até 7 dias',0,7],['8 a 30 dias',8,30],['31 a 60 dias',31,60],['61 a 90 dias',61,90],['mais de 90 dias',91,1e9]].map(([f,a,b])=>({f,n:venc.filter(c=>{const d=dias(c.z);return d>=a&&d<=b}).length}));
+  const ST=['ativo','pausado','churn','finalizado'];
+  const mesesK=[...new Set(rows.filter(c=>c.z).map(c=>c.z.slice(0,7)))].sort();
+  const meses=mesesK.map(k=>{const r=rows.filter(c=>c.z&&c.z.slice(0,7)===k);const o={k,nome:MESES_C[+k.slice(5)-1]+'/'+k.slice(0,4),total:r.length,vencidos:r.filter(c=>c.z<base).length};ST.forEach(s=>o[s]=r.filter(c=>c.s===s).length);o.aVencer=o.total-o.vencidos;return o});
+  const semPrazo={total:rows.filter(c=>!c.z).length};ST.forEach(s=>semPrazo[s]=rows.filter(c=>!c.z&&c.s===s).length);
+  const porSit={};ST.forEach(s=>porSit[s]=rows.filter(c=>c.s===s).length);
+  const ultima=venc.filter(c=>{const l=levaNum(c.l);return l&&l[0]===l[1]});
+  // pontos de atenção
+  const levaMaior=rows.filter(c=>{const l=levaNum(c.l);return l&&l[0]>l[1]});
+  const etapaIndef=rows.filter(c=>/^(indefinido|etapa removida)$/i.test(c.e));
+  const finalizadaErr=rows.filter(c=>/^finalizad/i.test(c.e)&&(c.s==='pausado'||c.s==='churn'));
+  const prazoFixoSem=at.filter(c=>/prazo fixo/i.test(c.e)&&!c.z);
+  const grupos=new Map();rows.forEach(c=>{if(!c.e)return;const k=normE(c.e);if(!grupos.has(k))grupos.set(k,new Map());const g=grupos.get(k);g.set(c.e,(g.get(c.e)||0)+1)});
+  const grafias=[...grupos.values()].filter(g=>g.size>1).map(g=>[...g].sort((a,b)=>b[1]-a[1]));
+  const teste=rows.filter(c=>/quality/i.test(c.p)||/^teste$/i.test(c.n)||/feature \d+ fix/i.test(c.n));
+  const nomesMap=new Map();rows.forEach(c=>{const k=c.n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();nomesMap.set(k,(nomesMap.get(k)||[]).concat([c]))});
+  const repetidos=[...nomesMap.values()].filter(v=>v.length>1);
+  const curtos=rows.filter(c=>!/\s/.test(c.n.trim())&&!c.n.startsWith('@'));
+  const mentorAD=rows.filter(c=>c.m&&aDefinir(c.m)),csAD=rows.filter(c=>c.cs&&aDefinir(c.cs));
+  return {base,rows,at,venc,dias,hoje,prox,pcVenc,semTudo,fx,meses,semPrazo,porSit,ultima,
+    porMentor:contar(venc,c=>c.m),porCS:contar(venc,c=>c.cs),porProduto:contar(venc,c=>c.p),porEtapa:contar(venc,c=>c.e),ultimaEtapa:contar(ultima,c=>c.e),
+    levaMaior,etapaIndef,finalizadaErr,prazoFixoSem,grafias,teste,repetidos,curtos,mentorAD,csAD};
+}
+function prodAchados(R){
+  const v=R.venc.length,a=R.at.length,f=R.fx,mais30=f[2].n+f[3].n+f[4].n,out=[];
+  if(!a)return out;
+  out.push(`<b>${pctf(v,a)} dos ativos estão com prazo vencido.</b> ${v} dos ${a} clientes ativos. ${f[0].n} venceram há até 7 dias e ${f[1].n} entre 8 e 30 dias; ${mais30} estão há mais de 30 dias${f[4].n?` e ${f[4].n} há mais de 90 (o mais antigo venceu em ${brData(R.venc[0]&&R.venc[0].z)})`:''}.`);
+  const mk=R.base.slice(0,7),prev=R.meses.filter(m=>m.k<mk&&m.ativo).slice(-1)[0],cur=R.meses.find(m=>m.k===mk);
+  if(prev||cur)out.push(`<b>Prazos por mês.</b> ${prev?`Os ${prev.ativo} ativos com prazo em ${prev.nome} já estão vencidos`:''}${prev&&cur?'; ':''}${cur?`${cur.nome} tem ${cur.vencidos} vencidos de ${cur.total}`:''}.`);
+  const e=R.porEtapa[0],m=R.porMentor.filter(x=>!aDefinir(x[0])).slice(0,2),c=R.porCS[0];
+  if(e)out.push(`<b>O atraso se concentra em “${esc(e[0])}”</b> (${e[1]} dos ${v})${m.length?` e nos mentores ${m.map(x=>`${esc(x[0])} (${x[1]})`).join(' e ')}`:''}${c?`. Na operação de CS, ${esc(c[0])} responde por ${c[1]} vencidos`:''}.`);
+  if(R.ultima.length)out.push(`<b>${R.ultima.length} vencidos estão na última leva do ciclo</b> (leva atual igual ao total, ex. “6 de 6”): podem ser contratos a encerrar ou renovar, não entregas atrasadas. Vale separar antes de cobrar o mentor.`);
+  if(R.pcVenc.length||R.semTudo.length)out.push(`<b>${R.pcVenc.length} pausados ou em churn ainda carregam prazo vencido</b>, o que infla a leitura de atraso feita direto no sistema. ${R.semTudo.length} ativos não têm etapa, mentor nem prazo e ficam invisíveis para o controle de prazo.`);
+  const mA=R.mentorAD.filter(x=>x.s==='ativo').length,cA=R.csAD.filter(x=>x.s==='ativo').length;
+  if(mA||cA)out.push(`<b>${mA} ativos com mentor “A definir”</b> (${R.venc.filter(x=>aDefinir(x.m)).length} já vencidos) e ${cA} com CS “A definir”.`);
+  return out;
+}
+const tbl=(cols,rows,cls='')=>`<div class="tbl-wrap"><table class="ptable ${cls}"><thead><tr>${cols.map(c=>`<th class="${c.r?'r':''}">${c.t}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+const sitPill=s=>`<span class="pselo ${s==='ativo'?'ok':s==='pausado'?'warn':s==='churn'?'crit':'mute'}">${esc(s?s[0].toUpperCase()+s.slice(1):'—')}</span>`;
+function contTbl(titulo,lista,total){return `<div><h3 class="ph3">${titulo}</h3>${tbl([{t:'Nome'},{t:'Registros',r:1},{t:'%',r:1}],lista.map(([k,n])=>`<tr><td>${esc(k)}</td><td class="r">${n}</td><td class="r">${pctf(n,total)}</td></tr>`))}</div>`}
+function listaClientes(rows,R,opts={}){
+  const cols=[{t:'#',r:1},{t:'Cliente'},{t:'Produto'},{t:'Situação'},{t:'Leva'},{t:'Etapa'},{t:'CS'},{t:'Mentor'},{t:'Prazo'}];if(opts.dias)cols.push({t:'Dias',r:1});
+  return tbl(cols,rows.map((c,i)=>`<tr><td class="r">${i+1}</td><td>${esc(c.n)}</td><td>${esc(c.p)}</td><td>${sitPill(c.s)}</td><td>${esc(c.l||'—')}</td><td>${esc(c.e||'—')}</td><td>${esc(c.cs||'—')}</td><td>${esc(c.m||'—')}</td><td>${brData(c.z)}</td>${opts.dias?`<td class="r"><b>${R.dias(c.z)}</b></td>`:''}</tr>`),'pcli')}
+function sparkVenc(hist){
+  if(!hist||hist.length<2)return `<p class="meta-line">A evolução diária dos vencidos aparece a partir da segunda leitura.</p>`;
+  const W=600,H=120,p=24,xs=hist.map((_,i)=>p+i*(W-2*p)/(hist.length-1)),mx=Math.max(...hist.map(h=>h.vencidos),1);
+  const ys=hist.map(h=>H-p-(h.vencidos/mx)*(H-2*p)),pts=xs.map((x,i)=>`${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const last=hist[hist.length-1];
+  return `<svg viewBox="0 0 ${W} ${H}" class="pspark" role="img" aria-label="Ativos vencidos por dia"><line x1="${p}" x2="${W-p}" y1="${H-p}" y2="${H-p}" stroke="var(--line)"/>
+    <polyline points="${xs[0]},${H-p} ${pts} ${xs[xs.length-1]},${H-p}" fill="color-mix(in srgb,var(--p1) 14%,transparent)" stroke="none"/><polyline points="${pts}" fill="none" stroke="var(--p1)" stroke-width="2"/>
+    <circle cx="${xs[xs.length-1]}" cy="${ys[ys.length-1]}" r="4" fill="var(--p1)"/>${hist.map((h,i)=>`<circle cx="${xs[i]}" cy="${ys[i]}" r="9" fill="transparent"><title>${brData(h.data)}: ${h.vencidos} vencidos de ${h.ativos} ativos</title></circle>`).join('')}
+    <text x="${p}" y="${H-6}" font-size="11" fill="var(--muted)">${brData(hist[0].data)}</text><text x="${W-p}" y="${H-6}" font-size="11" fill="var(--muted)" text-anchor="end">${brData(last.data)} · ${last.vencidos}</text></svg>`;
+}
+function renderProducao(main,banner){
+  main.dataset.view='producao';
+  const D=Producao.data;
+  const head=`<header class="mhead"><div><h1>Produção</h1><div class="sub">${D?`Prazos e pontos de atenção · base de ${brData(D.base)} · atualizado ${Producao.updated?fmtStamp(Producao.updated):''}`:'Controle de Produção Core'}</div></div></header>${banner}`;
+  if(!D){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O relatório ainda não chegou</h2><p>Ele aparece aqui depois da exportação diária do Controle de Produção.</p></div></div>`;return}
+  const todos=D.clientes||[];const [tipo,valor]=(ui.prodFiltro||'').split('|');
+  const rows=tipo==='m'?todos.filter(c=>c.m===valor):tipo==='cs'?todos.filter(c=>c.cs===valor):todos;
+  const key=D.base+'|'+ui.prodFiltro+'|'+todos.length;
+  if(!Producao.cache||Producao.cache.key!==key)Producao.cache={key,R:prodCalc(rows,D.base)};
+  const R=Producao.cache.R,eu=Producao.meuNome();
+  const mentores=contar(todos.filter(c=>c.s==='ativo'),c=>c.m).filter(x=>x[0]!=='—'),css=contar(todos.filter(c=>c.s==='ativo'),c=>c.cs).filter(x=>x[0]!=='—');
+  const filtro=`<div class="pfiltro"><label for="prod-filtro" class="flabel">Recorte</label><select class="inp" id="prod-filtro" data-act-change="prodFiltro">
+    <option value="">Toda a base (${todos.length} contratos)</option>${eu?`<option value="m|${esc(eu)}" ${ui.prodFiltro==='m|'+eu?'selected':''}>Só a minha carteira (${esc(eu)})</option>`:''}
+    <optgroup label="Por mentor">${mentores.map(([k,n])=>`<option value="m|${esc(k)}" ${ui.prodFiltro==='m|'+k?'selected':''}>${esc(k)} · ${n} ativos</option>`).join('')}</optgroup>
+    <optgroup label="Por CS">${css.map(([k,n])=>`<option value="cs|${esc(k)}" ${ui.prodFiltro==='cs|'+k?'selected':''}>${esc(k)} · ${n} ativos</option>`).join('')}</optgroup></select></div>`;
+  const a=R.at.length,v=R.venc.length;
+  const kpi=(n,l,bad)=>`<div class="pkpi ${bad?'bad':''}"><b>${n}</b><span>${l}</span></div>`;
+  const maxF=Math.max(1,...R.fx.map(x=>x.n));
+  const ST=['ativo','pausado','churn','finalizado'];
+  const mesesRows=R.meses.map(m=>`<tr><td>${m.nome}</td>${ST.map(s=>`<td class="r">${m[s]||''}</td>`).join('')}<td class="r">${m.total}</td><td class="r"><b>${m.vencidos}</b></td><td class="r">${m.aVencer}</td></tr>`);
+  const totP={total:R.meses.reduce((s,m)=>s+m.total,0),vencidos:R.meses.reduce((s,m)=>s+m.vencidos,0)};ST.forEach(s=>totP[s]=R.meses.reduce((x,m)=>x+(m[s]||0),0));
+  mesesRows.push(`<tr class="ptot"><td>Total com prazo</td>${ST.map(s=>`<td class="r">${totP[s]||''}</td>`).join('')}<td class="r">${totP.total}</td><td class="r">${totP.vencidos}</td><td class="r">${totP.total-totP.vencidos}</td></tr>`,
+    `<tr><td>Sem prazo</td>${ST.map(s=>`<td class="r">${R.semPrazo[s]||''}</td>`).join('')}<td class="r">${R.semPrazo.total}</td><td class="r">—</td><td class="r">—</td></tr>`,
+    `<tr class="ptot"><td>Total da base</td>${ST.map(s=>`<td class="r">${R.porSit[s]||''}</td>`).join('')}<td class="r">${R.rows.length}</td><td class="r">—</td><td class="r">—</td></tr>`);
+  const mini=(rows,cols)=>tbl(cols.map(c=>({t:c[0]})),rows.map(c=>`<tr>${cols.map(k=>`<td>${k[1]==='s'?sitPill(c.s):esc(c[k[1]]||'—')}</td>`).join('')}</tr>`));
+  const pontos=[];
+  if(R.semTudo.length)pontos.push(`<b>${R.semTudo.length} clientes ativos sem etapa, mentor e prazo.</b> ${contar(R.semTudo,c=>c.p).slice(0,3).map(x=>`${esc(x[0])} (${x[1]})`).join(', ')}. Sem esses campos o cliente não aparece em nenhum controle de prazo ou de mentor. Lista no Anexo C.`);
+  if(R.pcVenc.length)pontos.push(`<b>${R.pcVenc.length} registros pausados (${R.pcVenc.filter(c=>c.s==='pausado').length}) ou em churn (${R.pcVenc.filter(c=>c.s==='churn').length}) com prazo vencido ainda registrado.</b> Se o prazo não for limpo ou congelado ao pausar, um relatório tirado do sistema conta ${v+R.pcVenc.length} vencidos em vez de ${v}. Lista no Anexo E.`);
+  if(R.mentorAD.length||R.csAD.length)pontos.push(`<b>Mentor “A definir” em ${R.mentorAD.length} registros (${R.mentorAD.filter(c=>c.s==='ativo').length} ativos) e CS “A definir” em ${R.csAD.length} (${R.csAD.filter(c=>c.s==='ativo').length} ativos).</b> Lista no Anexo D.`);
+  if(R.levaMaior.length)pontos.push(`<b>Leva atual maior que o total em ${R.levaMaior.length} registros.</b> Ou o total contratado foi ampliado sem atualizar o campo, ou a contagem continuou após o fim do ciclo.${mini(R.levaMaior,[['Cliente','n'],['Produto','p'],['Situação','s'],['Leva','l'],['Etapa','e'],['Mentor','m']])}`);
+  if(R.etapaIndef.length)pontos.push(`<b>Etapa “Indefinido” ou “Etapa removida” em ${R.etapaIndef.length} registros.</b> Se voltarem a ativo, entram sem etapa definida.${mini(R.etapaIndef,[['Cliente','n'],['Produto','p'],['Situação','s'],['Etapa','e'],['CS','cs'],['Mentor','m']])}`);
+  if(R.finalizadaErr.length)pontos.push(`<b>Etapa “Finalizada” com situação pausado (${R.finalizadaErr.filter(c=>c.s==='pausado').length}) ou churn (${R.finalizadaErr.filter(c=>c.s==='churn').length}).</b> A entrega consta como concluída, mas o registro não foi para “finalizado”: ${R.finalizadaErr.map(c=>esc(c.n)).join('; ')}.`);
+  if(R.prazoFixoSem.length)pontos.push(`<b>${R.prazoFixoSem.length} ativos em etapa de “Prazo Fixo” sem prazo:</b> ${R.prazoFixoSem.map(c=>`${esc(c.n)} (${esc(c.m||'sem mentor')})`).join(', ')}.`);
+  if(R.grafias.length)pontos.push(`<b>Mesma etapa escrita de formas diferentes</b>, o que separa os clientes em grupos diferentes em qualquer filtro:${tbl([{t:'Grafias'}],R.grafias.map(g=>`<tr><td>${g.map(([e,n])=>`${esc(e)} <span class="meta-line">(${n})</span>`).join(' · ')}</td></tr>`))}`);
+  if(R.teste.length)pontos.push(`<b>${R.teste.length} registros de teste na base de clientes:</b> ${R.teste.map(c=>`${esc(c.n)} (${esc(c.s)})`).join(', ')}. Entram nos totais do sistema.`);
+  if(R.repetidos.length||R.curtos.length)pontos.push(`<b>Nomes repetidos e incompletos.</b> ${R.repetidos.length} nomes aparecem em mais de uma linha (com dois produtos é esperado; no mesmo produto merece conferência) e ${R.curtos.length} registros têm só um nome, o que dificulta cruzar com vendas ou contratos.${R.repetidos.length?mini(R.repetidos.flat(),[['Nome','n'],['Produto','p'],['Situação','s'],['Leva','l'],['Mentor','m']]):''}`);
+  const anexo=(id,titulo,html,n)=>`<details class="panexo"><summary><b>Anexo ${id}</b> · ${titulo} <span class="meta-line">(${n})</span></summary>${html}</details>`;
+  main.innerHTML=head+`<div class="scroll"><div class="painel prod">
+    <section class="card wide">${filtro}
+      <div class="pkpis">${kpi(v,`ativos com prazo vencido (${pctf(v,a)} dos ${a} ativos)`,1)}${kpi(R.hoje.length,`vencem hoje, ${brData(D.base)}`)}${kpi(R.prox.length,'vencem nos próximos 7 dias')}${kpi(R.pcVenc.length,'pausados e churn com prazo vencido')}${kpi(R.semPrazo.total,`sem prazo (${R.semTudo.length} ativos sem etapa, mentor e prazo)`)}</div>
+      <ul class="pachados">${prodAchados(R).map(x=>`<li>${x}</li>`).join('')}</ul></section>
+    ${!ui.prodFiltro?`<section class="card wide"><h2>Evolução dos ativos vencidos</h2>${sparkVenc(Producao.hist)}</section>`:''}
+    <section class="card wide"><h2>Prazos</h2>
+      <h3 class="ph3">Tempo de atraso dos ${v} ativos vencidos</h3>${tbl([{t:'Faixa'},{t:''},{t:'Clientes',r:1},{t:'%',r:1}],R.fx.map(x=>`<tr><td>${x.f}</td><td style="width:45%"><span class="pbarra" style="width:${x.n/maxF*100}%"></span></td><td class="r">${x.n}</td><td class="r">${pctf(x.n,v)}</td></tr>`))}
+      <h3 class="ph3">Prazos por mês e situação</h3>${tbl([{t:'Mês do prazo'},{t:'Ativo',r:1},{t:'Pausado',r:1},{t:'Churn',r:1},{t:'Finalizado',r:1},{t:'Total',r:1},{t:'Vencidos',r:1},{t:'A vencer',r:1}],mesesRows)}
+      <div class="pduas">${contTbl('Ativos vencidos por mentor',R.porMentor,v)}${contTbl('Ativos vencidos por CS',R.porCS,v)}</div>
+      <div class="pduas">${contTbl('Ativos vencidos por produto',R.porProduto,v)}${contTbl('Ativos vencidos por etapa atual',R.porEtapa,v)}</div>
+      <h3 class="ph3">Vencidos na última leva do ciclo · ${R.ultima.length}</h3><p class="meta-line">Leva atual igual ao total contratado (ex.: 6 de 6). Podem ser contratos a encerrar ou renovar.</p>${contTbl('Etapa atual desses '+R.ultima.length,R.ultimaEtapa,R.ultima.length)}</section>
+    <section class="card wide"><h2>Pontos de atenção na base</h2><p class="meta-line">Inconsistências encontradas na exportação. Nada é alterado no sistema.</p><ol class="ppontos">${pontos.map(x=>`<li>${x}</li>`).join('')||'<li>Nenhuma inconsistência encontrada.</li>'}</ol></section>
+    <section class="card wide"><h2>Anexos</h2>
+      ${anexo('A',`ativos com prazo vencido`,listaClientes(R.venc,R,{dias:1}),R.venc.length)}
+      ${anexo('B',`vencem hoje e nos próximos 7 dias`,`<h3 class="ph3">Vencem hoje (${R.hoje.length})</h3>${listaClientes(R.hoje,R)}<h3 class="ph3">Próximos 7 dias (${R.prox.length})</h3>${listaClientes(R.prox,R)}`,R.hoje.length+R.prox.length)}
+      ${anexo('C','ativos sem etapa, mentor e prazo',listaClientes(R.semTudo,R),R.semTudo.length)}
+      ${anexo('D','mentor ou CS “A definir”',`<h3 class="ph3">Mentor “A definir” (${R.mentorAD.length})</h3>${listaClientes(R.mentorAD,R)}<h3 class="ph3">CS “A definir” (${R.csAD.length})</h3>${listaClientes(R.csAD,R)}`,R.mentorAD.length+R.csAD.length)}
+      ${anexo('E','pausados e churn com prazo vencido',listaClientes(R.pcVenc,R,{dias:1}),R.pcVenc.length)}
+    </section>
+    <p class="meta-line">Fonte: ${esc(D.origem||'exportação de clientes')} (cp.corestudio.ai → Clientes → Exportar). “Vencido” é todo prazo anterior à data-base; “dias” é o atraso até ela.</p>
   </div></div>`;
 }
 
@@ -1578,6 +1729,7 @@ function ctxField(el){
   return null;
 }
 main.addEventListener('change',e=>{
+  if(e.target.id==='prod-filtro'){ui.prodFiltro=e.target.value;return renderMain()}
   if(e.target.id==='ctx-import'){const f=e.target.files&&e.target.files[0];if(f)importBackup(f);return}
   const r=ctxField(e.target);if(r===null)return;Ctx.save();if(r){ui.ctxForce=true;renderMain();renderSide()}
 });
@@ -1707,6 +1859,8 @@ setInterval(()=>{if(ui.view==='calendario'&&!ui.sel)renderMain()},60000);
 
 /* Linhas especiais da tabela tasks: painel:core (Mentorados), roteiro:<id> e esteira:config (Conteúdos) */
 function routeSpecial(row){
+  if(row.id==='painel:producao'){Producao.data=row.data;Producao.updated=row.updated_at;Producao.cache=null;return}
+  if(row.id==='painel:producao-hist'){Producao.hist=(row.data&&row.data.dias)||[];return}
   if(row.id.startsWith('painel:'))return Painel.set(row);
   if(row.id.startsWith('roteiro:'))Esteira.itens.set(row.id.slice(8),Object.assign({},row.data,{id:row.id.slice(8)}));
   else if(row.id==='esteira:config')Esteira.cfg=row.data||{};
