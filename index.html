@@ -745,18 +745,23 @@ function update(id,patch,opts){
 }
 function toggleDone(id){
   const t=Store.get(id);if(!t)return;
-  if(isDone(t)){update(id,{status:'pendente',completed_at:null},{detail:ui.sel===id});return}
-  lastDone={id,prev:{status:t.status,completed_at:t.completed_at,spent_minutes:t.spent_minutes},spawned:null};
+  if(isDone(t)){
+    // Reabrir desfaz a próxima repetição que o check criou, se ela ainda não foi concluída
+    const nx=t.next_id&&Store.get(t.next_id);if(nx&&!isDone(nx))Store.remove(nx.id);
+    update(id,{status:'pendente',completed_at:null,next_id:null},{detail:ui.sel===id});if(nx)renderAll();return}
+  lastDone={id,prev:{status:t.status,completed_at:t.completed_at,spent_minutes:t.spent_minutes,next_id:t.next_id||null},spawned:null};
   update(id,{status:'concluida',completed_at:new Date().toISOString()},{detail:ui.sel===id});
   askSpent(Store.get(id));
-  if(t.repeat){
+  if(t.repeat&&!(t.next_id&&Store.get(t.next_id))){
+    // A próxima vem depois de hoje: concluir uma repetição atrasada não cria outra já atrasada
     const base=t.planned_date||t.deadline||today();
     const step=d=>t.repeat==='diario'?addDays(d,1):t.repeat==='semanal'?addDays(d,7):addMonths(d,1);
-    const np=iso(step(fromIso(base)));const shift=dd(base,np);
-    const n=newTask(Object.assign({},t,{id:uid(),status:'pendente',completed_at:null,created_at:new Date().toISOString(),comments:[],
+    let nd=step(fromIso(base));for(let i=0;i<400&&iso(nd)<=today();i++)nd=step(nd);
+    const np=iso(nd);const shift=dd(base,np);
+    const n=newTask(Object.assign({},t,{id:uid(),status:'pendente',completed_at:null,created_at:new Date().toISOString(),comments:[],next_id:null,
       subtasks:t.subtasks.map(s=>({t:s.t,done:false})),planned_date:t.planned_date?np:null,
       deadline:t.deadline?iso(addDays(fromIso(t.deadline),shift)):null}));
-    Store.put(n);lastDone.spawned=n.id;renderAll();
+    Store.put(n);update(id,{next_id:n.id},{keepMain:true,keepAi:true});lastDone.spawned=n.id;renderAll();
   }
 }
 let lastDone=null;
