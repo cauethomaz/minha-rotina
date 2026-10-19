@@ -221,8 +221,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .wk-head div{padding:8px 6px;text-align:center;font-size:11.5px;color:var(--muted)}
 .wk-head b{display:block;font-size:18px;color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums;width:32px;height:32px;line-height:32px;margin:2px auto 0;border-radius:50%}
 .wk-head .today b{background:var(--accent);color:var(--on-accent)}
-.wk-all{border-bottom:1px solid var(--line);position:sticky;top:67px;background:var(--panel);z-index:2}
-.wk-all>div{min-height:36px;padding:4px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
+.wk-all{border-bottom:1px solid var(--line);background:var(--panel)}
+.wk-all>div{min-height:24px;padding:4px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
 .wk-all>div:first-child{border-left:0;font-size:10.5px;color:var(--faint);padding:8px 4px;text-align:right}
 .wk-all>div.over{background:var(--accent-soft)}
 .wk-body{position:relative}
@@ -243,6 +243,32 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .chipev.plan{background:var(--panel2)}
 .chipev.dl{color:var(--p1);border:1px solid color-mix(in srgb,var(--p1) 45%,transparent);background:var(--warn-soft)}
 .chipev.done{opacity:.5;text-decoration:line-through}
+.wk-head>div{position:relative}
+.wk-all>div{max-height:58px;overflow-y:auto}
+.dlbadge{display:inline-flex;align-items:center;gap:3px;margin:4px auto 0;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:999px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);cursor:pointer;max-width:100%;white-space:nowrap}
+.dlbadge svg{width:10px;height:10px;flex:none}
+.dlbadge i{font-style:normal;margin-left:3px}
+.dlbadge.hot{color:var(--p1);background:var(--warn-soft);border-color:color-mix(in srgb,var(--p1) 45%,transparent)}
+.dlbadge.ok{color:var(--ok)}
+.dlpop{position:absolute;top:100%;left:4px;z-index:20;width:270px;max-height:320px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:8px;text-align:left}
+.dlpop.r{left:auto;right:4px}
+.dlpop h4{margin:4px 4px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.dlpop h4.late{color:var(--p1)}
+.dlitem{display:flex;gap:7px;align-items:flex-start;width:100%;text-align:left;padding:6px;border-radius:7px;font-size:12.5px;color:var(--fg);cursor:pointer}
+.dlitem:hover{background:var(--panel2)}
+.dlitem .dot{margin-top:5px;flex:none}
+.dlitem .tt{min-width:0}
+.dlitem small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+.dlitem small b{color:var(--p1);font-weight:600}
+.dlitem.done{opacity:.55;text-decoration:line-through}
+.evdl{margin-left:5px;font-weight:700;color:var(--p1)}
+.evdl:not(.late){color:var(--fg)}
+.pmark{margin-right:3px;font-weight:700}
+.pmark.day{color:var(--p2)}
+.pmark.wk{color:var(--p2)}
+.ev.pday{box-shadow:0 0 0 2px var(--p2) inset}
+.ev.pweek{box-shadow:0 0 0 1px color-mix(in srgb,var(--p2) 70%,transparent) inset}
+.chipev.pday{box-shadow:0 0 0 1.5px var(--p2) inset}
 .chipev svg{width:11px;height:11px;flex:none}
 .nowline{position:absolute;left:0;right:0;height:2px;background:var(--p1);z-index:3;pointer-events:none}
 .nowline::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--p1)}
@@ -259,10 +285,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .mnum:hover{background:var(--panel2)}
 .mcell.today .mnum{background:var(--accent);color:var(--on-accent);font-weight:700}
 .more{font-size:11px;color:var(--muted);text-align:left;padding-left:6px}
-.calfc{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:0 28px 10px}
-.calfc .stack{width:180px}
-.calfc b{color:var(--fg);font-weight:600}
-.calfc .fc-k{display:inline-flex;align-items:center;gap:5px;margin-right:12px;white-space:nowrap}
+.calfc{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.calfc .stack{width:120px;height:6px}
 .calfc .fc-ok{color:var(--ok);font-weight:600}
 .calfc .fc-bad{color:var(--p1);font-weight:600}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:6px 28px 18px;align-items:center}
@@ -492,7 +516,6 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   .mhead{padding:14px 16px 8px}
   .scroll{padding:0 16px 40px}
   .week-wrap,.month-wrap{margin:0 16px 14px}
-  .calfc{margin:0 16px 10px}
   .legend{padding:6px 16px 14px}
   .banner{margin:0 16px 10px}
   .lev{grid-template-columns:minmax(0,1fr)}
@@ -1195,13 +1218,13 @@ function calForecast(days){
   Store.all().forEach(t=>{if(t.planned_date&&ds.has(t.planned_date))m[t.type||'N']+=isDone(t)?spentOf(t):(t.estimated_duration||30)});
   if(Ctx.data.countFixed!==false)Ctx.data.fixed.forEach(f=>{if(f.title)m[f.type||'N']+=(+f.dur||60)});
   const typed=m.E+m.O+m.A+m.C;
-  if(!typed)return `<div class="calfc"><span>Previsão da semana: nada planejado com tipo ainda.</span></div>`;
+  if(!typed)return `<span class="calfc">Previsão da semana: nada planejado com tipo ainda · arraste para replanejar</span>`;
   const pct=k=>Math.round(m[k]/typed*100),e=pct('E'),g=goal/100;
   const falta=Math.max(0,Math.ceil((g*typed-m.E)/(1-g)/15)*15);
-  const st=e>=goal?`<span class="fc-ok">✓ Dentro da meta (${e}% estratégico, meta ${goal}%)</span>`
-    :`<span class="fc-bad">Fora da meta: ${e}% estratégico, meta ${goal}%. Faltam ~${fmtDur(falta)} de estratégico</span>`;
-  return `<div class="calfc"><span><b>Previsão da semana</b></span>${stackBar(m)}${st}
-    <span>${TK.map(k=>`<span class="fc-k"><span class="dot d${k}"></span>${TYPES[k]} ${pct(k)}% · ${fmtDur(m[k])||'0'}</span>`).join('')}${m.N?`<span class="fc-k"><span class="dot dN"></span>Sem tipo ${fmtDur(m.N)} (fora da conta)</span>`:''}</span></div>`;
+  const st=e>=goal?`<span class="fc-ok">✓ ${e}% estratégico · dentro da meta de ${goal}%</span>`
+    :`<span class="fc-bad">${e}% estratégico · fora da meta de ${goal}% (faltam ~${fmtDur(falta)})</span>`;
+  const tip=TK.map(k=>`${TYPES[k]} ${pct(k)}% · ${fmtDur(m[k])||'0'}`).join('\n')+(m.N?`\nSem tipo ${fmtDur(m.N)} (fora da conta)`:'');
+  return `<span class="calfc" title="${esc(tip)}">Previsão da semana ${stackBar(m)} ${st}</span>`;
 }
 function calItems(day){
   const all=Store.all();
@@ -1214,18 +1237,35 @@ function layoutDay(evs){
   if(cluster.length)close();return out;
 }
 const tcls=t=>t.type||'N';
+// Prioridade do dia (estrela cheia) e da semana (estrela vazada) nos blocos e chips do calendário
+const prioMark=t=>isDone(t)?'':inDay(t)?'<span class="pmark day" title="Prioridade do dia">★</span>':inWeek(t)?'<span class="pmark wk" title="Prioridade da semana">☆</span>':'';
+const prioCls=t=>isDone(t)?'':inDay(t)?'pday':inWeek(t)?'pweek':'';
+// Entregas (prazo combinado) de um dia: contador no cabeçalho que abre a lista, sem ocupar a grade
+function dlBadge(d){
+  const td=today(),{dl}=calItems(d),open=dl.filter(t=>!isDone(t));
+  const late=d===td?Store.all().filter(t=>t.external&&t.deadline&&t.deadline<td&&!isDone(t)):[];
+  if(!dl.length&&!late.length)return '';
+  const cls=late.length||(d===td&&open.length)?'hot':open.length?'':'ok';
+  const lbl=open.length?`${open.length} entrega${open.length>1?'s':''}`:dl.length?'entregue':'';
+  const pop=ui.calDl===d?`<div class="dlpop ${[5,6,0].includes(fromIso(d).getDay())?'r':''}" role="dialog" aria-label="Entregas do dia">${late.length?`<h4 class="late">Atrasadas · ${late.length}</h4>${late.map(dlItem).join('')}`:''}${dl.length?`<h4>Entregar ${fmtDay(d).toLowerCase()} · ${dl.length}</h4>${dl.slice().sort(cmp).map(dlItem).join('')}`:''}</div>`:'';
+  return `<button class="dlbadge ${cls}" data-act="calDl" data-date="${d}" aria-expanded="${ui.calDl===d}">${svg('flag')}${lbl}${late.length?`<i>+${late.length} atrasada${late.length>1?'s':''}</i>`:''}</button>${pop}`;
+}
+function dlItem(t){
+  const quando=isDone(t)?'concluída':t.planned_date?`planejada ${fmtDay(t.planned_date).toLowerCase()}${t.planned_time?' '+t.planned_time:''}`:'<b>sem horário reservado</b>';
+  return `<button class="dlitem ${isDone(t)?'done':''}" data-act="open" data-id="${t.id}"><span class="dot d${tcls(t)}"></span><span class="tt">${prioMark(t)}${esc(t.title)}<small>${t.priority?'P'+t.priority+' · ':''}${quando}</small></span></button>`;
+}
 function chip(t,kind){
-  return `<button class="chipev ${kind} ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}" data-kind="${kind}" data-act="open" data-id="${t.id}" title="${esc(t.title)}">${kind==='dl'?svg('flag'):`<span class="dot d${tcls(t)}"></span>`}${kind==='dl'?'Prazo: ':''}${esc(t.title)}</button>`;
+  return `<button class="chipev ${kind} ${prioCls(t)} ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}" data-kind="${kind}" data-act="open" data-id="${t.id}" title="${esc(t.title)}">${kind==='dl'?svg('flag'):`<span class="dot d${tcls(t)}"></span>`}${kind==='dl'?'Prazo: ':''}${prioMark(t)}${esc(t.title)}</button>`;
 }
 function renderCalendar(main,banner){
   main.dataset.view='calendario';
   const a=fromIso(ui.anchor);const td=today();
-  let title,body;
+  let title,body,days=[];
   if(ui.cal==='semana'){
-    const ws=startOfWeek(a);const days=[...Array(7)].map((_,i)=>iso(addDays(ws,i)));const we=addDays(ws,6);
+    const ws=startOfWeek(a);days=[...Array(7)].map((_,i)=>iso(addDays(ws,i)));const we=addDays(ws,6);
     title=ws.getMonth()===we.getMonth()?`${ws.getDate()} – ${we.getDate()} de ${MON[we.getMonth()]} de ${we.getFullYear()}`:`${ws.getDate()} ${MONS[ws.getMonth()]} – ${we.getDate()} ${MONS[we.getMonth()]} ${we.getFullYear()}`;
-    const head=days.map(d=>{const x=fromIso(d),h=Ctx.data.hours[x.getDay()];return `<div class="${d===td?'today':''}">${WD[x.getDay()]}<b>${x.getDate()}</b>${h.on&&!h.prod?'<small>sem produção</small>':!h.on?'<small>folga</small>':''}</div>`}).join('');
-    const allday=days.map(d=>{const {plan,dl}=calItems(d);return `<div data-drop-all="${d}">${plan.filter(t=>!t.planned_time).map(t=>chip(t,'plan')).join('')}${dl.map(t=>chip(t,'dl')).join('')}</div>`}).join('');
+    const head=days.map(d=>{const x=fromIso(d),h=Ctx.data.hours[x.getDay()];return `<div class="${d===td?'today':''}">${WD[x.getDay()]}<b>${x.getDate()}</b>${h.on&&!h.prod?'<small>sem produção</small>':!h.on?'<small>folga</small>':''}${dlBadge(d)}</div>`}).join('');
+    const allday=days.map(d=>{const {plan}=calItems(d);return `<div data-drop-all="${d}">${plan.filter(t=>!t.planned_time).sort(cmp).map(t=>chip(t,'plan')).join('')}</div>`}).join('');
     const hours=[...Array(H1-H0)].map((_,i)=>`<div>${i?pad(H0+i)+':00':''}</div>`).join('');
     const now=new Date();const nowMin=now.getHours()*60+now.getMinutes();
     const cols=days.map(d=>{
@@ -1236,7 +1276,8 @@ function renderCalendar(main,banner){
       const off=!hr.on?`<div class="off" style="top:0;height:100%"></div>`:`<div class="off" style="top:0;height:${yOf(toMin(hr.start))}px"></div><div class="off" style="top:${yOf(toMin(hr.end))}px;bottom:0"></div>`;
       const blocks=evs.map(({t,f,s,e,lane,n})=>{const top=(s-H0*60)/60*48,h=Math.max((e-s)/60*48-2,18);
         if(f)return `<div class="ev fixed ${f.type||'N'}" style="top:${top}px;height:${h}px;left:calc(${lane/n*100}% + 3px);width:calc(${100/n}% - 6px);right:auto" title="Compromisso fixo · ${esc(f.title)}"><span class="tm">${f.time} · fixo</span>${esc(f.title)}</div>`;
-        return `<button class="ev ${tcls(t)} ${isDone(t)?'done':''}" style="top:${top}px;height:${h}px;left:calc(${lane/n*100}% + 3px);width:calc(${100/n}% - 6px);right:auto" draggable="true" data-drag="${t.id}" data-kind="plan" data-act="open" data-id="${t.id}"><span class="tm">${t.planned_time}${t.estimated_duration?' · '+fmtDur(t.estimated_duration):''}</span>${esc(t.title)}</button>`}).join('');
+        const pz=!isDone(t)&&t.deadline&&t.deadline<d?'<span class="evdl late" title="Planejada depois do prazo">⚑ após o prazo</span>':!isDone(t)&&t.external&&t.deadline===d?'<span class="evdl" title="Entrega combinada para este dia">⚑ entrega</span>':'';
+        return `<button class="ev ${tcls(t)} ${prioCls(t)} ${isDone(t)?'done':''}" style="top:${top}px;height:${h}px;left:calc(${lane/n*100}% + 3px);width:calc(${100/n}% - 6px);right:auto" draggable="true" data-drag="${t.id}" data-kind="plan" data-act="open" data-id="${t.id}"><span class="tm">${t.planned_time}${t.estimated_duration?' · '+fmtDur(t.estimated_duration):''}${pz}</span>${prioMark(t)}${esc(t.title)}</button>`}).join('');
       const nl=d===td&&nowMin>=H0*60&&nowMin<=H1*60?`<div class="nowline" style="top:${(nowMin-H0*60)/60*48}px"></div>`:'';
       return `<div class="day ${d===td?'today':''}" data-drop-day="${d}" style="height:${(H1-H0)*48}px">${off}${blocks}${nl}</div>`;
     }).join('');
@@ -1244,7 +1285,6 @@ function renderCalendar(main,banner){
       <div class="wk-head"><div></div>${head}</div>
       <div class="wk-all"><div>dia todo</div>${allday}</div>
       <div class="wk-body"><div class="hours">${hours}</div>${cols}</div></div></div>`;
-    body=calForecast(days)+body;
   }else{
     const first=new Date(a.getFullYear(),a.getMonth(),1);const gs=startOfWeek(first);
     title=`${MON[a.getMonth()][0].toUpperCase()+MON[a.getMonth()].slice(1)} de ${a.getFullYear()}`;
@@ -1255,11 +1295,11 @@ function renderCalendar(main,banner){
         ${vis.map(([t,k])=>chip(t,k)).join('')}${items.length>3?`<button class="more" data-act="gotoWeek" data-date="${d}">+${items.length-3} mais</button>`:''}</div>`}).join('');
     body=`<div class="month-wrap"><div class="month">${['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>`<div class="dow">${x}</div>`).join('')}${cells}</div></div>`;
   }
-  main.innerHTML=`<header class="mhead"><div><h1>${esc(title)}</h1><div class="sub">${ui.cal==='semana'?'Arraste para replanejar · duplo clique num horário cria uma demanda':'Clique num dia para abrir a semana · arraste para replanejar'}</div></div><div class="grow"></div>
+  main.innerHTML=`<header class="mhead"><div><h1>${esc(title)}</h1><div class="sub">${ui.cal==='semana'?calForecast(days):'Clique num dia para abrir a semana · arraste para replanejar'}</div></div><div class="grow"></div>
     <div class="calbar"><div class="seg" role="group" aria-label="Visualização"><button data-act="calmode" data-mode="semana" class="${ui.cal==='semana'?'on':''}">Semana</button><button data-act="calmode" data-mode="mes" class="${ui.cal==='mes'?'on':''}">Mês</button></div>
     <div class="calnav"><button class="ibtn" data-act="calprev" aria-label="Anterior">${svg('left')}</button><button class="btn" data-act="caltoday">Hoje</button><button class="ibtn" data-act="calnext" aria-label="Próximo">${svg('right')}</button></div></div></header>
     ${banner}${body}
-    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Prazo real (avisos ligados)</span></div>`;
+    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Entregas</span><span><span class="pmark day">★</span>Prioridade do dia</span><span><span class="pmark wk">☆</span>Prioridade da semana</span></div>`;
   const sc=$('#calScroll');if(sc&&!ui.scrolled){sc.scrollTop=(8-H0)*48;ui.scrolled=true}
 }
 
@@ -1769,6 +1809,8 @@ $('#side').addEventListener('click',e=>{
 /* ---------- Events: main ---------- */
 const main=$('#main');
 main.addEventListener('click',e=>{
+  // Fecha a lista de entregas ao clicar fora dela
+  if(ui.calDl&&!e.target.closest('.dlpop,[data-act="calDl"]')){ui.calDl=null;if(!e.target.closest('[data-act]'))return renderMain()}
   const el=e.target.closest('[data-act]');if(!el)return;
   const act=el.dataset.act;const id=el.dataset.id||(el.closest('[data-id]')||{}).dataset?.id;
   if(act==='toggle')return toggleDone(id);
@@ -1833,6 +1875,7 @@ main.addEventListener('click',e=>{
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
   if(act==='open')return openTask(id);
   if(act==='dup')return openTask(el.dataset.dup);
+  if(act==='calDl'){ui.calDl=ui.calDl===el.dataset.date?null:el.dataset.date;return renderMain()}
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
   if(act==='calprev'||act==='calnext'){const s=act==='calprev'?-1:1;const a=fromIso(ui.anchor);ui.anchor=iso(ui.cal==='semana'?addDays(a,7*s):addMonths(new Date(a.getFullYear(),a.getMonth(),1),s));return renderMain()}
   if(act==='caltoday'){ui.anchor=today();ui.scrolled=false;return renderMain()}
