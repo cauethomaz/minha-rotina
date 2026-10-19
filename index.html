@@ -259,6 +259,12 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .mnum:hover{background:var(--panel2)}
 .mcell.today .mnum{background:var(--accent);color:var(--on-accent);font-weight:700}
 .more{font-size:11px;color:var(--muted);text-align:left;padding-left:6px}
+.calfc{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:0 28px 10px}
+.calfc .stack{width:180px}
+.calfc b{color:var(--fg);font-weight:600}
+.calfc .fc-k{display:inline-flex;align-items:center;gap:5px;margin-right:12px;white-space:nowrap}
+.calfc .fc-ok{color:var(--ok);font-weight:600}
+.calfc .fc-bad{color:var(--p1);font-weight:600}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:6px 28px 18px;align-items:center}
 .legend span{display:inline-flex;gap:6px;align-items:center}
 .legend svg{width:12px;height:12px;color:var(--p1)}
@@ -486,6 +492,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
   .mhead{padding:14px 16px 8px}
   .scroll{padding:0 16px 40px}
   .week-wrap,.month-wrap{margin:0 16px 14px}
+  .calfc{margin:0 16px 10px}
   .legend{padding:6px 16px 14px}
   .banner{margin:0 16px 10px}
   .lev{grid-template-columns:minmax(0,1fr)}
@@ -1182,6 +1189,20 @@ function renderMain(){
 }
 
 /* ---------- Render: calendar ---------- */
+// Previsão da semana: tempo planejado por tipo (feito conta o tempo gasto) e se o estratégico fica na meta
+function calForecast(days){
+  const goal=+Ctx.data.goalE||30,m={E:0,O:0,A:0,C:0,N:0},ds=new Set(days);
+  Store.all().forEach(t=>{if(t.planned_date&&ds.has(t.planned_date))m[t.type||'N']+=isDone(t)?spentOf(t):(t.estimated_duration||30)});
+  if(Ctx.data.countFixed!==false)Ctx.data.fixed.forEach(f=>{if(f.title)m[f.type||'N']+=(+f.dur||60)});
+  const typed=m.E+m.O+m.A+m.C;
+  if(!typed)return `<div class="calfc"><span>Previsão da semana: nada planejado com tipo ainda.</span></div>`;
+  const pct=k=>Math.round(m[k]/typed*100),e=pct('E'),g=goal/100;
+  const falta=Math.max(0,Math.ceil((g*typed-m.E)/(1-g)/15)*15);
+  const st=e>=goal?`<span class="fc-ok">✓ Dentro da meta (${e}% estratégico, meta ${goal}%)</span>`
+    :`<span class="fc-bad">Fora da meta: ${e}% estratégico, meta ${goal}%. Faltam ~${fmtDur(falta)} de estratégico</span>`;
+  return `<div class="calfc"><span><b>Previsão da semana</b></span>${stackBar(m)}${st}
+    <span>${TK.map(k=>`<span class="fc-k"><span class="dot d${k}"></span>${TYPES[k]} ${pct(k)}% · ${fmtDur(m[k])||'0'}</span>`).join('')}${m.N?`<span class="fc-k"><span class="dot dN"></span>Sem tipo ${fmtDur(m.N)} (fora da conta)</span>`:''}</span></div>`;
+}
 function calItems(day){
   const all=Store.all();
   return {plan:all.filter(t=>t.planned_date===day),dl:all.filter(t=>t.deadline===day&&t.external)};
@@ -1223,6 +1244,7 @@ function renderCalendar(main,banner){
       <div class="wk-head"><div></div>${head}</div>
       <div class="wk-all"><div>dia todo</div>${allday}</div>
       <div class="wk-body"><div class="hours">${hours}</div>${cols}</div></div></div>`;
+    body=calForecast(days)+body;
   }else{
     const first=new Date(a.getFullYear(),a.getMonth(),1);const gs=startOfWeek(first);
     title=`${MON[a.getMonth()][0].toUpperCase()+MON[a.getMonth()].slice(1)} de ${a.getFullYear()}`;
