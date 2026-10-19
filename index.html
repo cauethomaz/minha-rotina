@@ -303,6 +303,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 /* Claude suggestions */
 .sug{color:var(--accent);font-size:11px;margin-left:4px;text-transform:none;letter-spacing:0}
 .sug-chip{font-size:11px;color:var(--accent);font-weight:600}
+.dup-chip{font-size:11px;font-weight:600;color:var(--p2);cursor:pointer;border-radius:4px;padding:0 4px;background:color-mix(in srgb,var(--p2) 12%,transparent)}
+.dup-chip:hover{text-decoration:underline}
+.dupbar{border-color:color-mix(in srgb,var(--p2) 40%,transparent);background:color-mix(in srgb,var(--p2) 8%,transparent)}
 .aiwork{font-size:11.5px;color:var(--accent);font-weight:600}
 @media (prefers-reduced-motion:no-preference){.aiwork{animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.4}}}
 .aibar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:10px;padding:8px 12px;font-size:12.5px}
@@ -707,7 +710,7 @@ window.addEventListener('pagehide',()=>Store.flushAll());
 const ui={prodFiltro:'',estFb:null,estAba:'aprovar',estOpen:null,estCfg:false,estNota:false,collapsed:[],view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
 try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;if(Array.isArray(s.collapsed))ui.collapsed=s.collapsed;if(s.estAba)ui.estAba=s.estAba}catch(e){}
 const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,collapsed:ui.collapsed,estAba:ui.estAba}))}catch(e){}};
-const listViews=['inbox','revisar','pdia','psemana','hoje','semana','todas','concluidas'];
+const listViews=['inbox','revisar','pdia','psemana','hoje','atrasados','semana','todas','concluidas'];
 const weekKey=()=>iso(startOfWeek(new Date()));
 const inDay=t=>t.focus_day===today(),inWeek=t=>t.focus_week===weekKey();
 // Organized automatically (rules or Claude) and not confirmed yet
@@ -794,6 +797,9 @@ function capture(text,pasted){
   if(made.length>1&&!aiReady())toast(made.length+' demandas criadas');
   renderAll();
   if(aiReady())classify(made.filter(id=>!isDone(Store.get(id))));
+  // Aviso de possível duplicada (vem depois do aviso de organização, que ele substitui)
+  for(const id of made){const t=Store.get(id),o=findDup(t);
+    if(o){toast(`Pode ser duplicada de “${o.title.slice(0,60)}”`,'Ver demanda',()=>openTask(o.id));break}}
 }
 
 /* ---------- Claude fills the fields ---------- */
@@ -902,11 +908,17 @@ function ruleSuggest(t){
   const dur=type==='E'?90:type==='A'?60:type==='C'?15:30;
   const external=/ entreg| roteiro| deadline| cliente| apresentar pr| apresentacao pr| enviar pr| mandar pr/.test(x)||undefined;
   const deadline=t.deadline||workDay(priority===1);
-  const slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date)
+  let slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date)
     :(findSlot(dur,type,deadline,t.id)||findSlot(dur,type,null,t.id));
-  return {type,priority,external,estimated_duration:t.estimated_duration||dur,deadline,planned_date:slot&&slot.date,planned_time:slot&&slot.time,project,people,
+  // Conversas vão sempre às 11:00, 15 min (janela de mensagens): hoje se ainda não passou das 11h, senão o próximo dia de expediente
+  if(type==='C'){const fixo=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'));const now=new Date();let k=fixo?t.planned_date:null;
+    for(let i=0;!k&&i<14;i++){const d=addDays(now,i),h=Ctx.data.hours[d.getDay()];if(h&&h.on&&(i>0||now.getHours()<11))k=iso(d)}
+    slot={date:k||workDay(false),time:'11:00'};
+    return Object.assign(base(),{estimated_duration:t.estimated_duration||15,deadline:deadline&&deadline<slot.date?slot.date:deadline,planned_date:slot.date,planned_time:'11:00'});}
+  return Object.assign(base(),{planned_date:slot&&slot.date,planned_time:slot&&slot.time});
+  function base(){return {type,priority,external,estimated_duration:t.estimated_duration||dur,deadline,project,people,
     rhythm:/ diari| todo dia| todos os dias| toda manha/.test(x)?'diario':/ semanal| toda semana| toda (segunda|terca|quarta|quinta|sexta)| semanalmente/.test(x)?'semanal'
-      :/ mensal| todo mes| mensalmente| fechamento do mes/.test(x)?'mensal':/ trimestr| trimestre| q[1-4] /.test(x)?'trimestral':''};
+      :/ mensal| todo mes| mensalmente| fechamento do mes/.test(x)?'mensal':/ trimestr| trimestre| q[1-4] /.test(x)?'trimestral':''}}
 }
 function classify(ids,manual){
   const done=[];
@@ -975,6 +987,14 @@ function groups(){
         {title:'Hoje',items:open.filter(x=>!lateF(x)&&(x.planned_date===t||x.deadline===t||ui.aiPending.has(x.id)))},
         {title:'Concluídas hoje',items:all.filter(x=>isDone(x)&&x.completed_at&&iso(new Date(x.completed_at))===t)}];
     }
+    case 'atrasados':{
+      // Dia em que ficou para trás: o mais antigo entre planejado e prazo que já passaram
+      const desde=x=>[x.planned_date,x.deadline].filter(d=>d&&d<t).sort()[0];
+      const late=open.filter(lateF).sort((a,b)=>desde(a).localeCompare(desde(b))||cmp(a,b));const age=x=>dd(desde(x),t);
+      return [{title:'Há mais de 2 semanas',warn:true,items:late.filter(x=>age(x)>14)},
+        {title:'Há 1 a 2 semanas',warn:true,items:late.filter(x=>age(x)>7&&age(x)<=14)},
+        {title:'Nos últimos 7 dias',warn:true,items:late.filter(x=>age(x)<=7)}];
+    }
     case 'semana':{
       const rest=open.filter(x=>!lateF(x));const a=x=>anchor(x);const tm=iso(addDays(fromIso(t),1));
       return [{title:'Ficaram para trás',warn:true,items:open.filter(lateF)},
@@ -1023,7 +1043,7 @@ function renderSide(){
       ${item('inbox','Caixa de entrada',svg('inbox','ico'),b.inbox.length||'')}
       ${item('revisar','A revisar',svg('sublist','ico'),Store.all().filter(toReview).length||'')}
       ${sec('prioridades','Prioridades',item('pdia','Prioridades do dia',svg('star','ico'),b.open.filter(inDay).length||'')+item('psemana','Prioridades da semana',svg('star','ico'),b.open.filter(inWeek).length||''))}
-      ${sec('listas','Listas',item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')+item('semana','Semana',svg('week','ico'),b.week.length||'')+item('todas','Todas as notas',svg('notes','ico'),b.open.length)+item('concluidas','Concluídas',svg('check','ico'),b.done.length||''))}
+      ${sec('listas','Listas',item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')+item('atrasados','Atrasados',svg('flag','ico'),b.late.length||'')+item('semana','Semana',svg('week','ico'),b.week.length||'')+item('todas','Todas as notas',svg('notes','ico'),b.open.length)+item('concluidas','Concluídas',svg('check','ico'),b.done.length||''))}
       ${sec('tipos','Tipos',TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join(''))}
       ${sec('ritmos','Ritmos',Object.keys(RHYTHM).map(k=>item('ritmo:'+k,RHYTHM[k],svg('clock','ico'),b.open.filter(t=>rhythmOf(t)===k).length||'')).join(''))}
       ${Ctx.data.projects.length?sec('projetos','Projetos',Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')):''}
@@ -1043,7 +1063,7 @@ function renderSide(){
 function headFor(){
   const t=new Date();
   const map={inbox:['Caixa de entrada','Despeje aqui. Organize depois.'],pdia:['Prioridades do dia','O que precisa sair hoje'],psemana:['Prioridades da semana','O que precisa sair até domingo'],revisar:['A revisar','Organizadas automaticamente. Confira e confirme.'],hoje:['Hoje',fmtDay(today(),true).replace(/^Hoje$/,'')||`${WDL[t.getDay()]}, ${t.getDate()} de ${MON[t.getMonth()]}`],
-    semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
+    atrasados:['Atrasados','Planejado ou prazo já passou, das mais antigas para as mais recentes'],semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
   if(ui.view.startsWith('tipo:'))return [TYPES[ui.view.slice(5)],'Abertas, por prioridade'];
   if(ui.view.startsWith('proj:'))return [ui.view.slice(5),'Projeto · abertas, por tipo'];
   if(ui.view.startsWith('ritmo:'))return [RHYTHM[ui.view.slice(6)],({diario:'O que se repete ou acontece todo dia',semanal:'Rituais e acompanhamentos da semana',mensal:'Processos, pessoas e planejamento do mês',trimestral:'Direção, estrutura e grandes apostas'})[ui.view.slice(6)]+' · abertas, por tipo'];
@@ -1053,6 +1073,8 @@ function rowHtml(t){
   const td=today(),m=[];
   if(ui.aiPending.has(t.id))m.push('<span class="aiwork">✦ organizando…</span>');
   else if(t.ai&&t.ai.fields&&t.ai.fields.length)m.push(`<span class="sug-chip" title="Campos preenchidos automaticamente">${t.ai.by==='claude'?'✦ revisado pelo Claude':'✦ sugerido'}</span>`);
+  const dp=!isDone(t)&&DUP[t.id];
+  if(dp)m.push(`<span class="dup-chip" data-act="dup" data-dup="${dp.id}" role="button" tabindex="0" title="Parecida com: ${esc(dp.title)}. Clique para abrir.">⚠ possível duplicada</span>`);
   if(t.type)m.push(`<span class="pill p${t.type}">${TYPES[t.type]}</span>`);
   if(t.priority)m.push(`<span class="pri pri${t.priority}">P${t.priority}</span>`);
   if(t.planned_date)m.push(`<span class="${!isDone(t)&&t.planned_date<td?'late':''}">${svg('cal')}${fmtDay(t.planned_date)}${t.planned_time?' · '+t.planned_time:''}</span>`);
@@ -1074,11 +1096,30 @@ function emptyFor(){
   const any=Store.all().length;
   if(ui.q)return `<div class="empty"><h2>Nada encontrado</h2><p>Nenhuma demanda com “${esc(ui.q)}”.</p></div>`;
   if(!any)return `<div class="empty"><h2>Comece escrevendo uma linha</h2><p>Escreva qualquer coisa no campo acima e aperte Enter. Não precisa escolher categoria, prazo nem prioridade agora.</p><p>Pode colar uma lista inteira do seu bloco de notas: cada linha vira uma demanda.</p></div>`;
-  const msg={pdia:'Nenhuma prioridade para hoje. Toque em “Dia” nos cards das demandas que precisam sair hoje.',psemana:'Nenhuma prioridade para a semana. Toque em “Semana” nos cards das demandas que precisam sair nesta semana.',revisar:'Tudo revisado. As demandas organizadas automaticamente aparecem aqui até você confirmar.',inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
+  const msg={pdia:'Nenhuma prioridade para hoje. Toque em “Dia” nos cards das demandas que precisam sair hoje.',psemana:'Nenhuma prioridade para a semana. Toque em “Semana” nos cards das demandas que precisam sair nesta semana.',revisar:'Tudo revisado. As demandas organizadas automaticamente aparecem aqui até você confirmar.',inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',atrasados:'Nenhuma demanda atrasada.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
   return `<div class="empty"><p>${msg[ui.view]||'Nenhuma demanda aberta deste tipo.'}</p></div>`;
 }
+/* ---------- Demandas possivelmente duplicadas (títulos parecidos entre as abertas) ---------- */
+const DUP_STOP=new Set('de da do das dos e a o as os para pra pro com no na nos nas em um uma uns umas que sobre ao aos por sem mais ver fazer toda todo todas todos semana semanal dia hoje amanha'.split(' '));
+const dupWords=t=>new Set(norm(t.title).trim().split(' ').filter(w=>w.length>=3&&!DUP_STOP.has(w)).map(w=>w.replace(/s$/,'')));
+function dupScore(A,B){if(!A.size||!B.size)return 0;let n=0;A.forEach(w=>{if(B.has(w))n++});
+  const m=Math.min(A.size,B.size);return (n>=2||n===m)&&n/m>=0.75?n/Math.max(A.size,B.size)+n/m:0}
+const notDup=(a,b)=>(a.notDup||[]).includes(b.id)||(b.notDup||[]).includes(a.id);
+function findDup(t){
+  if(!t||isDone(t))return null;const A=dupWords(t);let best=null,bs=0;
+  Store.all().forEach(o=>{if(o.id===t.id||isDone(o)||notDup(t,o))return;const sc=dupScore(A,dupWords(o));if(sc>bs){bs=sc;best=o}});
+  return best;
+}
+let DUP={};
+function dupMap(){
+  const open=Store.all().filter(x=>!isDone(x)&&x.title).map(t=>({t,w:dupWords(t)}));const m={},bs={};
+  for(let i=0;i<open.length;i++)for(let j=i+1;j<open.length;j++){const a=open[i],b=open[j];if(notDup(a.t,b.t))continue;
+    const sc=dupScore(a.w,b.w);if(!sc)continue;
+    if(!(bs[a.t.id]>=sc)){bs[a.t.id]=sc;m[a.t.id]=b.t}if(!(bs[b.t.id]>=sc)){bs[b.t.id]=sc;m[b.t.id]=a.t}}
+  return m;
+}
 function renderList(){
-  const body=$('#listBody');if(!body)return;
+  const body=$('#listBody');if(!body)return;DUP=dupMap();
   const gs=groups().filter(g=>g.items.length);
   body.innerHTML=gs.length?gs.map(g=>`<section class="group">${g.title?`<h3 class="${g.warn?'warn':''}">${g.dot?`<span class="dot d${g.dot}"></span>`:''}${esc(g.title)} <span class="n">${g.items.length}</span></h3>`:''}<div class="rows">${g.items.map(rowHtml).join('')}</div></section>`).join(''):emptyFor();
 }
@@ -1108,7 +1149,7 @@ function renderMain(){
         ${showLev?'<div class="levstrip" id="levstrip"></div>':''}
         ${ui.view==='inbox'?'<div class="toolbar" id="inboxBar"></div>':''}
         ${ui.view==='revisar'?'<div class="toolbar" id="reviewBar"></div>':''}
-        ${ui.view!=='concluidas'?`<div class="capture"><div class="capture-row"><span class="plus" aria-hidden="true"></span>
+        ${ui.view!=='concluidas'&&ui.view!=='atrasados'?`<div class="capture"><div class="capture-row"><span class="plus" aria-hidden="true"></span>
           <textarea id="cap" rows="1" placeholder="${ui.view==='hoje'?'Nova demanda para hoje…':'Nova demanda…'}" aria-label="Nova demanda"></textarea></div>
           <div class="chips" id="capPreview"></div>
           <div class="hint" id="capHint"></div></div>`:''}
@@ -1636,6 +1677,7 @@ function renderDetail(){
       ${ui.aiPending.has(t.id)?'<div class="aibar"><span class="aiwork">✦ O Claude está organizando esta demanda…</span></div>'
         :sugF.length?`<div class="aibar"><span>${t.ai.by==='claude'?'✦ Os campos marcados foram revisados pelo Claude.':'✦ Os campos marcados foram preenchidos automaticamente'+(t.ai_review==='pendente'?'. O Claude ainda vai revisar.':'.')}</span><button data-dact="aiaccept">Manter</button><button data-dact="aiundo">Desfazer</button></div>`
         :aiState==='on'&&!isDone(t)&&(!t.type||!t.priority||!t.deadline)?'<div class="aibar"><span>Faltam campos nesta demanda.</span><button data-dact="aiorg">✦ Organizar</button></div>':''}
+      ${(()=>{const o=findDup(t);return o?`<div class="aibar dupbar"><span>⚠ Pode ser duplicada de “${esc(o.title)}”${o.planned_date?' · '+fmtDay(o.planned_date).toLowerCase():''}.</span><button data-dact="dupopen" data-dup="${o.id}">Abrir</button><button data-dact="dupno" data-dup="${o.id}">Não é duplicada</button></div>`:''})()}
       <textarea id="d-title" class="dtitle" rows="1" data-f="title" placeholder="Título da demanda" aria-label="Título">${esc(t.title)}</textarea>
       ${seg('status',Object.entries(STATUS),t.status)}
       <div class="focus big" role="group" aria-label="Prioridade"><button data-dact="fday" class="${inDay(t)?'on':''}" aria-pressed="${inDay(t)}">${svg('star')}Prioridade do dia</button><button data-dact="fweek" class="${inWeek(t)?'on':''}" aria-pressed="${inWeek(t)}">${svg('star')}Prioridade da semana</button></div>
@@ -1762,6 +1804,7 @@ main.addEventListener('click',e=>{
     return}
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
   if(act==='open')return openTask(id);
+  if(act==='dup')return openTask(el.dataset.dup);
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
   if(act==='calprev'||act==='calnext'){const s=act==='calprev'?-1:1;const a=fromIso(ui.anchor);ui.anchor=iso(ui.cal==='semana'?addDays(a,7*s):addMonths(new Date(a.getFullYear(),a.getMonth(),1),s));return renderMain()}
   if(act==='caltoday'){ui.anchor=today();ui.scrolled=false;return renderMain()}
@@ -1870,6 +1913,9 @@ det.addEventListener('click',e=>{
     case 'fday':return update(t.id,{focus_day:inDay(t)?null:today()},{detail:true});
     case 'fweek':return update(t.id,{focus_week:inWeek(t)?null:weekKey()},{detail:true});
     case 'aiundo':undoAI(t.id);return renderAll();
+    case 'dupopen':return openTask(a.dataset.dup);
+    case 'dupno':{const o=Store.get(a.dataset.dup);if(o)Store.put(Object.assign({},o,{notDup:[...new Set((o.notDup||[]).concat(t.id))]}));
+      return update(t.id,{notDup:[...new Set((t.notDup||[]).concat(a.dataset.dup))]},{detail:true})}
     case 'aiaccept':return update(t.id,{ai:null},{detail:true,keepAi:true});
     case 'aiorg':return classify([t.id],true);
     case 'rmperson':{const x=arr('people');x.splice(i,1);return update(t.id,{people:x},{detail:true})}

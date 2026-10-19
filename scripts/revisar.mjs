@@ -92,7 +92,7 @@ TIPO
 - E (estratégico): direção do setor, processos, pessoas, decisões estruturais, apostas, projetos importantes, mudanças de sistema.
 - O (operacional): destravar o time, decisões rápidas, follow-ups, dia a dia, problemas pontuais, correções, cobranças, acompanhamentos, tarefas administrativas e pessoais.
 - A (analítico): métricas, indicadores, leitura de resultados, diagnósticos, análises para decisão.
-- C (conversas): resolver algo mandando mensagem ou falando com alguém: responder quem ficou sem resposta, mandar lembrete, cobrar, dar retorno, alinhar com alguém, resolver o caso de um mentorado por conversa. Costuma levar 15 min e vai em lote, numa janela de mensagens.
+- C (conversas): resolver algo mandando mensagem ou falando com alguém: responder quem ficou sem resposta, mandar lembrete, cobrar, dar retorno, alinhar com alguém, resolver o caso de um mentorado por conversa. Vai SEMPRE às 11:00 com 15 min (planned_time "11:00", estimated_duration 15), numa janela de mensagens em lote; o Cauê ajusta quando for diferente. Use hoje se ainda não passou das 11h, senão o próximo dia de expediente.
 
 PRIORIDADE (impacto no setor × urgência real): 1 = fazer agora; 2 = nesta semana; 3 = pode esperar.
 É P1 quando: ${ctx.p1 || 'há risco alto ou urgência real.'}
@@ -142,6 +142,8 @@ function review(t, r) {
   const tags = [...new Set((t.tags || []).concat(strs(r.tags, 3).map(x => x.toLowerCase().replace(/^#/, ''))))];
   if (tags.length !== (t.tags || []).length) set('tags', tags);
   if (!(t.subtasks || []).length) set('subtasks', strs(r.subtasks, 8).map(x => ({ t: x, done: false })));
+  // Conversas: sempre 11:00 e 15 min (a regra do Cauê vale acima da escolha do modelo)
+  if ((patch.type || t.type) === 'C') { set('planned_time', '11:00'); set('estimated_duration', 15); }
   const dl = patch.deadline || t.deadline, pd = patch.planned_date || t.planned_date;
   if (dl && pd && pd > dl && 'planned_date' in patch) patch.planned_date = dl;
   const old = t.ai || { fields: [], prev: {} };
