@@ -34,7 +34,7 @@ async function api(p, opt = {}) {
 
 const WDL = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 const DURS = [15, 30, 45, 60, 90, 120, 180, 240];
-const RHYTHM = ['diario', 'semanal', 'mensal', 'trimestral'];
+const RHYTHM = ['diario', 'semanal', 'quinzenal', 'mensal', 'trimestral'];
 const LOCKABLE = ['type', 'priority', 'planned_date', 'planned_time', 'estimated_duration', 'deadline', 'rhythm', 'project'];
 const pad = n => String(n).padStart(2, '0');
 const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -114,7 +114,7 @@ ${items.map(it => JSON.stringify(it)).join('\n')}
 
 Escreva SOMENTE JSON neste formato, um item por demanda, com o mesmo "id":
 {"items":[{"id":"","title":"","description":"","type":"E","priority":2,"planned_date":"AAAA-MM-DD","planned_time":"HH:MM","estimated_duration":30,"deadline":"AAAA-MM-DD","external":false,"rhythm":"","project":"","responsible":"Cauê","people":[],"tags":[],"subtasks":[]}]}
-Regras: type é "E", "O", "A" ou "C". title curto (até 8 palavras), claro, mantendo nomes próprios. description reescreve os detalhes úteis em 1 a 3 frases, ou "" se o texto já é curto. subtasks só se o texto descrever etapas. tags: 0 a 3 palavras minúsculas. people: nomes de pessoas citadas. estimated_duration: um de 15, 30, 45, 60, 90, 120, 180, 240. rhythm: "diario", "semanal", "mensal", "trimestral" ou "".`);
+Regras: type é "E", "O", "A" ou "C". title curto (até 8 palavras), claro, mantendo nomes próprios. description reescreve os detalhes úteis em 1 a 3 frases, ou "" se o texto já é curto. subtasks só se o texto descrever etapas. tags: 0 a 3 palavras minúsculas. people: nomes de pessoas citadas. estimated_duration: um de 15, 30, 45, 60, 90, 120, 180, 240. rhythm: "diario", "semanal", "quinzenal" (a cada duas semanas), "mensal", "trimestral" ou "".`);
 }
 
 function review(t, r) {

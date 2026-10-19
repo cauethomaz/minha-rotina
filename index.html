@@ -523,8 +523,8 @@ const TYPES={E:'Estratégico',O:'Operacional',A:'Analítico',C:'Conversas'};
 const TK=Object.keys(TYPES),TKN=TK.concat(['N']);
 const PRI={1:'Fazer agora',2:'Nesta semana',3:'Pode esperar'};
 const STATUS={pendente:'Pendente',andamento:'Em andamento',concluida:'Concluída'};
-const RHYTHM={diario:'Diário',semanal:'Semanal',mensal:'Mensal',trimestral:'Trimestral'};
-const REPEAT={'':'Não repete',diario:'Todo dia',semanal:'Toda semana',mensal:'Todo mês'};
+const RHYTHM={diario:'Diário',semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',trimestral:'Trimestral'};
+const REPEAT={'':'Não repete',diario:'Todo dia',semanal:'Toda semana',quinzenal:'A cada 2 semanas',mensal:'Todo mês'};
 const WD=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const WDL=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
 const MON=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -755,7 +755,7 @@ function toggleDone(id){
   if(t.repeat&&!(t.next_id&&Store.get(t.next_id))){
     // A próxima vem depois de hoje: concluir uma repetição atrasada não cria outra já atrasada
     const base=t.planned_date||t.deadline||today();
-    const step=d=>t.repeat==='diario'?addDays(d,1):t.repeat==='semanal'?addDays(d,7):addMonths(d,1);
+    const step=d=>t.repeat==='diario'?addDays(d,1):t.repeat==='semanal'?addDays(d,7):t.repeat==='quinzenal'?addDays(d,14):addMonths(d,1);
     let nd=step(fromIso(base));for(let i=0;i<400&&iso(nd)<=today();i++)nd=step(nd);
     const np=iso(nd);const shift=dd(base,np);
     const n=newTask(Object.assign({},t,{id:uid(),status:'pendente',completed_at:null,created_at:new Date().toISOString(),comments:[],next_id:null,
@@ -923,6 +923,7 @@ function ruleSuggest(t){
   return Object.assign(base(),{planned_date:slot&&slot.date,planned_time:slot&&slot.time});
   function base(){return {type,priority,external,estimated_duration:t.estimated_duration||dur,deadline,project,people,
     rhythm:/ diari| todo dia| todos os dias| toda manha/.test(x)?'diario':/ semanal| toda semana| toda (segunda|terca|quarta|quinta|sexta)| semanalmente/.test(x)?'semanal'
+      :/ quinzen| a cada (duas|2) semanas| a cada 15 dias| de 15 em 15| semana sim semana nao/.test(x)?'quinzenal'
       :/ mensal| todo mes| mensalmente| fechamento do mes/.test(x)?'mensal':/ trimestr| trimestre| q[1-4] /.test(x)?'trimestral':''}}
 }
 function classify(ids,manual){
@@ -1071,7 +1072,7 @@ function headFor(){
     atrasados:['Atrasados','Planejado ou prazo já passou, das mais antigas para as mais recentes'],semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
   if(ui.view.startsWith('tipo:'))return [TYPES[ui.view.slice(5)],'Abertas, por prioridade'];
   if(ui.view.startsWith('proj:'))return [ui.view.slice(5),'Projeto · abertas, por tipo'];
-  if(ui.view.startsWith('ritmo:'))return [RHYTHM[ui.view.slice(6)],({diario:'O que se repete ou acontece todo dia',semanal:'Rituais e acompanhamentos da semana',mensal:'Processos, pessoas e planejamento do mês',trimestral:'Direção, estrutura e grandes apostas'})[ui.view.slice(6)]+' · abertas, por tipo'];
+  if(ui.view.startsWith('ritmo:'))return [RHYTHM[ui.view.slice(6)],({diario:'O que se repete ou acontece todo dia',semanal:'Rituais e acompanhamentos da semana',quinzenal:'O que acontece a cada duas semanas',mensal:'Processos, pessoas e planejamento do mês',trimestral:'Direção, estrutura e grandes apostas'})[ui.view.slice(6)]+' · abertas, por tipo'];
   return map[ui.view];
 }
 function rowHtml(t){
@@ -1294,7 +1295,7 @@ function renderLeverage(main,banner){
   add('Prazos vencidos','O prazo real já passou.',b.open.filter(t=>t.deadline&&t.deadline<td));
   add('Podem passar pelo filtro do Sanchez','Operacionais sem urgência máxima que ainda estão com você.',b.open.filter(t=>t.type==='O'&&t.priority!==1&&(t.responsible||'Cauê')==='Cauê'));
   add('Analíticas sem ritual','Análise funciona melhor com dia e horário fixos. Defina uma repetição.',b.open.filter(t=>t.type==='A'&&!t.repeat));
-  const rc={diario:0,semanal:0,mensal:0,trimestral:0,none:0};b.open.forEach(t=>rc[rhythmOf(t)||'none']++);
+  const rc={diario:0,semanal:0,quinzenal:0,mensal:0,trimestral:0,none:0};b.open.forEach(t=>rc[rhythmOf(t)||'none']++);
   const tot=wt.total||1;
   main.innerHTML=`<header class="mhead"><div><h1>Alavancagem</h1><div class="sub">O que multiplica o resultado do time?</div></div></header>${banner}
   <div class="scroll"><div class="lev">
