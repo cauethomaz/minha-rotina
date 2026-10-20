@@ -298,6 +298,27 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
 .card h2{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:600}
 .card.wide{grid-column:1/-1}
+.pi.caso{align-items:flex-start}
+.casohead{display:grid;gap:3px;text-align:left;width:100%;cursor:pointer}
+.casohead .meta-line{margin:0;font-size:13px}
+.casohead b.late,.casopassos small.late{color:var(--p1)}
+.casoed{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:8px}
+.casoform{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.casoprod{margin:0;font-size:12.5px}
+.casoia{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 12px}
+.casoia p{margin:4px 0 0;font-size:13.5px}
+.casoia .flabel{display:block}
+.casopassos{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.casopassos li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px}
+.casopassos li.done>span{color:var(--muted);text-decoration:line-through}
+.casopassos small{display:block;color:var(--faint);font-size:11.5px;text-decoration:none}
+.casolog{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13.5px}
+.casolog .sub{display:block;font-size:11.5px;color:var(--faint)}
+.casoadd{display:flex;gap:8px;align-items:flex-end}
+.casoadd textarea{flex:1}
+.casoacts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.casogrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 24px;margin-top:6px}
+.casogrid .bar-row{grid-template-columns:minmax(0,1fr) 90px 28px}
 .verdict{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .verdict .q{font-family:var(--display);font-size:20px;letter-spacing:-.015em;font-weight:650;max-width:38ch;text-wrap:balance}
 .verdict .badge{font-weight:700;font-size:13px;padding:5px 12px;border-radius:999px}
@@ -1083,7 +1104,7 @@ function renderSide(){
       ${sec('tipos','Tipos',TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join(''))}
       ${sec('ritmos','Ritmos',Object.keys(RHYTHM).map(k=>item('ritmo:'+k,RHYTHM[k],svg('clock','ico'),b.open.filter(t=>rhythmOf(t)===k).length||'')).join(''))}
       ${Ctx.data.projects.length?sec('projetos','Projetos',Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')):''}
-      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.data?(Painel.data.resumo&&Painel.data.resumo.criticos)||'':'')+item('producao','Produção',svg('sublist','ico'),Producao.meusVencidos()||'')+item('conteudos','Conteúdos',svg('film','ico'),(Esteira.count('aprovar')+Esteira.count('revisar'))||'')+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
+      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.data?(Painel.data.resumo&&Painel.data.resumo.criticos)||'':'')+item('producao','Produção',svg('sublist','ico'),Producao.meusVencidos()||'')+item('insatisfacoes','Insatisfações',svg('flag','ico'),Casos.abertos().length||'')+item('conteudos','Conteúdos',svg('film','ico'),(Esteira.count('aprovar')+Esteira.count('revisar'))||'')+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
     </nav>
     <div class="side-foot">
       <button class="lev-mini" data-view="alavancagem">
@@ -1173,6 +1194,7 @@ function renderMain(){
   if(ui.view==='mentorados')return renderMentorados(main,banner);
   if(ui.view==='conteudos')return renderConteudos(main,banner);
   if(ui.view==='producao')return renderProducao(main,banner);
+  if(ui.view==='insatisfacoes')return renderCasos(main,banner);
   const [h,sub]=headFor();
   // Keep capture + search DOM alive while typing; rebuild only the list body.
   if(main.dataset.view!==ui.view||!$('#listBody')){
@@ -1875,6 +1897,19 @@ main.addEventListener('click',e=>{
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
   if(act==='open')return openTask(id);
   if(act==='dup')return openTask(el.dataset.dup);
+  if(act==='casoNovo')return casoNovo();
+  if(act==='casoAbrir'){ui.casoOpen=ui.casoOpen===id?null:id;ui.casoDel=false;return renderMain()}
+  if(act==='casoFechados'){if(e.target.closest('summary'))ui.casoFechados=!el.open;return}
+  if(act.startsWith('caso')&&id&&Casos.itens.has(id)){const c=Casos.itens.get(id);
+    if(act==='casoFill'){const t=$('#caso-colar');return casoPreencher(id,t?t.value:'')}
+    if(act==='casoPasso'){const ps=Object.assign({},c.passos);ps[el.dataset.k]=ps[el.dataset.k]?null:today();if(!ps[el.dataset.k])delete ps[el.dataset.k];return Casos.save(id,{passos:ps})}
+    if(act==='casoLog'){const t=$('#caso-log-'+id);const v=t&&t.value.trim();if(!v)return t&&t.focus();return Casos.save(id,{log:(c.log||[]).concat([{em:new Date().toISOString(),txt:v}])},'Atualização registrada')}
+    if(act==='casoDemanda')return casoDemanda(c);
+    if(act==='casoFechar'){if(!c.raiz){toast('Escolha a causa raiz antes de encerrar.');const r=$('#cf-raiz');r&&r.focus();return}
+      const ps=Object.assign({},c.passos);if(!ps.encerrar)ps.encerrar=today();ui.casoOpen=null;return Casos.save(id,{status:'fechado',fechadoEm:new Date().toISOString(),passos:ps},'Caso encerrado')}
+    if(act==='casoReabrir')return Casos.save(id,{status:'aberto',fechadoEm:null});
+    if(act==='casoDel'){if(ui.casoDel===id)return Casos.remove(id);ui.casoDel=id;return renderMain()}
+  }
   if(act==='calDl'){ui.calDl=ui.calDl===el.dataset.date?null:el.dataset.date;return renderMain()}
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
   if(act==='calprev'||act==='calnext'){const s=act==='calprev'?-1:1;const a=fromIso(ui.anchor);ui.anchor=iso(ui.cal==='semana'?addDays(a,7*s):addMonths(new Date(a.getFullYear(),a.getMonth(),1),s));return renderMain()}
@@ -1900,6 +1935,11 @@ function ctxField(el){
   return null;
 }
 main.addEventListener('change',e=>{
+  if(e.target.dataset.casoF){const id=ui.casoOpen;if(!id||!Casos.itens.has(id))return;
+    const k=e.target.dataset.casoF,v=e.target.value.trim();const p={[k]:v};if(ui.casoNovo===id&&k==='nome')ui.casoNovo=null;
+    const c=Casos.itens.get(id);if(k==='nome'&&v&&!c.mentor){const cli=casoCliente(v);if(cli&&cli.m&&!aDefinir(cli.m))p.mentor=cli.m}
+    if(k==='motivo'&&v&&(!c.categoria||c.categoria==='outro'))p.categoria=casoCategoria(v);
+    return Casos.save(id,p,null,!(p.mentor||p.categoria))}
   if(e.target.id==='prod-filtro'){ui.prodFiltro=e.target.value;return renderMain()}
   if(e.target.matches('.pdono')){const d=Ctx.data.prodDonos=Ctx.data.prodDonos||{},k=e.target.dataset.etapa;if(e.target.value===donoPadrao(k))delete d[k];else d[k]=e.target.value;Ctx.save();return renderMain()}
   if(e.target.id==='ctx-import'){const f=e.target.files&&e.target.files[0];if(f)importBackup(f);return}
@@ -2032,10 +2072,143 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('resize',()=>{$('#scrim').hidden=!(ui.sel&&!isList()&&innerWidth>820)});
 setInterval(()=>{if(ui.view==='calendario'&&!ui.sel)renderMain()},60000);
 
+/* ---------- Insatisfações: casos de mentorados insatisfeitos (linhas caso:<id>; análise do Claude em insat:analise) ---------- */
+const CASO_CAT={estrategia:'Estratégia e roteiros',mentor:'Mentor',producao:'Produção, edição e prazos',resultado:'Resultado (views, seguidores)',atendimento:'Atendimento e tempo de resposta',venda:'Expectativa da venda e contrato',outro:'Outro'};
+const CASO_KW={venda:['venda','vendedor','closer','sdr','prometid','promessa','contrato','reembolso','cancel','multa','garantia','pagamento','dinheiro'],
+  producao:['edicao','editad','edit','atras','prazo','leva','entrega','upload','drive','legenda','video pronto'],
+  mentor:['mentor','call','reuniao','postura','grosseir','sumiu','agenda'],
+  atendimento:['resposta','responde','demora','atendimento','suporte','vacuo','ignorad','retorno'],
+  resultado:['view','visualiza','seguidor','resultado','engajamento','viral','cresc','alcance'],
+  estrategia:['estrateg','roteiro','headline','gancho','posicionamento','nicho','conteudo','tema','metodo']};
+const CASO_RAIZ={venda:'Expectativa desalinhada na venda',onboarding:'Onboarding ou entendimento do método',estrategia:'Qualidade da estratégia ou do roteiro',mentor:'Postura ou presença do mentor',producao:'Processo ou prazo de produção',atendimento:'Comunicação e tempo de resposta',execucao:'Execução do mentorado (não grava, não posta)',outro:'Outro'};
+const CASO_PAPEL={cs:'CS',sdr:'SDR',closer:'Closer',mentor:'Mentor',outro:'Outro'};
+const CASO_GRAV={alta:'Risco alto',media:'Atenção',baixa:'Leve'};
+// Sequência de ações de cada caso; o número é o prazo em dias úteis a partir da abertura
+const CASO_PASSOS=[
+  ['recebido','Avisar quem encaminhou que o caso está com você',1],
+  ['entender','Entender o caso: grupo, histórico com o CS e a versão do mentor',1],
+  ['contato','Falar com o mentorado: ouvir, reconhecer e não se defender',2],
+  ['plano','Combinar o plano de ação: o que muda, quem faz e até quando',3],
+  ['devolutiva','Dar a devolutiva a quem encaminhou',3],
+  ['acompanhar','Checar se o plano está andando',10],
+  ['encerrar','Confirmar com o mentorado que resolveu e registrar a causa raiz',15]];
+const addBiz=(z,n)=>{let d=fromIso(z);while(n>0){d=addDays(d,1);const h=Ctx.data.hours[d.getDay()];if(!h||h.on)n--}return iso(d)};
+const casoProx=c=>CASO_PASSOS.find(p=>!(c.passos||{})[p[0]]);
+const casoPrazo=(c,p)=>addBiz((c.abertoEm||today()).slice(0,10),p[2]);
+const casoAtrasado=c=>{const p=casoProx(c);return c.status!=='fechado'&&p&&casoPrazo(c,p)<today()};
+const casoUltima=c=>(c.log||[]).slice(-1)[0];
+const nrm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
+function casoCategoria(txt){const x=' '+nrm(txt)+' ';let best='outro',n=0;Object.keys(CASO_KW).forEach(k=>{const s=CASO_KW[k].filter(w=>x.includes(w)).length;if(s>n){n=s;best=k}});return best}
+// Mentorado do Controle de Produção com o mesmo nome (para mostrar etapa, prazo, mentor e CS)
+function casoCliente(nome){const D=Producao.data;if(!D||!nome)return null;const k=nrm(nome);
+  return (D.clientes||[]).find(c=>nrm(c.n)===k)||(D.clientes||[]).find(c=>k.length>5&&(nrm(c.n).includes(k)||k.includes(nrm(c.n))))||null}
+function casoPreencher(id,txt){
+  const c=Casos.itens.get(id);if(!c||!txt.trim())return;const p={};const x=nrm(txt);
+  const tel=txt.match(/(?:\+?55[\s-]?)?\(?\d{2}\)?[\s-]?9?\d{4}[\s-]?\d{4}/);if(tel&&!c.telefone)p.telefone=tel[0].trim();
+  const D=Producao.data;
+  if(!c.nome&&D){const hit=(D.clientes||[]).filter(k=>k.s==='ativo'&&k.n&&k.n.length>5&&x.includes(nrm(k.n))).sort((a,b)=>b.n.length-a.n.length)[0];if(hit)p.nome=hit.n}
+  const cli=casoCliente(p.nome||c.nome);if(!c.mentor&&cli&&cli.m&&!aDefinir(cli.m))p.mentor=cli.m;
+  const papel=Object.keys(CASO_PAPEL).find(k=>k!=='outro'&&k!=='mentor'&&new RegExp('\\b'+k+'\\b').test(x));if(papel&&!c.papel)p.papel=papel;
+  if(!c.motivo)p.motivo=txt.trim();
+  if(!c.categoria||c.categoria==='outro')p.categoria=casoCategoria(txt);
+  if(!c.gravidade||c.gravidade==='media')p.gravidade=/cancel|reembolso|procon|advogad|processo judicial|churn|sair da mentoria|devolu/.test(x)?'alta':c.gravidade||'media';
+  Casos.save(id,p,Object.keys(p).length?'Campos preenchidos a partir do texto. Confira.':'Nada novo encontrado no texto.');
+}
+const Casos={itens:new Map(),analise:null,
+  all(){return [...this.itens.values()].sort((a,b)=>String(b.abertoEm).localeCompare(String(a.abertoEm)))},
+  abertos(){return this.all().filter(c=>c.status!=='fechado')},
+  local(){try{localStorage.setItem('minharotina.casos',JSON.stringify(this.all()))}catch(e){}},
+  async save(id,patch,msg,quiet){
+    const cur=this.itens.get(id)||{};const next=Object.assign({},cur,patch,{atualizadoEm:new Date().toISOString()});delete next.id;
+    this.itens.set(id,Object.assign({},next,{id}));renderSide();if(!quiet)renderMain();
+    if(!sb||!currentUser){this.local();if(msg)toast(msg);return}
+    const {error}=await sb.from('tasks').upsert({id:'caso:'+id,user_id:currentUser.id,data:next,updated_at:new Date().toISOString()});
+    if(error||msg)toast(error?'Não salvou. Verifique a conexão e tente de novo.':msg);
+  },
+  async remove(id){this.itens.delete(id);ui.casoOpen=null;ui.casoDel=false;renderSide();renderMain();
+    if(sb&&currentUser){const {error}=await sb.from('tasks').delete().eq('id','caso:'+id);toast(error?'Não consegui excluir. Tente de novo.':'Caso excluído')}else{this.local();toast('Caso excluído')}}};
+try{if(!window.SUPABASE_URL)JSON.parse(localStorage.getItem('minharotina.casos')||'[]').forEach(c=>Casos.itens.set(c.id,c))}catch(e){}
+function casoNovo(){const id=uid();Casos.itens.set(id,{id,abertoEm:new Date().toISOString(),status:'aberto',gravidade:'media',categoria:'',passos:{},log:[]});
+  ui.casoOpen=id;ui.casoNovo=id;renderMain();renderSide();setTimeout(()=>{const t=$('#caso-colar');t&&t.focus()},30)}
+function casoDemanda(c){
+  const p=casoProx(c);if(!p)return;const fala=['recebido','contato','devolutiva','encerrar'].includes(p[0]);
+  const t=newTask({title:`Insatisfação ${c.nome||''}: ${p[1].split(':')[0].toLowerCase()}`.slice(0,140),description:`${CASO_CAT[c.categoria]||''}${c.motivo?'\n\n'+c.motivo:''}${c.encaminhou?'\n\nEncaminhado por '+c.encaminhou+(c.papel?' ('+CASO_PAPEL[c.papel]+')':''):''}`,
+    type:fala?'C':'O',priority:1,deadline:casoPrazo(c,p),people:[c.nome,c.encaminhou,c.mentor].filter(Boolean),project:Ctx.data.projects.find(x=>/core/i.test(x))||''});
+  Store.put(t);if(aiReady())classify([t.id]);else renderAll();toast('Demanda criada (P1)','Abrir',()=>openTask(t.id));
+}
+// Padrões entre os casos: o que se repete por motivo, mentor, quem encaminha e causa raiz
+function casoPadroes(L){
+  const cnt=(f)=>{const m={};L.forEach(c=>{const k=f(c);if(k)m[k]=(m[k]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+  const mot=cnt(c=>c.categoria&&CASO_CAT[c.categoria]),men=cnt(c=>c.mentor),pap=cnt(c=>c.papel&&CASO_PAPEL[c.papel]),raiz=cnt(c=>c.raiz&&CASO_RAIZ[c.raiz]),quem=cnt(c=>c.nome&&c.nome.trim());
+  const out=[];const N=L.length;
+  if(men[0]&&men[0][1]>=2)out.push(`**${men[0][0]}** aparece em **${men[0][1]} de ${N}** casos. Vale olhar a rotina e a carteira desse mentor antes do próximo caso.`);
+  if(mot[0]&&mot[0][1]>=2)out.push(`**${mot[0][0]}** é o motivo mais comum (**${mot[0][1]} de ${N}**).`);
+  if(raiz[0]&&raiz[0][1]>=2)out.push(`Causa raiz que mais se repete nos casos fechados: **${raiz[0][0]}** (${raiz[0][1]}).`);
+  const vv=L.filter(c=>c.categoria==='venda'||c.raiz==='venda'||['sdr','closer'].includes(c.papel)).length;if(vv>=2)out.push(`**${vv} casos** passam pela venda (motivo ligado ao que foi prometido ou encaminhados por SDR ou closer). Alinhar o discurso comercial com o que a entrega cumpre.`);
+  quem.filter(([,n])=>n>=2).forEach(([nm,n])=>out.push(`**${nm}** já teve **${n} casos**. Insatisfação repetida é risco de churn: trate como caso de risco alto.`));
+  const novos=L.filter(c=>{const k=casoCliente(c.nome);return k&&k.e&&/^(diagn|onboard|mapa|apresenta|leva 1|leva 2)/i.test(nrm(k.e))}).length;if(novos>=2)out.push(`**${novos} casos** são de mentorados no começo da jornada. Pode ser onboarding ou expectativa da venda.`);
+  return {mot,men,pap,raiz,out};
+}
+function renderCasos(main,banner){
+  main.dataset.view='insatisfacoes';
+  const L=Casos.all(),ab=L.filter(c=>c.status!=='fechado'),fe=L.filter(c=>c.status==='fechado'),A=Casos.analise;
+  const fechados=fe.filter(c=>c.fechadoEm&&c.abertoEm);const tMed=fechados.length?Math.round(fechados.reduce((s,c)=>s+dd(c.abertoEm.slice(0,10),c.fechadoEm.slice(0,10)),0)/fechados.length):null;
+  const head=`<header class="mhead"><div><h1>Insatisfações</h1><div class="sub">Casos que chegam do CS, SDR ou closer · do registro à causa raiz${A&&A.atualizadoEm?' · análise do Claude de '+fmtStamp(A.atualizadoEm):''}</div></div><div class="grow"></div><button class="btn pri-b" data-act="casoNovo">+ Novo caso</button></header>${banner}`;
+  const P=casoPadroes(L);
+  const bars=(arr)=>{const mx=arr.length?arr[0][1]:1;return arr.length?arr.slice(0,6).map(([n,v])=>`<div class="bar-row"><span class="nm" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)}</span><span class="track"><i style="width:${v/mx*100}%;background:var(--muted)"></i></span><span class="val">${v}</span></div>`).join(''):'<p class="meta-line" style="margin:0">—</p>'};
+  const kpi=(v,l,c)=>`<div class="pkpi ${c||''}"><b>${v}</b><span>${l}</span></div>`;
+  const padroes=L.length?`<section class="card wide"><h2>Padrões</h2>
+    <div class="pkpis">${kpi(ab.length,'casos abertos')}${kpi(ab.filter(c=>c.gravidade==='alta').length,'com risco alto',ab.some(c=>c.gravidade==='alta')?'bad':'')}${kpi(ab.filter(casoAtrasado).length,'com passo atrasado',ab.some(casoAtrasado)?'bad':'')}${kpi(tMed==null?'—':tMed+' dias','tempo médio até fechar')}</div>
+    ${P.out.length?`<ul class="pcand" style="margin:14px 0 0">${P.out.map(x=>`<li>${md(x)}</li>`).join('')}</ul>`:L.length<3?'<p class="meta-line" style="margin:12px 0 0">Os padrões aparecem conforme você registra mais casos.</p>':''}
+    ${A&&((A.padroes||[]).length||(A.recomendacoes||[]).length)?`<div class="casoia"><span class="flabel">✦ Leitura do Claude</span>${(A.padroes||[]).map(x=>`<p>${md(x)}</p>`).join('')}${(A.recomendacoes||[]).length?`<span class="flabel" style="margin-top:8px">Para não repetir</span><ul class="pcand">${A.recomendacoes.map(x=>`<li>${md(x)}</li>`).join('')}</ul>`:''}</div>`:''}
+    <div class="casogrid"><div><h3 class="psub">Motivo</h3>${bars(P.mot)}</div><div><h3 class="psub">Mentor envolvido</h3>${bars(P.men)}</div><div><h3 class="psub">Quem encaminhou</h3>${bars(P.pap)}</div><div><h3 class="psub">Causa raiz (fechados)</h3>${bars(P.raiz)}</div></div></section>`:'';
+  const lista=ab.length?`<ul class="plist">${ab.map(casoItem).join('')}</ul>`:`<p class="meta-line">${L.length?'Nenhum caso aberto.':'Nenhum caso registrado. Use “+ Novo caso” e cole a mensagem de quem encaminhou: o app tenta preencher o resto.'}</p>`;
+  main.innerHTML=head+`<div class="scroll"><div class="painel">
+    <section class="card wide"><h2>Casos abertos · ${ab.length}</h2>${lista}</section>
+    ${padroes}
+    ${fe.length?`<section class="card wide"><details ${ui.casoFechados?'open':''} data-act="casoFechados"><summary class="psub" style="margin:0;cursor:pointer">Casos fechados · ${fe.length}</summary><ul class="plist" style="margin-top:10px">${fe.map(casoItem).join('')}</ul></details></section>`:''}
+  </div></div>`;
+}
+function casoItem(c){
+  const open=ui.casoOpen===c.id,p=casoProx(c),late=casoAtrasado(c),u=casoUltima(c),fech=c.status==='fechado';
+  const nivel=fech?'ok':c.gravidade==='alta'?'crit':'warn';
+  const dias=c.abertoEm?dd(c.abertoEm.slice(0,10),(fech&&c.fechadoEm?c.fechadoEm:new Date().toISOString()).slice(0,10)):0;
+  const resumo=`<button class="casohead" data-act="casoAbrir" data-id="${c.id}" aria-expanded="${open}"><strong>${esc(c.nome||'Sem nome')}</strong>
+    <span class="meta-line">${[c.categoria&&CASO_CAT[c.categoria],c.mentor&&'mentor '+c.mentor,c.encaminhou&&'via '+c.encaminhou+(c.papel?' ('+CASO_PAPEL[c.papel]+')':'')].filter(Boolean).map(esc).join(' · ')}</span>
+    <span class="meta-line">${fech?`Fechado em ${dias} dias${c.raiz?' · causa: '+esc(CASO_RAIZ[c.raiz]):''}`:`Aberto há ${dias} dia${dias===1?'':'s'}${p?` · próximo: <b class="${late?'late':''}">${esc(p[1].split(':')[0])}${late?' (atrasado)':' até '+fmtDay(casoPrazo(c,p)).toLowerCase()}</b>`:''}`}</span>
+    ${u?`<span class="meta-line">Última atualização ${fmtDay(u.em.slice(0,10)).toLowerCase()}: ${esc(u.txt.slice(0,140))}</span>`:''}</button>`;
+  return `<li class="pi ${nivel} caso"><span class="pselo ${nivel}">${fech?'Fechado':CASO_GRAV[c.gravidade||'media']}</span><div class="pbody">${resumo}${open?casoEditor(c):''}</div></li>`;
+}
+function casoEditor(c){
+  const f=(k,l,ph,type)=>`<div class="fld"><label for="cf-${k}">${l}</label><input class="inp" id="cf-${k}" ${type?`type="${type}"`:''} data-caso-f="${k}" value="${esc(c[k]||'')}" placeholder="${esc(ph||'')}"></div>`;
+  const sel=(k,l,o)=>`<div class="fld"><label for="cf-${k}">${l}</label><select class="inp" id="cf-${k}" data-caso-f="${k}"><option value="">—</option>${Object.entries(o).map(([v,t])=>`<option value="${v}" ${c[k]===v?'selected':''}>${t}</option>`).join('')}</select></div>`;
+  const cli=casoCliente(c.nome),ia=Casos.analise&&Casos.analise.casos&&Casos.analise.casos[c.id],ps=c.passos||{},fech=c.status==='fechado';
+  const wa=String(c.telefone||'').replace(/\D/g,'');
+  return `<div class="casoed">
+    ${ui.casoNovo===c.id&&!c.nome?`<div class="fld"><label for="caso-colar">Cole a mensagem de quem encaminhou</label><textarea class="inp" id="caso-colar" rows="4" placeholder="Cole aqui o que o CS, SDR ou closer mandou. O app tenta achar nome, telefone, mentor e motivo."></textarea><div><button class="btn" data-act="casoFill" data-id="${c.id}">Preencher a partir do texto</button></div></div>`:''}
+    <div class="casoform">${f('nome','Mentorado','Nome do mentorado')}${f('telefone','Telefone','(11) 99999-9999','tel')}${f('encaminhou','Quem encaminhou','Nome de quem mandou o caso')}${sel('papel','Função',CASO_PAPEL)}${f('mentor','Mentor envolvido','Nome do mentor')}${sel('categoria','Motivo',CASO_CAT)}${sel('gravidade','Gravidade',CASO_GRAV)}</div>
+    <div class="fld" style="margin-top:10px"><label for="cf-motivo">Problema ou motivo da insatisfação</label><textarea class="inp" id="cf-motivo" rows="3" data-caso-f="motivo">${esc(c.motivo||'')}</textarea></div>
+    ${cli?`<p class="meta-line casoprod">Produção: ${esc(cli.p||'')} · etapa ${esc(cli.e||'—')} · prazo ${cli.z?brData(cli.z)+(cli.z<Producao.data.base?' (vencido)':''):'—'} · mentor ${esc(cli.m||'—')} · CS ${esc(cli.cs||'—')}</p>`:''}
+    ${wa?`<p class="meta-line"><a href="https://wa.me/${wa.length<=11?'55'+wa:wa}" target="_blank" rel="noopener">Abrir conversa no WhatsApp</a></p>`:''}
+    ${ia?`<div class="casoia"><span class="flabel">✦ Leitura do Claude</span>${ia.raiz?`<p><b>Raiz provável:</b> ${md(ia.raiz)}</p>`:''}${ia.proximo_passo?`<p><b>Próximo passo:</b> ${md(ia.proximo_passo)}</p>`:''}${ia.mensagem?`<div class="psug"><p><span class="flabel">Sugestão de mensagem</span><span id="caso-msg-${c.id}">${esc(ia.mensagem)}</span></p><button class="btn" data-act="copySug" data-target="caso-msg-${c.id}">Copiar</button></div>`:''}</div>`:''}
+    <h3 class="psub">Sequência de ações</h3>
+    <ol class="casopassos">${CASO_PASSOS.map(p=>{const d=ps[p[0]],pr=casoPrazo(c,p),late=!d&&!fech&&pr<today();
+      return `<li class="${d?'done':''}"><button class="chk ${d?'on':''}" data-act="casoPasso" data-id="${c.id}" data-k="${p[0]}" aria-label="${d?'Desmarcar':'Marcar'}: ${esc(p[1])}">${svg('tick')}</button><span>${esc(p[1])}<small class="${late?'late':''}">${d?'feito '+fmtDay(d).toLowerCase():(late?'atrasado · era até ':'até ')+fmtDay(pr).toLowerCase()}</small></span></li>`}).join('')}</ol>
+    <h3 class="psub">Atualizações do caso</h3>
+    ${(c.log||[]).length?`<ul class="casolog">${c.log.slice().reverse().map(x=>`<li><span class="sub">${fmtStamp(x.em)}</span>${esc(x.txt)}</li>`).join('')}</ul>`:''}
+    <div class="casoadd"><textarea class="inp" id="caso-log-${c.id}" rows="2" placeholder="O que aconteceu? Ex.: liguei, ela quer trocar de mentor; combinei call com o Rodrigo na quinta."></textarea><button class="btn" data-act="casoLog" data-id="${c.id}">Registrar</button></div>
+    ${fech?'':`<h3 class="psub">Encerrar</h3><div class="casoform">${sel('raiz','Causa raiz',CASO_RAIZ)}<div class="fld" style="grid-column:span 2"><label for="cf-licao">O que muda para não repetir</label><input class="inp" id="cf-licao" data-caso-f="licao" value="${esc(c.licao||'')}" placeholder="Ex.: closer não promete viral em 30 dias"></div></div>`}
+    <div class="pactions casoacts">
+      ${fech?`<button class="btn" data-act="casoReabrir" data-id="${c.id}">Reabrir</button>`:`${casoProx(c)?`<button class="btn" data-act="casoDemanda" data-id="${c.id}">+ Demanda do próximo passo</button>`:''}<button class="btn" data-act="casoFechar" data-id="${c.id}">✓ Encerrar caso</button>`}
+      <span class="grow"></span><button class="btn ${ui.casoDel===c.id?'danger':''}" data-act="casoDel" data-id="${c.id}">${ui.casoDel===c.id?'Confirmar exclusão':'Excluir'}</button>
+    </div></div>`;
+}
 /* Linhas especiais da tabela tasks: painel:core (Mentorados), roteiro:<id> e esteira:config (Conteúdos) */
 function routeSpecial(row){
   if(row.id==='painel:producao'){Producao.data=row.data;Producao.updated=row.updated_at;Producao.cache=null;return}
   if(row.id==='painel:producao-hist'){Producao.hist=(row.data&&row.data.dias)||[];return}
+  if(row.id.startsWith('caso:')){Casos.itens.set(row.id.slice(5),Object.assign({},row.data,{id:row.id.slice(5)}));return}
+  if(row.id==='insat:analise'){Casos.analise=row.data;return}
   if(row.id.startsWith('painel:'))return Painel.set(row);
   if(row.id.startsWith('roteiro:'))Esteira.itens.set(row.id.slice(8),Object.assign({},row.data,{id:row.id.slice(8)}));
   else if(row.id==='esteira:config')Esteira.cfg=row.data||{};
@@ -2057,7 +2230,7 @@ const Esteira={itens:new Map(),cfg:{},
   all(){return [...this.itens.values()]},
   count(etapa){const e=ETAPAS.find(x=>x.id===etapa);return this.all().filter(i=>e.status.includes(i.status)).length},
   // Não redesenha enquanto você digita um pedido ou os ajustes
-  changed(){renderSide();const ae=document.activeElement;if(ui.view==='conteudos'&&!(ae&&ae.closest&&ae.closest('.cdrawer')&&/INPUT|TEXTAREA/.test(ae.tagName)))renderMain()},
+  changed(){renderSide();const ae=document.activeElement;const typing=ae&&ae.closest&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName);if((ui.view==='conteudos'&&!(typing&&ae.closest('.cdrawer')))||(ui.view==='insatisfacoes'&&!typing))renderMain()},
   async save(id,patch,msg){
     const cur=this.itens.get(id);if(!cur||!sb||!currentUser)return;
     const next=Object.assign({},cur,patch,{atualizadoEm:new Date().toISOString()});
@@ -2114,7 +2287,7 @@ function supaDb(uid){
             next({docChanges:()=>data.filter(r=>!r.id.includes(':')).map(r=>({type:'added',doc:docSnap(r.id,r.data)}))});
           });
           sb.channel('tasks-'+uid).on('postgres_changes',{event:'*',schema:'public',table:'tasks'},p=>{
-            if(p.eventType==='DELETE'&&p.old&&p.old.id&&p.old.id.includes(':')){Esteira.itens.delete(p.old.id.slice(8));Esteira.changed();return}
+            if(p.eventType==='DELETE'&&p.old&&p.old.id&&p.old.id.includes(':')){if(p.old.id.startsWith('caso:'))Casos.itens.delete(p.old.id.slice(5));else Esteira.itens.delete(p.old.id.slice(8));Esteira.changed();return}
             if(p.eventType==='DELETE'){if(p.old&&p.old.id)next({docChanges:()=>[{type:'removed',doc:docSnap(p.old.id,null)}]});return}
             if(p.new&&p.new.id&&p.new.id.includes(':')){if(p.new.user_id===uid){routeSpecial(p.new);Esteira.changed()}return}
             if(p.new&&p.new.user_id===uid)next({docChanges:()=>[{type:'modified',doc:docSnap(p.new.id,p.new.data)}]});
