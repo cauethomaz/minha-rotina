@@ -485,6 +485,7 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .pkpi.bad b{color:var(--p1)}
 button.pkpi{text-align:left;cursor:pointer;font:inherit;color:inherit;background:transparent}
 button.pkpi:hover{border-color:var(--accent)}
+.pconta{margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:13.5px}.pconta p{margin:0}.pconta .panexo{margin:6px 0 0}
 .pdsit{margin:12px 0 4px;font-size:13.5px;color:var(--muted)}.pdsit b{color:var(--fg)}.pdsit .late{color:var(--p1);font-weight:600}
 .pkpi.mentor{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .pdonos{margin-bottom:6px}
@@ -1666,6 +1667,9 @@ function cardDonos(R){
   const cfg=etapas.map(e=>`<tr><td>${esc(e||'(sem etapa)')}</td><td class="r">${nEt(e)}</td><td><select class="inp pdono" data-etapa="${esc(normE(e))}">${DONOS.map(([k,n])=>`<option value="${k}" ${donoEtapa(e)===k?'selected':''}>${n}${donoPadrao(e)===k?' (padrão)':''}</option>`).join('')}</select></td></tr>`);
   return `<section class="card wide"><h2>Com quem está o atraso</h2><p class="meta-line">Pela etapa atual de cada cliente vencido. Clique num quadro para ver o ranking e as etapas daquele dono.</p>
     <div class="pkpis pdonos">${kpi('todos',v,'ativos com prazo vencido','bad')}${kpi('mentor',mt.length,`com os mentores (${pctf(mt.length,v)})${semMentor.length?` · ${semMentor.length} com mentor “A definir”`:''}`)}${outros}</div>
+    ${R.pcVenc.length?(()=>{const pa=R.pcVenc.filter(c=>c.s==='pausado').length,ch=R.pcVenc.length-pa;
+      return `<div class="pconta"><p>No Controle aparecem <b>${v+R.pcVenc.length}</b> clientes com prazo vencido. Retirando <b>${pa} pausados</b> e <b>${ch} em churn</b> (que ainda carregam prazo), restam <b>${v} ativos</b>: é sobre eles que este quadro trabalha.</p>
+      <details class="panexo"><summary><b>Ver os ${R.pcVenc.length} pausados e churn com prazo vencido</b> <span class="meta-line">(pedir para o CS limpar o prazo no Controle)</span></summary>${listaClientes(R.pcVenc,R,{dias:1})}</details></div>`})():''}
     <p class="pdsit"><b>${sel==='todos'?'Todos os ativos':'Agora na etapa de '+esc(nome)}:</b> ${agora.length} clientes · <span class="late">${L.length} vencidos (${pctf(L.length,agora.length)})</span> · ${emDia} em dia · ${semPz} sem prazo</p>
     <div class="pduas">${tbl([{t:rot},{t:'Vencidos aqui',r:1},{t:'Vencidos na carteira',r:1}],rank.map(([k,n])=>`<tr><td>${esc(k)}</td><td class="r"><b>${n}</b></td><td class="r">${cart.get(k)||0}</td></tr>`))}
       ${contTbl(`Etapas desses ${L.length}`,et,L.length)}</div>
