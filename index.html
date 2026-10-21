@@ -299,6 +299,14 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .card h2{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:600}
 .card.wide{grid-column:1/-1}
 .fumsg{display:block;white-space:pre-wrap}
+.sxnums{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin:8px 0}
+.sxnums div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12px;color:var(--muted)}
+.sxnums b{display:block;color:var(--fg);font-size:13.5px}
+.sxhl{font-style:italic;color:var(--fg)}
+.sxel summary{cursor:pointer;color:var(--muted);font-size:13px}
+.sxel dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:6px 0 0;font-size:13px}
+.sxel dt{color:var(--muted);font-weight:600}.sxel dd{margin:0}
+.sxres{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 24px}
 .pi.caso{align-items:flex-start}
 .casohead{display:grid;gap:3px;text-align:left;width:100%;cursor:pointer}
 .casohead .meta-line{margin:0;font-size:13px}
@@ -1452,23 +1460,65 @@ function waCtx(a){
   const L=(a.whatsapp_linha||[]).slice(-4);
   return `${L.length?`<ul class="pwal">${L.map(x=>`<li><span class="sub">${esc(/^\d{4}-/.test(x.data||'')?brData(x.data.slice(0,10)).slice(0,5):x.data||'')}${x.quem?' · '+esc(QUEM[x.quem]||x.quem):''}</span>${md(x.txt)}</li>`).join('')}</ul>`:''}${a.whatsapp_combinado?`<p class="pwac"><b>Combinado:</b> ${md(a.whatsapp_combinado)}</p>`:''}`}
 // Botão no topo de Mentorados para alternar entre o Dashboard diário e o Follow-up de segunda/quarta
-const mentToggle=()=>`<div class="grow"></div><div class="seg" role="group" aria-label="Visão"><button data-act="mentAba" data-aba="dash" class="${ui.mentAba!=='followup'?'on':''}" aria-pressed="${ui.mentAba!=='followup'}">Dashboard</button><button data-act="mentAba" data-aba="followup" class="${ui.mentAba==='followup'?'on':''}" aria-pressed="${ui.mentAba==='followup'}">Follow-up</button></div>`;
+const MENT_ABAS=[['dash','Dashboard'],['followup','Follow-up'],['sexta','Fechamento']];
+const mentAba=()=>MENT_ABAS.some(a=>a[0]===ui.mentAba)?ui.mentAba:'dash';
+const mentToggle=()=>`<div class="grow"></div><div class="seg" role="group" aria-label="Visão">${MENT_ABAS.map(([k,l])=>`<button data-act="mentAba" data-aba="${k}" class="${mentAba()===k?'on':''}" aria-pressed="${mentAba()===k}">${l}</button>`).join('')}</div>`;
+// Pendências do seu lado: a leitura mais recente entre a varredura das 17h e o follow-up de segunda/quarta
+function fuPendencias(f){
+  const v=Painel.mt.pendencias,useV=v&&(!f||String(v.publicadoEm||'')>String(f.publicadoEm||''));
+  const P=useV?(v.pendencias||[]):((f&&f.pendencias)||[]);
+  const item=(p,i,pre)=>{const n=FU_PRI[p.prioridade]||'mute';const sid=`fu-p-${pre}${i}`;
+    return `<li class="pi ${n==='mute'?'':n}"><span class="pselo ${n}">${p.estrela?'⭐ ':''}${esc(p.prioridade||'')}</span><div class="pbody"><strong>${esc(p.nome)}</strong>${p.espera?`<span class="meta-line"> · ${esc(p.espera)}</span>`:''}${p.desde||p.grupo?`<span class="meta-line" style="display:block">${esc([p.grupo,p.desde].filter(Boolean).join(' · '))}</span>`:''}<p>${md(p.texto)}</p>${p.acao?`<p class="pacao"><b>Ação:</b> ${md(p.acao)}</p>`:''}
+      ${p.sugestao?`<div class="psug"><p><span class="flabel">Sugestão de resposta</span><span class="fumsg" id="${sid}">${esc(p.sugestao)}</span></p><button class="btn" data-act="copySug" data-target="${sid}">Copiar</button></div>`:''}</div></li>`};
+  const fonte=useV?`Varredura de ${esc(v.titulo_data||v.data)}${v.hora?' · '+esc(v.hora):''}`:f?`Follow-up de ${esc(f.titulo_data||f.data)}`:'';
+  const cnt=useV&&v.contagem?`<div class="presumo">${['urgente','alta','normal','monitorar'].filter(k=>v.contagem[k]!=null).map(k=>`<span class="pselo ${{urgente:'crit',alta:'warn',normal:'mute',monitorar:'mute'}[k]}">${v.contagem[k]} ${k}</span>`).join('')}</div>`:'';
+  return `<section class="card wide"><h2>Pendências do seu lado · ${P.length}</h2><p class="meta-line" style="margin:-4px 0 10px">${fonte}</p>${cnt}
+    ${useV&&v.comparacao?`<p class="paviso">${md(v.comparacao)}</p>`:''}
+    <ul class="plist">${P.map((p,i)=>item(p,i,'')).join('')||'<p class="meta-line">Ninguém esperando resposta.</p>'}</ul>
+    ${useV&&(v.monitorar||[]).length?`<h3 class="psub">Monitorar · toque leve</h3><ul class="plist">${v.monitorar.map((p,i)=>item(Object.assign({prioridade:'MONITORAR'},p),i,'m')).join('')}</ul>`:''}
+    ${useV&&(v.em_dia||[]).length?`<details style="margin-top:12px"><summary class="psub" style="margin:0;cursor:pointer">Em dia · ${v.em_dia.length}</summary><ul class="pcand" style="margin-top:8px">${v.em_dia.map(x=>`<li>${md(x)}</li>`).join('')}</ul></details>`:''}</section>`;
+}
+const SX_TOM={ok:'ok',warn:'warn',crit:'crit',bad:'crit',mute:'mute'};
+function renderSexta(main,banner){
+  const f=Painel.mt.sexta;
+  const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${f?`Fechamento da semana · ${esc(f.titulo_data||f.data||'')}${f.publicadoEm?' · atualizado '+fmtStamp(f.publicadoEm):''}`:'Fechamento da semana'}</div></div>${mentToggle()}</header>${banner}`;
+  if(!f){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O fechamento ainda não chegou</h2><p>Ele aparece aqui depois da próxima rodada da rotina “Fechamento da semana CORE” (sexta).</p></div></div>`;return}
+  const r=f.resumo||{},bloco=(t,a)=>(a||[]).length?`<div><h3 class="psub">${t}</h3><ul class="pcand">${a.map(x=>`<li>${md(x)}</li>`).join('')}</ul></div>`:'';
+  const cards=(f.clientes||[]).map((c,i)=>{const n=SX_TOM[c.tom]||'mute';const b=c.best||[];const t=(c.msg||[]).join('\n');
+    return `<li class="pi ${n==='mute'?'':n}"><span class="pselo ${n}">${c.estrela?'⭐ ':''}${esc(c.status||'')}</span><div class="pbody"><strong>${esc(c.nome)}</strong>${c.ig?`<span class="meta-line"> @${esc(c.ig)}</span>`:''}
+      ${(c.nums||[]).length?`<div class="sxnums">${c.nums.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
+      ${b[0]?`<p><b>Melhor vídeo:</b> <a href="https://www.instagram.com/reel/${esc(b[0])}/" target="_blank" rel="noopener">${esc(b[1]||'')} views · ${esc(b[2]||'')}</a></p>`:''}
+      ${c.headline?`<p class="sxhl">“${esc(c.headline)}”</p>`:''}
+      ${c.elias?`<details class="sxel"><summary>Análise Elias da headline</summary><dl>${Object.entries(c.elias).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></details>`:''}
+      ${c.melhoria?`<p><b>Ponto de melhoria:</b> ${md(c.melhoria)}</p>`:''}
+      ${c.wpp?`<p class="pacao"><b>No WhatsApp:</b> ${md(c.wpp)}</p>`:''}
+      ${c.combinado?`<p class="pacao"><b>Combinado na semana:</b> ${md(c.combinado)}</p>`:''}
+      ${c.tarefa?`<p><b>Missão da próxima semana:</b> ${md(c.tarefa)}</p>`:''}
+      ${t?`<div class="psug"><p><span class="flabel">Mensagem de sexta${c.rascunho==='digitado'?' · já está como rascunho no grupo':''}</span><span class="fumsg" id="sx-m-${i}">${esc(t)}</span></p><button class="btn" data-act="copySug" data-target="sx-m-${i}">Copiar</button></div>`:''}
+      ${c.grupo?`<p class="meta-line" style="margin:6px 0 0">Grupo: ${esc(c.grupo)}</p>`:''}</div></li>`}).join('');
+  main.innerHTML=head+`<div class="scroll"><div class="painel">
+    <section class="card wide"><h2>Resumo da semana · ${(f.clientes||[]).length} mentorados</h2>${f.nota?`<p class="meta-line" style="margin:0 0 10px">${md(f.nota)}</p>`:''}
+      <div class="sxres">${bloco('Quem mais cresceu',r.cresceu)}${bloco('Quem não postou',r.nao_postou)}${bloco('Quem não respondeu',r.nao_respondeu)}${bloco('Esperando você',r.esperando)}</div>
+      ${f.atencao?`<p class="paviso">${md(f.atencao)}</p>`:''}${f.aviso?`<p class="paviso">${md(f.aviso)}</p>`:''}</section>
+    <section class="card wide"><h2>Mentorados</h2><ul class="plist">${cards}</ul></section>
+    ${(f.rodape||[]).length?`<section class="card wide pfoot">${f.rodape.map(n=>`<p>${md(n)}</p>`).join('')}</section>`:''}
+  </div></div>`;
+}
 const FU_CAT={'QUENTE':'ok','QUASE CASE':'ok','PERTO DE DESTRAVAR':'warn','PARADO':'crit','ESFRIOU':'mute','EM RITMO':'mute'};
-const FU_PRI={URGENTE:'crit',ALTA:'warn',NORMAL:'mute'};
+const FU_PRI={URGENTE:'crit',ALTA:'warn',NORMAL:'mute',MONITORAR:'mute'};
 function renderFollowup(main,banner){
-  const f=Painel.fu;
-  const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${f?`Follow-up · ${esc(f.tipo||'')} · ${esc(f.titulo_data||f.data||'')}${Painel.fuUpd?' · atualizado '+fmtStamp(Painel.fuUpd):''}`:'Follow-up CORE'}</div></div>${mentToggle()}</header>${banner}`;
-  if(!f){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O follow-up ainda não chegou</h2><p>Ele aparece aqui depois da próxima rodada da rotina “Follow-up CORE” (segunda e quarta).</p></div></div>`;return}
+  const f=Painel.mt.followup;
+  const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${f?`Follow-up · ${esc(f.tipo||'')} · ${esc(f.titulo_data||f.data||'')}${f.publicadoEm?' · atualizado '+fmtStamp(f.publicadoEm):''}`:'Follow-up CORE'}</div></div>${mentToggle()}</header>${banner}`;
+  if(!f){main.innerHTML=head+`<div class="scroll"><div class="painel">${Painel.mt.pendencias?fuPendencias(null):''}<div class="empty"><h2>O follow-up ainda não chegou</h2><p>Ele aparece aqui depois da próxima rodada da rotina “Follow-up CORE” (segunda e quarta).</p></div></div></div>`;return}
   const cl=f.clientes||[],cnt={};cl.forEach(c=>cnt[c.categoria]=(cnt[c.categoria]||0)+1);
   const msg=(c,i)=>{const t=Array.isArray(c.mensagem)?c.mensagem.join('\n'):String(c.mensagem||'');return t?`<div class="psug"><p><span class="flabel">Mensagem${c.rascunho==='digitado'?' · já está como rascunho no grupo':''}</span><span class="fumsg" id="fu-m-${i}">${esc(t)}</span></p><button class="btn" data-act="copySug" data-target="fu-m-${i}">Copiar</button></div>`:''};
-  const pend=(f.pendencias||[]).map(p=>{const n=FU_PRI[p.prioridade]||'mute';return `<li class="pi ${n==='mute'?'':n}"><span class="pselo ${n}">${esc(p.prioridade||'')}</span><div class="pbody"><strong>${esc(p.nome)}</strong>${p.desde?`<span class="meta-line"> · ${esc(p.desde)}</span>`:''}<p>${md(p.texto)}</p>${p.acao?`<p class="pacao"><b>Ação:</b> ${md(p.acao)}</p>`:''}</div></li>`}).join('');
   const cards=cl.map((c,i)=>{const n=FU_CAT[c.categoria]||'mute';return `<li class="pi ${n==='mute'?'':n}"><span class="pselo ${n}">${c.estrela?'⭐ ':''}${esc(c.categoria||'')}</span><div class="pbody"><strong>${esc(c.nome)}</strong>${c.handle?`<span class="meta-line"> ${esc(c.handle)}</span>`:''}<p>${md(c.resumo)}</p>${c.proximo_passo?`<p class="pacao"><b>Próximo passo:</b> ${md(c.proximo_passo)}</p>`:''}${msg(c,i)}${c.grupo?`<p class="meta-line" style="margin:6px 0 0">Grupo: ${esc(c.grupo)}</p>`:''}</div></li>`}).join('');
   const tb=f.tabela&&(f.tabela.linhas||[]).length?`<section class="card wide"><h2>Números de hoje</h2><div class="tbl-wrap"><table class="ptable"><thead><tr>${(f.tabela.colunas||[]).map((c,j)=>`<th class="${j?'r':''}">${esc(c)}</th>`).join('')}</tr></thead><tbody>${f.tabela.linhas.map(r=>`<tr>${r.map((v,j)=>`<td class="${j?'r':'cli'}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${f.tabela_nota?`<p class="meta-line" style="margin:10px 0 0">${md(f.tabela_nota)}</p>`:''}</section>`:'';
   main.innerHTML=head+`<div class="scroll"><div class="painel">
     <section class="card wide"><h2>Resumo · ${cl.length} mentorados</h2><div class="presumo">${Object.keys(FU_CAT).filter(k=>cnt[k]).map(k=>`<span class="pselo ${FU_CAT[k]}">${k} · ${cnt[k]}</span>`).join('')}</div>
       ${f.aviso?`<p class="paviso">${md(f.aviso)}</p>`:''}
       ${(f.destaques||[]).length?`<h3 class="psub">Destaques</h3><ul class="pcand">${f.destaques.map(x=>`<li>${md(x)}</li>`).join('')}</ul>`:''}</section>
-    <section class="card wide"><h2>Pendências do seu lado · ${(f.pendencias||[]).length}</h2><ul class="plist">${pend||'<p class="meta-line">Nada pendente do seu lado.</p>'}</ul></section>
+    ${fuPendencias(f)}
     ${f.estrelas_nota&&!cl.some(c=>c.estrela)?`<section class="card wide"><h2>Estrelas ⭐</h2><p class="meta-line" style="margin:0">${md(f.estrelas_nota)}</p></section>`:''}
     <section class="card wide"><h2>Mensagens da semana · ${cl.length}</h2><ul class="plist">${cards}</ul></section>
     ${tb}
@@ -1477,7 +1527,8 @@ function renderFollowup(main,banner){
 }
 function renderMentorados(main,banner){
   main.dataset.view='mentorados';
-  if(ui.mentAba==='followup')return renderFollowup(main,banner);
+  if(mentAba()==='followup')return renderFollowup(main,banner);
+  if(mentAba()==='sexta')return renderSexta(main,banner);
   const d=Painel.data;
   const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${d?`Painel CORE · leitura de ${esc(d.titulo_data||d.data||'')}${Painel.updated?' · atualizado '+fmtStamp(Painel.updated):''}`:'Painel CORE'}</div></div>${mentToggle()}</header>${banner}`;
   if(!d){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O painel ainda não chegou</h2><p>${Painel.loading?'Carregando…':'Ele aparece aqui depois da próxima leitura diária da rotina “Dashboard CORE”, às 9h.'}</p></div></div>`;return}
@@ -2234,7 +2285,7 @@ function casoEditor(c){
 function routeSpecial(row){
   if(row.id==='painel:producao'){Producao.data=row.data;Producao.updated=row.updated_at;Producao.cache=null;return}
   if(row.id==='painel:producao-hist'){Producao.hist=(row.data&&row.data.dias)||[];return}
-  if(row.id==='mentorados:followup'){Painel.fu=row.data;Painel.fuUpd=row.updated_at||(row.data&&row.data.publicadoEm);if(ui.view==='mentorados')renderMain();return}
+  if(row.id.startsWith('mentorados:')){Painel.mt[row.id.slice(11)]=row.data||null;if(ui.view==='mentorados')renderMain();return}
   if(row.id.startsWith('caso:')){Casos.itens.set(row.id.slice(5),Object.assign({},row.data,{id:row.id.slice(5)}));return}
   if(row.id==='insat:analise'){Casos.analise=row.data;return}
   if(row.id.startsWith('painel:'))return Painel.set(row);
@@ -2274,12 +2325,12 @@ const Esteira={itens:new Map(),cfg:{},
   }};
 /* ---------- Painel CORE ---------- */
 // O painel fica numa linha reservada da tabela tasks (id "painel:core"), escrita por scripts/publicar-painel.mjs
-const Painel={data:null,updated:null,loading:false,
+const Painel={data:null,updated:null,loading:false,mt:{},
   set(row){this.data=row.data;this.updated=row.updated_at;renderSide();if(ui.view==='mentorados')renderMain()},
   async load(){
     if(!sb||!currentUser)return;this.loading=true;
-    const {data:rows}=await sb.from('tasks').select('id,data,updated_at').in('id',['painel:core','mentorados:followup']);
-    this.loading=false;const fu=(rows||[]).find(r=>r.id==='mentorados:followup');if(fu)routeSpecial(fu);
+    const {data:rows}=await sb.from('tasks').select('id,data,updated_at').in('id',['painel:core','mentorados:followup','mentorados:pendencias','mentorados:sexta']);
+    this.loading=false;(rows||[]).filter(r=>r.id.startsWith('mentorados:')).forEach(routeSpecial);
     const data=(rows||[]).find(r=>r.id==='painel:core');if(data)this.set(data);else if(ui.view==='mentorados')renderMain();
   }};
 /* Show/hide password while typing */
