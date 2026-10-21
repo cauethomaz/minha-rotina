@@ -483,6 +483,9 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .pkpi b{font-family:var(--display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
 .pkpi span{font-size:12.5px;color:var(--muted)}
 .pkpi.bad b{color:var(--p1)}
+button.pkpi{text-align:left;cursor:pointer;font:inherit;color:inherit;background:transparent}
+button.pkpi:hover{border-color:var(--accent)}
+.pdsit{margin:12px 0 4px;font-size:13.5px;color:var(--muted)}.pdsit b{color:var(--fg)}.pdsit .late{color:var(--p1);font-weight:600}
 .pkpi.mentor{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .pdonos{margin-bottom:6px}
 .pdono{padding:4px 8px;min-width:150px}
@@ -1643,22 +1646,31 @@ function sparkVenc(hist){
     <circle cx="${xs[xs.length-1]}" cy="${ys[ys.length-1]}" r="4" fill="var(--p1)"/>${hist.map((h,i)=>`<circle cx="${xs[i]}" cy="${ys[i]}" r="9" fill="transparent"><title>${brData(h.data)}: ${h.vencidos} vencidos de ${h.ativos} ativos</title></circle>`).join('')}
     <text x="${p}" y="${H-6}" font-size="11" fill="var(--muted)">${brData(hist[0].data)}</text><text x="${W-p}" y="${H-6}" font-size="11" fill="var(--muted)" text-anchor="end">${brData(last.data)} · ${last.vencidos}</text></svg>`;
 }
+// Quem é a pessoa de cada dono no ranking (edição não tem responsável no Controle: usa o mentor da carteira)
+const DONO_PESSOA={todos:['Mentor',c=>c.m],mentor:['Mentor',c=>c.m],cs:['CS',c=>c.cs],copy:['Copy',c=>c.cp],edicao:['Mentor da carteira',c=>c.m],cliente:['CS que acompanha',c=>c.cs]};
 function cardDonos(R){
   const v=R.venc.length;if(!v)return '';
   const por=Object.fromEntries(DONOS.map(([k])=>[k,R.venc.filter(c=>donoEtapa(c.e)===k)]));
+  const sel=ui.prodDono&&(ui.prodDono==='todos'||por[ui.prodDono])?ui.prodDono:'mentor';
   const mt=por.mentor,semMentor=mt.filter(c=>aDefinir(c.m));
-  const kpi=(n,l,cls)=>`<div class="pkpi ${cls||''}"><b>${n}</b><span>${l}</span></div>`;
-  const outros=DONOS.filter(([k])=>k!=='mentor').map(([k,n])=>kpi(por[k].length,`${n} (${pctf(por[k].length,v)})`)).join('');
-  const porM=contar(mt,c=>c.m),cart=new Map(contar(R.venc,c=>c.m)),etM=contar(mt,c=>c.e);
+  const kpi=(k,n,l,cls)=>`<button class="pkpi ${cls||''} ${sel===k?'mentor':''}" data-act="prodDono" data-k="${k}" aria-pressed="${sel===k}"><b>${n}</b><span>${l}</span></button>`;
+  const outros=DONOS.filter(([k])=>k!=='mentor').map(([k,n])=>kpi(k,por[k].length,`${n} (${pctf(por[k].length,v)})`)).join('');
+  // Recorte escolhido: ranking por pessoa, etapas e situação de quem está nessa etapa agora
+  const L=sel==='todos'?R.venc:por[sel],nome=sel==='todos'?'todos os donos':(DONOS.find(d=>d[0]===sel)||[])[1];
+  const [rot,quem]=DONO_PESSOA[sel];const nm=c=>{const x=quem(c);return x&&x.trim()?x:'—'};
+  const rank=contar(L,nm),cart=new Map(contar(R.venc,nm)),et=contar(L,c=>c.e);
+  const agora=sel==='todos'?R.at:R.at.filter(c=>donoEtapa(c.e)===sel);
+  const emDia=agora.filter(c=>c.z&&c.z>=R.base).length,semPz=agora.filter(c=>!c.z).length;
   const etapas=[...new Map(R.venc.map(c=>[normE(c.e),c.e||''])).values()].sort((a,b)=>a.localeCompare(b));
   const nEt=e=>R.venc.filter(c=>normE(c.e)===normE(e)).length;
   const cfg=etapas.map(e=>`<tr><td>${esc(e||'(sem etapa)')}</td><td class="r">${nEt(e)}</td><td><select class="inp pdono" data-etapa="${esc(normE(e))}">${DONOS.map(([k,n])=>`<option value="${k}" ${donoEtapa(e)===k?'selected':''}>${n}${donoPadrao(e)===k?' (padrão)':''}</option>`).join('')}</select></td></tr>`);
-  return `<section class="card wide"><h2>Com quem está o atraso</h2><p class="meta-line">Pela etapa atual de cada cliente vencido. Mentor é quem precisa agir para a etapa andar.</p>
-    <div class="pkpis pdonos">${kpi(v,'ativos com prazo vencido','bad')}${kpi(mt.length,`com os mentores (${pctf(mt.length,v)})${semMentor.length?` · ${semMentor.length} com mentor “A definir”`:''}`,'mentor')}${outros}</div>
-    <div class="pduas">${tbl([{t:'Mentor'},{t:'Vencidos com ele',r:1},{t:'Vencidos na carteira',r:1}],porM.map(([k,n])=>`<tr><td>${esc(k)}</td><td class="r"><b>${n}</b></td><td class="r">${cart.get(k)||0}</td></tr>`))}
-      ${contTbl(`Etapas desses ${mt.length}`,etM,mt.length)}</div>
+  return `<section class="card wide"><h2>Com quem está o atraso</h2><p class="meta-line">Pela etapa atual de cada cliente vencido. Clique num quadro para ver o ranking e as etapas daquele dono.</p>
+    <div class="pkpis pdonos">${kpi('todos',v,'ativos com prazo vencido','bad')}${kpi('mentor',mt.length,`com os mentores (${pctf(mt.length,v)})${semMentor.length?` · ${semMentor.length} com mentor “A definir”`:''}`)}${outros}</div>
+    <p class="pdsit"><b>${sel==='todos'?'Todos os ativos':'Agora na etapa de '+esc(nome)}:</b> ${agora.length} clientes · <span class="late">${L.length} vencidos (${pctf(L.length,agora.length)})</span> · ${emDia} em dia · ${semPz} sem prazo</p>
+    <div class="pduas">${tbl([{t:rot},{t:'Vencidos aqui',r:1},{t:'Vencidos na carteira',r:1}],rank.map(([k,n])=>`<tr><td>${esc(k)}</td><td class="r"><b>${n}</b></td><td class="r">${cart.get(k)||0}</td></tr>`))}
+      ${contTbl(`Etapas desses ${L.length}`,et,L.length)}</div>
     <details class="panexo"><summary><b>Quem responde por cada etapa</b> <span class="meta-line">(ajuste se alguma etapa estiver no dono errado)</span></summary>${tbl([{t:'Etapa atual'},{t:'Vencidos',r:1},{t:'Responsável'}],cfg)}</details>
-    <details class="panexo"><summary><b>Lista dos ${mt.length} vencidos com os mentores</b></summary>${listaClientes(mt,R,{dias:1})}</details></section>`;
+    <details class="panexo"><summary><b>Lista dos ${L.length} vencidos${sel==='todos'?'':' com '+esc(nome)}</b></summary>${listaClientes(L,R,{dias:1})}</details></section>`;
 }
 function renderProducao(main,banner){
   main.dataset.view='producao';
@@ -1974,6 +1986,7 @@ main.addEventListener('click',e=>{
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
   if(act==='open')return openTask(id);
   if(act==='dup')return openTask(el.dataset.dup);
+  if(act==='prodDono'){ui.prodDono=el.dataset.k;return renderMain()}
   if(act==='mentAba'){ui.mentAba=el.dataset.aba;saveUi();return renderMain()}
   if(act==='casoNovo')return casoNovo();
   if(act==='casoAbrir'){ui.casoOpen=ui.casoOpen===id?null:id;ui.casoDel=false;return renderMain()}
