@@ -314,6 +314,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .casoed{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:8px}
 .casoform{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .casoprod{margin:0;font-size:12.5px}
+.casopuxar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px}.casopuxar .meta-line{margin:0;font-size:12.5px}
+.pi.caso .dup-chip{display:inline-block;margin-bottom:4px}
 .casoia{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 12px}
 .casoia p{margin:4px 0 0;font-size:13.5px}
 .casoia .flabel{display:block}
@@ -1994,6 +1996,7 @@ main.addEventListener('click',e=>{
   if(act==='mentAba'){ui.mentAba=el.dataset.aba;saveUi();return renderMain()}
   if(act==='casoNovo')return casoNovo();
   if(act==='casoAbrir'){ui.casoOpen=ui.casoOpen===id?null:id;ui.casoDel=false;return renderMain()}
+  if(ui.casoDel&&act!=='casoDel')ui.casoDel=false;
   if(act==='casoFechados'){if(e.target.closest('summary'))ui.casoFechados=!el.open;return}
   if(act.startsWith('caso')&&id&&Casos.itens.has(id)){const c=Casos.itens.get(id);
     if(act==='casoFill'){const t=$('#caso-colar');return casoPreencher(id,t?t.value:'')}
@@ -2004,6 +2007,10 @@ main.addEventListener('click',e=>{
       const ps=Object.assign({},c.passos);if(!ps.encerrar)ps.encerrar=today();ui.casoOpen=null;return Casos.save(id,{status:'fechado',fechadoEm:new Date().toISOString(),passos:ps},'Caso encerrado')}
     if(act==='casoReabrir')return Casos.save(id,{status:'aberto',fechadoEm:null});
     if(act==='casoDel'){if(ui.casoDel===id)return Casos.remove(id);ui.casoDel=id;return renderMain()}
+    if(act==='casoPuxar'){const nm=($('#cf-nome')||{}).value||c.nome;const r=casoDoControle(c,nm,true);
+      if(!r)return toast(`Não achei “${nm||'(sem nome)'}” no Controle de Produção. Escolha o nome na lista que aparece ao digitar.`);
+      const q=r.cli;return Casos.save(id,r.p,`Do Controle: ${[q.m&&'mentor '+q.m,q.cs&&'CS '+q.cs,q.cp&&'copy '+q.cp,q.e&&'etapa '+q.e].filter(Boolean).join(' · ')}`)}
+    if(act==='casoIr'){ui.casoOpen=el.dataset.other;ui.casoDel=false;return renderMain()}
   }
   if(act==='calDl'){ui.calDl=ui.calDl===el.dataset.date?null:el.dataset.date;return renderMain()}
   if(act==='calmode'){ui.cal=el.dataset.mode;ui.scrolled=false;saveUi();return renderMain()}
@@ -2032,9 +2039,12 @@ function ctxField(el){
 main.addEventListener('change',e=>{
   if(e.target.dataset.casoF){const id=ui.casoOpen;if(!id||!Casos.itens.has(id))return;
     const k=e.target.dataset.casoF,v=e.target.value.trim();const p={[k]:v};if(ui.casoNovo===id&&k==='nome')ui.casoNovo=null;
-    const c=Casos.itens.get(id);if(k==='nome'&&v&&!c.mentor){const cli=casoCliente(v);if(cli&&cli.m&&!aDefinir(cli.m))p.mentor=cli.m}
+    const c=Casos.itens.get(id);
+    if(k==='nome'&&v){const ctl=casoDoControle(c,v,false);if(ctl)Object.assign(p,ctl.p);
+      const o=casoDup(Object.assign({},c,{nome:v}));if(o)toast(`Já existe um caso aberto de ${o.nome}, aberto ${fmtDay(String(o.abertoEm).slice(0,10)).toLowerCase()}.`,'Abrir',()=>{ui.casoOpen=o.id;ui.casoDel=false;renderMain()})}
     if(k==='motivo'&&v&&(!c.categoria||c.categoria==='outro'))p.categoria=casoCategoria(v);
-    return Casos.save(id,p,null,!(p.mentor||p.categoria))}
+    Object.keys(p).forEach(f=>{if(f!==k){const inp=document.getElementById('cf-'+f);if(inp)inp.value=p[f]}});
+    return Casos.save(id,p,null,true)}
   if(e.target.id==='prod-filtro'){ui.prodFiltro=e.target.value;return renderMain()}
   if(e.target.matches('.pdono')){const d=Ctx.data.prodDonos=Ctx.data.prodDonos||{},k=e.target.dataset.etapa;if(e.target.value===donoPadrao(k))delete d[k];else d[k]=e.target.value;Ctx.save();return renderMain()}
   if(e.target.id==='ctx-import'){const f=e.target.files&&e.target.files[0];if(f)importBackup(f);return}
@@ -2197,12 +2207,20 @@ function casoCategoria(txt){const x=' '+nrm(txt)+' ';let best='outro',n=0;Object
 // Mentorado do Controle de Produção com o mesmo nome (para mostrar etapa, prazo, mentor e CS)
 function casoCliente(nome){const D=Producao.data;if(!D||!nome)return null;const k=nrm(nome);
   return (D.clientes||[]).find(c=>nrm(c.n)===k)||(D.clientes||[]).find(c=>k.length>5&&(nrm(c.n).includes(k)||k.includes(nrm(c.n))))||null}
+// Dados do Controle de Produção para o caso: mentor, produto, CS e copy (forcar = sobrescreve o que já está preenchido)
+function casoDoControle(c,nome,forcar){const cli=casoCliente(nome||c.nome);if(!cli)return null;const p={};
+  const set=(k,v)=>{if(v&&!aDefinir(v)&&(forcar||!c[k]))p[k]=v};
+  set('mentor',cli.m);set('produto',cli.p);set('cs',cli.cs);set('copy',cli.cp);
+  if(forcar&&cli.n&&cli.n!==c.nome)p.nome=cli.n;return {cli,p}}
+// Outro caso aberto do mesmo mentorado (nome igual, sem acento e sem diferença de maiúsculas)
+function casoDup(c){if(!c||!c.nome||c.status==='fechado')return null;const k=nrm(c.nome);
+  return Casos.all().find(o=>o.id!==c.id&&o.status!=='fechado'&&o.nome&&nrm(o.nome)===k)||null}
 function casoPreencher(id,txt){
   const c=Casos.itens.get(id);if(!c||!txt.trim())return;const p={};const x=nrm(txt);
   const tel=txt.match(/(?:\+?55[\s-]?)?\(?\d{2}\)?[\s-]?9?\d{4}[\s-]?\d{4}/);if(tel&&!c.telefone)p.telefone=tel[0].trim();
   const D=Producao.data;
   if(!c.nome&&D){const hit=(D.clientes||[]).filter(k=>k.s==='ativo'&&k.n&&k.n.length>5&&x.includes(nrm(k.n))).sort((a,b)=>b.n.length-a.n.length)[0];if(hit)p.nome=hit.n}
-  const cli=casoCliente(p.nome||c.nome);if(!c.mentor&&cli&&cli.m&&!aDefinir(cli.m))p.mentor=cli.m;
+  const ctl=casoDoControle(c,p.nome||c.nome,false);if(ctl)Object.assign(p,ctl.p);
   const papel=Object.keys(CASO_PAPEL).find(k=>k!=='outro'&&k!=='mentor'&&new RegExp('\\b'+k+'\\b').test(x));if(papel&&!c.papel)p.papel=papel;
   if(!c.motivo)p.motivo=txt.trim();
   if(!c.categoria||c.categoria==='outro')p.categoria=casoCategoria(txt);
@@ -2220,8 +2238,10 @@ const Casos={itens:new Map(),analise:null,
     const {error}=await sb.from('tasks').upsert({id:'caso:'+id,user_id:currentUser.id,data:next,updated_at:new Date().toISOString()});
     if(error||msg)toast(error?'Não salvou. Verifique a conexão e tente de novo.':msg);
   },
-  async remove(id){this.itens.delete(id);ui.casoOpen=null;ui.casoDel=false;renderSide();renderMain();
-    if(sb&&currentUser){const {error}=await sb.from('tasks').delete().eq('id','caso:'+id);toast(error?'Não consegui excluir. Tente de novo.':'Caso excluído')}else{this.local();toast('Caso excluído')}}};
+  async remove(id){const cur=this.itens.get(id);this.itens.delete(id);ui.casoOpen=null;ui.casoDel=false;ui.casoNovo=null;renderSide();renderMain();
+    if(sb&&currentUser){const {error}=await sb.from('tasks').delete().eq('id','caso:'+id);
+      if(error){if(cur)this.itens.set(id,cur);renderSide();renderMain();toast('Não consegui excluir: '+(error.message||'erro no banco')+'. Tente de novo.')}else toast('Caso excluído')}
+    else{this.local();toast('Caso excluído')}}};
 try{if(!window.SUPABASE_URL)JSON.parse(localStorage.getItem('minharotina.casos')||'[]').forEach(c=>Casos.itens.set(c.id,c))}catch(e){}
 function casoNovo(){const id=uid();Casos.itens.set(id,{id,abertoEm:new Date().toISOString(),status:'aberto',gravidade:'media',categoria:'',passos:{},log:[]});
   ui.casoOpen=id;ui.casoNovo=id;renderMain();renderSide();setTimeout(()=>{const t=$('#caso-colar');t&&t.focus()},30)}
@@ -2272,17 +2292,22 @@ function casoItem(c){
     <span class="meta-line">${[c.categoria&&CASO_CAT[c.categoria],c.mentor&&'mentor '+c.mentor,c.encaminhou&&'via '+c.encaminhou+(c.papel?' ('+CASO_PAPEL[c.papel]+')':'')].filter(Boolean).map(esc).join(' · ')}</span>
     <span class="meta-line">${fech?`Fechado em ${dias} dias${c.raiz?' · causa: '+esc(CASO_RAIZ[c.raiz]):''}`:`Aberto há ${dias} dia${dias===1?'':'s'}${p?` · próximo: <b class="${late?'late':''}">${esc(p[1].split(':')[0])}${late?' (atrasado)':' até '+fmtDay(casoPrazo(c,p)).toLowerCase()}</b>`:''}`}</span>
     ${u?`<span class="meta-line">Última atualização ${fmtDay(u.em.slice(0,10)).toLowerCase()}: ${esc(u.txt.slice(0,140))}</span>`:''}</button>`;
-  return `<li class="pi ${nivel} caso"><span class="pselo ${nivel}">${fech?'Fechado':CASO_GRAV[c.gravidade||'media']}</span><div class="pbody">${resumo}${open?casoEditor(c):''}</div></li>`;
+  const dup=casoDup(c);
+  return `<li class="pi ${nivel} caso"><span class="pselo ${nivel}">${fech?'Fechado':CASO_GRAV[c.gravidade||'media']}</span><div class="pbody">${dup?`<span class="dup-chip" data-act="casoIr" data-id="${c.id}" data-other="${dup.id}" role="button" tabindex="0" title="Abrir o outro caso">⚠ possível duplicado</span>`:''}${resumo}${open?casoEditor(c):''}</div></li>`;
 }
 function casoEditor(c){
-  const f=(k,l,ph,type)=>`<div class="fld"><label for="cf-${k}">${l}</label><input class="inp" id="cf-${k}" ${type?`type="${type}"`:''} data-caso-f="${k}" value="${esc(c[k]||'')}" placeholder="${esc(ph||'')}"></div>`;
+  const f=(k,l,ph,type)=>`<div class="fld"><label for="cf-${k}">${l}</label><input class="inp" id="cf-${k}" ${type?`type="${type}"`:''} ${k==='nome'?'list="caso-clientes" autocomplete="off"':''} data-caso-f="${k}" value="${esc(c[k]||'')}" placeholder="${esc(ph||'')}"></div>`;
   const sel=(k,l,o)=>`<div class="fld"><label for="cf-${k}">${l}</label><select class="inp" id="cf-${k}" data-caso-f="${k}"><option value="">—</option>${Object.entries(o).map(([v,t])=>`<option value="${v}" ${c[k]===v?'selected':''}>${t}</option>`).join('')}</select></div>`;
   const cli=casoCliente(c.nome),ia=Casos.analise&&Casos.analise.casos&&Casos.analise.casos[c.id],ps=c.passos||{},fech=c.status==='fechado';
-  const wa=String(c.telefone||'').replace(/\D/g,'');
+  const wa=String(c.telefone||'').replace(/\D/g,''),dup=casoDup(c);
+  const nomes=Producao.data?[...new Set((Producao.data.clientes||[]).filter(k=>k.n).sort((a,b)=>(a.s==='ativo'?0:1)-(b.s==='ativo'?0:1)).map(k=>k.n))]:[];
   return `<div class="casoed">
+    ${dup?`<div class="aibar dupbar"><span>⚠ Já existe outro caso aberto de <b>${esc(dup.nome)}</b>, aberto ${fmtDay(String(dup.abertoEm).slice(0,10)).toLowerCase()}${dup.motivo?': '+esc(dup.motivo.slice(0,90)):''}.</span><button data-act="casoIr" data-id="${c.id}" data-other="${dup.id}">Abrir o outro</button><button data-act="casoDel" data-id="${c.id}">${ui.casoDel===c.id?'Clique de novo para excluir este':'Excluir este'}</button></div>`:''}
+    ${nomes.length?`<datalist id="caso-clientes">${nomes.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`:''}
     ${ui.casoNovo===c.id&&!c.nome?`<div class="fld"><label for="caso-colar">Cole a mensagem de quem encaminhou</label><textarea class="inp" id="caso-colar" rows="4" placeholder="Cole aqui o que o CS, SDR ou closer mandou. O app tenta achar nome, telefone, mentor e motivo."></textarea><div><button class="btn" data-act="casoFill" data-id="${c.id}">Preencher a partir do texto</button></div></div>`:''}
-    <div class="casoform">${f('nome','Mentorado','Nome do mentorado')}${f('telefone','Telefone','(11) 99999-9999','tel')}${f('encaminhou','Quem encaminhou','Nome de quem mandou o caso')}${sel('papel','Função',CASO_PAPEL)}${f('mentor','Mentor envolvido','Nome do mentor')}${sel('categoria','Motivo',CASO_CAT)}${sel('gravidade','Gravidade',CASO_GRAV)}</div>
+    <div class="casoform">${f('nome','Mentorado','Nome como está no Controle')}${f('telefone','Telefone','(11) 99999-9999','tel')}${f('encaminhou','Quem encaminhou','Nome de quem mandou o caso')}${sel('papel','Função',CASO_PAPEL)}${f('mentor','Mentor envolvido','Nome do mentor')}${sel('categoria','Motivo',CASO_CAT)}${sel('gravidade','Gravidade',CASO_GRAV)}${f('produto','Produto','Do Controle')}${f('cs','CS','Do Controle')}${f('copy','Copy','Do Controle')}</div>
     <div class="fld" style="margin-top:10px"><label for="cf-motivo">Problema ou motivo da insatisfação</label><textarea class="inp" id="cf-motivo" rows="3" data-caso-f="motivo">${esc(c.motivo||'')}</textarea></div>
+    <div class="casopuxar"><button class="btn" data-act="casoPuxar" data-id="${c.id}">↻ Puxar dados do Controle</button><span class="meta-line">${cli?'Encontrado no Controle de Produção.':Producao.data?'Ainda não encontrado no Controle: escolha o nome na lista ao digitar.':'O Controle de Produção ainda não carregou.'}</span></div>
     ${cli?`<p class="meta-line casoprod">Produção: ${esc(cli.p||'')} · etapa ${esc(cli.e||'—')} · prazo ${cli.z?brData(cli.z)+(cli.z<Producao.data.base?' (vencido)':''):'—'} · mentor ${esc(cli.m||'—')} · CS ${esc(cli.cs||'—')}</p>`:''}
     ${wa?`<p class="meta-line"><a href="https://wa.me/${wa.length<=11?'55'+wa:wa}" target="_blank" rel="noopener">Abrir conversa no WhatsApp</a></p>`:''}
     ${ia?`<div class="casoia"><span class="flabel">✦ Leitura do Claude</span>${ia.raiz?`<p><b>Raiz provável:</b> ${md(ia.raiz)}</p>`:''}${ia.proximo_passo?`<p><b>Próximo passo:</b> ${md(ia.proximo_passo)}</p>`:''}${ia.mensagem?`<div class="psug"><p><span class="flabel">Sugestão de mensagem</span><span id="caso-msg-${c.id}">${esc(ia.mensagem)}</span></p><button class="btn" data-act="copySug" data-target="caso-msg-${c.id}">Copiar</button></div>`:''}</div>`:''}
@@ -2295,7 +2320,7 @@ function casoEditor(c){
     ${fech?'':`<h3 class="psub">Encerrar</h3><div class="casoform">${sel('raiz','Causa raiz',CASO_RAIZ)}<div class="fld" style="grid-column:span 2"><label for="cf-licao">O que muda para não repetir</label><input class="inp" id="cf-licao" data-caso-f="licao" value="${esc(c.licao||'')}" placeholder="Ex.: closer não promete viral em 30 dias"></div></div>`}
     <div class="pactions casoacts">
       ${fech?`<button class="btn" data-act="casoReabrir" data-id="${c.id}">Reabrir</button>`:`${casoProx(c)?`<button class="btn" data-act="casoDemanda" data-id="${c.id}">+ Demanda do próximo passo</button>`:''}<button class="btn" data-act="casoFechar" data-id="${c.id}">✓ Encerrar caso</button>`}
-      <span class="grow"></span><button class="btn ${ui.casoDel===c.id?'danger':''}" data-act="casoDel" data-id="${c.id}">${ui.casoDel===c.id?'Confirmar exclusão':'Excluir'}</button>
+      <span class="grow"></span><button class="btn ${ui.casoDel===c.id?'danger-solid':'danger'}" data-act="casoDel" data-id="${c.id}">${ui.casoDel===c.id?'Clique de novo para excluir':'Excluir caso'}</button>
     </div></div>`;
 }
 /* Linhas especiais da tabela tasks: painel:core (Mentorados), roteiro:<id> e esteira:config (Conteúdos) */
