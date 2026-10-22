@@ -146,7 +146,7 @@ async function contexto() {
   for (const m of c.mentorados) {
     const w = m.wpp || {};
     const desde = [w.atualizado, w.ultima_cliente, w.ultima_minha, w.ultima_time].filter(Boolean).sort().slice(-1)[0] || null;
-    console.log(JSON.stringify({ id: m.id, nome: m.nome, grupo: m.grupo, ler_desde: desde, esperando_desde: w.esperando_desde || null,
+    console.log(JSON.stringify({ id: m.id, nome: m.nome, grupo: m.grupo, grupo_id: w.grupo_id || null, ler_desde: desde, esperando_desde: w.esperando_desde || null,
       ultimo_fato: w.ultimo_fato || null, combinados: (m.combinados || []).filter(x => x.estado !== 'feito'), mensagem_tipo: m.mensagem && m.mensagem.tipo || null }));
   }
 }

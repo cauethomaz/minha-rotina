@@ -31,7 +31,7 @@ A rotina escreve este JSON e roda `node scripts/mentorados.mjs montar <ia.json>`
     "categoria": "QUASE CASE",
     "insta_excluir": ["shortcode de vídeo que não conta: IA, collab, carrossel"],
     "wpp": {
-      "atualizado": "2026-10-22T08:10:00-03:00", "ok": true,
+      "atualizado": "2026-10-22T08:10:00-03:00", "ok": true, "grupo_id": "120363404487404884@g.us",
       "ultima_cliente": "2026-10-21T18:45:00-03:00", "ultima_minha": "2026-10-21T09:12:00-03:00", "ultima_time": "2026-10-16T17:18:00-03:00",
       "esperando_desde": null, "esperando_txt": null,
       "ultimo_fato": "Avisou que o vídeo de ontem passou de 15 mil.",

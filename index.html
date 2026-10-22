@@ -1157,7 +1157,7 @@ function renderSide(){
       ${sec('tipos','Tipos',TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join(''))}
       ${sec('ritmos','Ritmos',Object.keys(RHYTHM).map(k=>item('ritmo:'+k,RHYTHM[k],svg('clock','ico'),b.open.filter(t=>rhythmOf(t)===k).length||'')).join(''))}
       ${Ctx.data.projects.length?sec('projetos','Projetos',Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')):''}
-      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.mt.carteira?(mcCalc(Painel.mt.carteira).filter(r=>r.sit==='crit').length||''):Painel.data?(Painel.data.resumo&&Painel.data.resumo.criticos)||'':'')+item('producao','Produção',svg('sublist','ico'),Producao.meusVencidos()||'')+item('insatisfacoes','Insatisfações',svg('flag','ico'),Casos.abertos().length||'')+item('conteudos','Conteúdos',svg('film','ico'),(Esteira.count('aprovar')+Esteira.count('revisar'))||'')+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
+      ${sec('visao','Visão',item('calendario','Calendário',svg('cal','ico'))+item('mentorados','Mentorados',svg('person','ico'),Painel.mt.carteira?(mcCalc(Painel.mt.carteira).filter(r=>r.sit==='crit').length||''):'')+item('producao','Produção',svg('sublist','ico'),Producao.meusVencidos()||'')+item('insatisfacoes','Insatisfações',svg('flag','ico'),Casos.abertos().length||'')+item('conteudos','Conteúdos',svg('film','ico'),(Esteira.count('aprovar')+Esteira.count('revisar'))||'')+item('alavancagem','Alavancagem',svg('gauge','ico'))+item('contexto','Contexto',svg('gear','ico')))}
     </nav>
     <div class="side-foot">
       <button class="lev-mini" data-view="alavancagem">
@@ -1474,35 +1474,8 @@ function renderLeverage(main,banner){
   if(hist)hist.addEventListener('mouseleave',()=>tip.hidden=true);
 }
 
-/* ---------- Render: mentorados (painel diário CORE, gravado pela rotina "Dashboard CORE") ---------- */
-// Texto do painel: **negrito** e [rótulo](https://link), nada além disso
+// Texto vindo das rotinas: **negrito** e [rótulo](https://link), nada além disso
 const md=v=>esc(v||'').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-function painelItem(it,lista,i){
-  const nivel=lista==='oportunidades'?'ok':(it.nivel==='crit'?'crit':'warn');
-  return `<li class="pi ${nivel}"><span class="pselo ${nivel}">${esc(it.selo||'')}</span><div class="pbody"><strong>${esc(it.nome)}</strong><p>${md(it.texto)}</p>${it.acao?`<p class="pacao">${md(it.acao)}</p>`:''}
-    ${it.sugestao?`<div class="psug"><p><span class="flabel">Sugestão de mensagem</span><span id="sug-${lista}-${i}">${esc(it.sugestao)}</span></p><button class="btn" data-act="copySug" data-target="sug-${lista}-${i}">Copiar</button></div>`:''}
-    <div class="pactions"><button class="btn" data-act="mkTask" data-list="${lista}" data-i="${i}">+ Criar demanda</button></div></div></li>`;
-}
-// Grupos onde o Cauê não manda mensagem há 7+ dias corridos (contato[].ultima_minha vem da rotina; os dias são contados aqui)
-function cardContato(d){
-  if(!Array.isArray(d.contato))return `<section class="card wide"><h2>Sem mensagem minha há 7 dias ou mais</h2><p class="meta-line">Aparece a partir da próxima leitura da rotina “Dashboard CORE”.</p></section>`;
-  const hj=new Date(today()+'T12:00:00'),dias=v=>/^\d{4}-\d{2}-\d{2}/.test(v||'')?Math.round((hj-new Date(v.slice(0,10)+'T12:00:00'))/864e5):null;
-  const L=d.contato.map((x,i)=>({x,i,n:dias(x.ultima_minha)})).sort((a,b)=>(b.n??1e9)-(a.n??1e9));
-  const atras=L.filter(o=>o.n==null||o.n>=7),quase=L.filter(o=>o.n!=null&&o.n>=5&&o.n<7);
-  const quando=n=>n==null?'sem mensagem sua no histórico':n===1?'há 1 dia':`há ${n} dias`;
-  const item=({x,i,n})=>`<li class="pi ${n==null||n>=14?'crit':'warn'}"><span class="pselo ${n==null||n>=14?'crit':'warn'}">${n==null?'—':n+' dias'}</span><div class="pbody"><strong>${esc(x.nome)}</strong>${x.sub?`<span class="sub"> ${esc(x.sub)}</span>`:''}
-    <p>Sua última mensagem no grupo: <b>${quando(n)}</b>${x.ultima_minha?` (${brData(x.ultima_minha.slice(0,10))})`:''}.${x.ultima_cliente?` Última do cliente: ${brData(x.ultima_cliente.slice(0,10))}.`:''}</p>${x.texto?`<p>${md(x.texto)}</p>`:''}
-    ${x.sugestao?`<div class="psug"><p><span class="flabel">Sugestão de mensagem</span><span id="sug-contato-${i}">${esc(x.sugestao)}</span></p><button class="btn" data-act="copySug" data-target="sug-contato-${i}">Copiar</button></div>`:''}
-    <div class="pactions"><button class="btn" data-act="mkTask" data-list="contato" data-i="${i}">+ Criar demanda</button></div></div></li>`;
-  return `<section class="card wide"><h2>Sem mensagem minha há 7 dias ou mais · ${atras.length}</h2><p class="meta-line" style="margin:0 0 10px">Dias corridos desde a sua última mensagem em cada grupo (fim de semana conta).</p>
-    <ul class="plist">${atras.map(item).join('')||'<p class="meta-line">Você falou em todos os grupos nos últimos 7 dias.</p>'}</ul>
-    ${quase.length?`<p class="meta-line" style="margin:10px 0 0">Entram nos próximos dias: ${quase.map(o=>`<b>${esc(o.x.nome)}</b> (${o.n} dias)`).join(', ')}.</p>`:''}</section>`;
-}
-// Contexto do grupo: linha do tempo curta (whatsapp_linha) e o que ficou combinado (whatsapp_combinado)
-const QUEM={caue:'Você',cliente:'Cliente',time:'Time'};
-function waCtx(a){
-  const L=(a.whatsapp_linha||[]).slice(-4);
-  return `${L.length?`<ul class="pwal">${L.map(x=>`<li><span class="sub">${esc(/^\d{4}-/.test(x.data||'')?brData(x.data.slice(0,10)).slice(0,5):x.data||'')}${x.quem?' · '+esc(QUEM[x.quem]||x.quem):''}</span>${md(x.txt)}</li>`).join('')}</ul>`:''}${a.whatsapp_combinado?`<p class="pwac"><b>Combinado:</b> ${md(a.whatsapp_combinado)}</p>`:''}`}
 /* ---------- Mentorados · Carteira (aba única; dados em mentorados:carteira, gravados pela rotina "Mentorados CORE") ---------- */
 // Horas úteis entre a e agora: conta só segunda a sexta, 24h por dia (regra de prazo de resposta do Cauê)
 function horasUteis(a,b){const ini=new Date(a),fim=(b||new Date()).getTime();if(isNaN(ini))return null;let t=ini.getTime(),min=0;
@@ -1550,7 +1523,7 @@ const MC_RIT={1:'Plano de segunda',3:'Cobrança de quarta',5:'Fechamento de sext
 const mcMsgHoje=m=>{const t=m.mensagem&&m.mensagem.tipo;if(!mcMsgTexto(m))return false;return !Object.values(MC_RIT).includes(t)||MC_RIT[new Date().getDay()]===t};
 function renderCarteira(main,banner){
   const C=Painel.mt.carteira,u=ui.mc=ui.mc||{f:'todos',mais:'',q:'',ord:'urg',open:null,todos:false};
-  const head=(sub)=>`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${sub}</div></div>${mentToggle()}</header>${banner}`;
+  const head=(sub)=>`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${sub}</div></div></header>${banner}`;
   if(!C){main.innerHTML=head('Carteira')+`<div class="scroll"><div class="empty"><h2>A carteira ainda não chegou</h2><p>Ela aparece aqui depois da primeira leitura da rotina “Mentorados CORE”.</p></div></div>`;return}
   const L=C.leitura||{},R=mcCalc(C),hojeR=RITUAL[new Date().getDay()];
   const fonte=(ico,rot,f)=>{if(!f)return `<span class="mcfonte"><span class="dotf mute"></span>${rot}: sem dado</span>`;const ok=f.ok===true||(f.total&&f.ok===f.total);
@@ -1647,108 +1620,9 @@ function mcFicha(C,R){
   </aside>`;
 }
 
-// Botão no topo de Mentorados para alternar entre as visões
-const MENT_ABAS=[['carteira','Carteira'],['dash','Dashboard (antigo)'],['followup','Follow-up (antigo)'],['sexta','Fechamento (antigo)']];
-const mentAba=()=>MENT_ABAS.some(a=>a[0]===ui.mentAba)?ui.mentAba:'carteira';
-const mentToggle=()=>`<div class="grow"></div><div class="seg" role="group" aria-label="Visão">${MENT_ABAS.map(([k,l])=>`<button data-act="mentAba" data-aba="${k}" class="${mentAba()===k?'on':''}" aria-pressed="${mentAba()===k}">${l}</button>`).join('')}</div>`;
-// Pendências do seu lado: a leitura mais recente entre a varredura das 17h e o follow-up de segunda/quarta
-function fuPendencias(f){
-  const v=Painel.mt.pendencias,useV=v&&(!f||String(v.publicadoEm||'')>String(f.publicadoEm||''));
-  const P=useV?(v.pendencias||[]):((f&&f.pendencias)||[]);
-  const item=(p,i,pre)=>{const n=FU_PRI[p.prioridade]||'mute';const sid=`fu-p-${pre}${i}`;
-    return `<li class="pi ${n==='mute'?'':n}"><span class="pselo ${n}">${p.estrela?'⭐ ':''}${esc(p.prioridade||'')}</span><div class="pbody"><strong>${esc(p.nome)}</strong>${p.espera?`<span class="meta-line"> · ${esc(p.espera)}</span>`:''}${p.desde||p.grupo?`<span class="meta-line" style="display:block">${esc([p.grupo,p.desde].filter(Boolean).join(' · '))}</span>`:''}<p>${md(p.texto)}</p>${p.acao?`<p class="pacao"><b>Ação:</b> ${md(p.acao)}</p>`:''}
-      ${p.sugestao?`<div class="psug"><p><span class="flabel">Sugestão de resposta</span><span class="fumsg" id="${sid}">${esc(p.sugestao)}</span></p><button class="btn" data-act="copySug" data-target="${sid}">Copiar</button></div>`:''}</div></li>`};
-  const fonte=useV?`Varredura de ${esc(v.titulo_data||v.data)}${v.hora?' · '+esc(v.hora):''}`:f?`Follow-up de ${esc(f.titulo_data||f.data)}`:'';
-  const cnt=useV&&v.contagem?`<div class="presumo">${['urgente','alta','normal','monitorar'].filter(k=>v.contagem[k]!=null).map(k=>`<span class="pselo ${{urgente:'crit',alta:'warn',normal:'mute',monitorar:'mute'}[k]}">${v.contagem[k]} ${k}</span>`).join('')}</div>`:'';
-  return `<section class="card wide"><h2>Pendências do seu lado · ${P.length}</h2><p class="meta-line" style="margin:-4px 0 10px">${fonte}</p>${cnt}
-    ${useV&&v.comparacao?`<p class="paviso">${md(v.comparacao)}</p>`:''}
-    <ul class="plist">${P.map((p,i)=>item(p,i,'')).join('')||'<p class="meta-line">Ninguém esperando resposta.</p>'}</ul>
-    ${useV&&(v.monitorar||[]).length?`<h3 class="psub">Monitorar · toque leve</h3><ul class="plist">${v.monitorar.map((p,i)=>item(Object.assign({prioridade:'MONITORAR'},p),i,'m')).join('')}</ul>`:''}
-    ${useV&&(v.em_dia||[]).length?`<details style="margin-top:12px"><summary class="psub" style="margin:0;cursor:pointer">Em dia · ${v.em_dia.length}</summary><ul class="pcand" style="margin-top:8px">${v.em_dia.map(x=>`<li>${md(x)}</li>`).join('')}</ul></details>`:''}</section>`;
-}
-const SX_TOM={ok:'ok',warn:'warn',crit:'crit',bad:'crit',mute:'mute'};
-function renderSexta(main,banner){
-  const f=Painel.mt.sexta;
-  const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${f?`Fechamento da semana · ${esc(f.titulo_data||f.data||'')}${f.publicadoEm?' · atualizado '+fmtStamp(f.publicadoEm):''}`:'Fechamento da semana'}</div></div>${mentToggle()}</header>${banner}`;
-  if(!f){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O fechamento ainda não chegou</h2><p>Ele aparece aqui depois da próxima rodada da rotina “Fechamento da semana CORE” (sexta).</p></div></div>`;return}
-  const r=f.resumo||{},bloco=(t,a)=>(a||[]).length?`<div><h3 class="psub">${t}</h3><ul class="pcand">${a.map(x=>`<li>${md(x)}</li>`).join('')}</ul></div>`:'';
-  const cards=(f.clientes||[]).map((c,i)=>{const n=SX_TOM[c.tom]||'mute';const b=c.best||[];const t=(c.msg||[]).join('\n');
-    return `<li class="pi ${n==='mute'?'':n}"><span class="pselo ${n}">${c.estrela?'⭐ ':''}${esc(c.status||'')}</span><div class="pbody"><strong>${esc(c.nome)}</strong>${c.ig?`<span class="meta-line"> @${esc(c.ig)}</span>`:''}
-      ${(c.nums||[]).length?`<div class="sxnums">${c.nums.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
-      ${b[0]?`<p><b>Melhor vídeo:</b> <a href="https://www.instagram.com/reel/${esc(b[0])}/" target="_blank" rel="noopener">${esc(b[1]||'')} views · ${esc(b[2]||'')}</a></p>`:''}
-      ${c.headline?`<p class="sxhl">“${esc(c.headline)}”</p>`:''}
-      ${c.elias?`<details class="sxel"><summary>Análise Elias da headline</summary><dl>${Object.entries(c.elias).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></details>`:''}
-      ${c.melhoria?`<p><b>Ponto de melhoria:</b> ${md(c.melhoria)}</p>`:''}
-      ${c.wpp?`<p class="pacao"><b>No WhatsApp:</b> ${md(c.wpp)}</p>`:''}
-      ${c.combinado?`<p class="pacao"><b>Combinado na semana:</b> ${md(c.combinado)}</p>`:''}
-      ${c.tarefa?`<p><b>Missão da próxima semana:</b> ${md(c.tarefa)}</p>`:''}
-      ${t?`<div class="psug"><p><span class="flabel">Mensagem de sexta${c.rascunho==='digitado'?' · já está como rascunho no grupo':''}</span><span class="fumsg" id="sx-m-${i}">${esc(t)}</span></p><button class="btn" data-act="copySug" data-target="sx-m-${i}">Copiar</button></div>`:''}
-      ${c.grupo?`<p class="meta-line" style="margin:6px 0 0">Grupo: ${esc(c.grupo)}</p>`:''}</div></li>`}).join('');
-  main.innerHTML=head+`<div class="scroll"><div class="painel">
-    <section class="card wide"><h2>Resumo da semana · ${(f.clientes||[]).length} mentorados</h2>${f.nota?`<p class="meta-line" style="margin:0 0 10px">${md(f.nota)}</p>`:''}
-      <div class="sxres">${bloco('Quem mais cresceu',r.cresceu)}${bloco('Quem não postou',r.nao_postou)}${bloco('Quem não respondeu',r.nao_respondeu)}${bloco('Esperando você',r.esperando)}</div>
-      ${f.atencao?`<p class="paviso">${md(f.atencao)}</p>`:''}${f.aviso?`<p class="paviso">${md(f.aviso)}</p>`:''}</section>
-    <section class="card wide"><h2>Mentorados</h2><ul class="plist">${cards}</ul></section>
-    ${(f.rodape||[]).length?`<section class="card wide pfoot">${f.rodape.map(n=>`<p>${md(n)}</p>`).join('')}</section>`:''}
-  </div></div>`;
-}
-const FU_CAT={'QUENTE':'ok','QUASE CASE':'ok','PERTO DE DESTRAVAR':'warn','PARADO':'crit','ESFRIOU':'mute','EM RITMO':'mute'};
-const FU_PRI={URGENTE:'crit',ALTA:'warn',NORMAL:'mute',MONITORAR:'mute'};
-function renderFollowup(main,banner){
-  const f=Painel.mt.followup;
-  const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${f?`Follow-up · ${esc(f.tipo||'')} · ${esc(f.titulo_data||f.data||'')}${f.publicadoEm?' · atualizado '+fmtStamp(f.publicadoEm):''}`:'Follow-up CORE'}</div></div>${mentToggle()}</header>${banner}`;
-  if(!f){main.innerHTML=head+`<div class="scroll"><div class="painel">${Painel.mt.pendencias?fuPendencias(null):''}<div class="empty"><h2>O follow-up ainda não chegou</h2><p>Ele aparece aqui depois da próxima rodada da rotina “Follow-up CORE” (segunda e quarta).</p></div></div></div>`;return}
-  const cl=f.clientes||[],cnt={};cl.forEach(c=>cnt[c.categoria]=(cnt[c.categoria]||0)+1);
-  const msg=(c,i)=>{const t=Array.isArray(c.mensagem)?c.mensagem.join('\n'):String(c.mensagem||'');return t?`<div class="psug"><p><span class="flabel">Mensagem${c.rascunho==='digitado'?' · já está como rascunho no grupo':''}</span><span class="fumsg" id="fu-m-${i}">${esc(t)}</span></p><button class="btn" data-act="copySug" data-target="fu-m-${i}">Copiar</button></div>`:''};
-  const cards=cl.map((c,i)=>{const n=FU_CAT[c.categoria]||'mute';return `<li class="pi ${n==='mute'?'':n}"><span class="pselo ${n}">${c.estrela?'⭐ ':''}${esc(c.categoria||'')}</span><div class="pbody"><strong>${esc(c.nome)}</strong>${c.handle?`<span class="meta-line"> ${esc(c.handle)}</span>`:''}<p>${md(c.resumo)}</p>${c.proximo_passo?`<p class="pacao"><b>Próximo passo:</b> ${md(c.proximo_passo)}</p>`:''}${msg(c,i)}${c.grupo?`<p class="meta-line" style="margin:6px 0 0">Grupo: ${esc(c.grupo)}</p>`:''}</div></li>`}).join('');
-  const tb=f.tabela&&(f.tabela.linhas||[]).length?`<section class="card wide"><h2>Números de hoje</h2><div class="tbl-wrap"><table class="ptable"><thead><tr>${(f.tabela.colunas||[]).map((c,j)=>`<th class="${j?'r':''}">${esc(c)}</th>`).join('')}</tr></thead><tbody>${f.tabela.linhas.map(r=>`<tr>${r.map((v,j)=>`<td class="${j?'r':'cli'}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${f.tabela_nota?`<p class="meta-line" style="margin:10px 0 0">${md(f.tabela_nota)}</p>`:''}</section>`:'';
-  main.innerHTML=head+`<div class="scroll"><div class="painel">
-    <section class="card wide"><h2>Resumo · ${cl.length} mentorados</h2><div class="presumo">${Object.keys(FU_CAT).filter(k=>cnt[k]).map(k=>`<span class="pselo ${FU_CAT[k]}">${k} · ${cnt[k]}</span>`).join('')}</div>
-      ${f.aviso?`<p class="paviso">${md(f.aviso)}</p>`:''}
-      ${(f.destaques||[]).length?`<h3 class="psub">Destaques</h3><ul class="pcand">${f.destaques.map(x=>`<li>${md(x)}</li>`).join('')}</ul>`:''}</section>
-    ${fuPendencias(f)}
-    ${f.estrelas_nota&&!cl.some(c=>c.estrela)?`<section class="card wide"><h2>Estrelas ⭐</h2><p class="meta-line" style="margin:0">${md(f.estrelas_nota)}</p></section>`:''}
-    <section class="card wide"><h2>Mensagens da semana · ${cl.length}</h2><ul class="plist">${cards}</ul></section>
-    ${tb}
-    ${(f.rodape||[]).length?`<section class="card wide pfoot">${f.rodape.map(n=>`<p>${md(n)}</p>`).join('')}</section>`:''}
-  </div></div>`;
-}
 function renderMentorados(main,banner){
   main.dataset.view='mentorados';
-  if(mentAba()==='carteira')return renderCarteira(main,banner);
-  if(mentAba()==='followup')return renderFollowup(main,banner);
-  if(mentAba()==='sexta')return renderSexta(main,banner);
-  const d=Painel.data;
-  const head=`<header class="mhead"><div><h1>Mentorados</h1><div class="sub">${d?`Painel CORE · leitura de ${esc(d.titulo_data||d.data||'')}${Painel.updated?' · atualizado '+fmtStamp(Painel.updated):''}`:'Painel CORE'}</div></div>${mentToggle()}</header>${banner}`;
-  if(!d){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O painel ainda não chegou</h2><p>${Painel.loading?'Carregando…':'Ele aparece aqui depois da próxima leitura diária da rotina “Dashboard CORE”, às 9h.'}</p></div></div>`;return}
-  const r=d.resumo||{},c=d.carteira,pl=d.plano;
-  // "Último post": a rotina manda só o número de dias; aqui vira "há N dias"
-  const ultimo=v=>v==null||v===''?'—':/^\d+$/.test(String(v))?(+v===0?'hoje':+v===1?'há 1 dia':`há ${v} dias`):String(v);
-  const tbl=(d.ativos||[]).map(a=>`<tr><td class="cli">${esc(a.nome)}<span class="sub">${esc(a.sub||'')}</span></td><td>${esc(a.produto||'')}<span class="sub">${esc(a.etapa||'')}${a.etapa_selo?` <span class="pselo ${esc(a.etapa_selo.nivel||'warn')}">${esc(a.etapa_selo.txt)}</span>`:''}</span></td>
-    <td class="r">${esc(a.seguidores||'—')}<span class="sub">${esc(a.seguidores_sub||'')}</span></td><td class="r">${esc(a.media30||'—')}${a.media30_sub?`<span class="sub">${esc(a.media30_sub)}</span>`:''}</td>
-    <td class="r">${a.maior7_url&&/^https?:/.test(a.maior7_url)?`<a href="${esc(a.maior7_url)}" target="_blank" rel="noopener">${esc(a.maior7||'')}</a>`:esc(a.maior7||'—')}</td>
-    <td class="r">${a.dias_nivel?`<span class="pselo ${esc(a.dias_nivel)}">${esc(ultimo(a.dias_sem_postar))}</span>`:esc(ultimo(a.dias_sem_postar))}</td><td class="pwa">${a.whatsapp?`<span class="pselo ${esc(a.whatsapp_nivel||'mute')}">${esc(a.whatsapp)}</span>`:'—'}${waCtx(a)}</td></tr>`).join('');
-  main.innerHTML=head+`<div class="scroll"><div class="painel">
-    <section class="card wide"><h2>Hoje: ${(d.top3||[]).length} coisas pra fazer</h2><ol class="top3">${(d.top3||[]).map((x,i)=>`<li><span class="num">${i+1}</span><div><strong>${esc(x.nome)}</strong><p>${md(x.texto)}</p></div><button class="btn" data-act="mkTask" data-list="top3" data-i="${i}">+ Demanda</button></li>`).join('')}</ol>
-      <div class="presumo">${r.criticos!=null?`<span class="pselo crit">${r.criticos} críticos</span>`:''}${r.atencao!=null?`<span class="pselo warn">${r.atencao} em atenção</span>`:''}${r.oportunidades!=null?`<span class="pselo ok">${r.oportunidades} oportunidades</span>`:''}${r.ativos!=null?`<span class="pselo mute">${r.ativos} ativos</span>`:''}</div>
-      ${(d.avisos||[]).map(a=>`<p class="paviso">${md(a)}</p>`).join('')}</section>
-    ${c?`<section class="card wide"><h2>Carteira destravada do mês</h2><div class="pcart"><span class="stat-big">${esc(String(c.pct))}%</span><span class="meta-line">${md(c.texto)}</span></div>
-      <div class="pbar" role="img" aria-label="${esc(String(c.pct))}% da carteira destravada"><i style="width:${Math.min(100,+c.pct||0)}%"></i>${(c.marcas||[]).map(m=>{const v=parseInt(String(m.nome).match(/(\d+)%/)?.[1]);return isNaN(v)?'':`<b style="left:${v}%"></b>`}).join('')}</div>
-      <div class="pmarks">${(c.marcas||[]).map(m=>`<div><b>${esc(m.nome)}</b>${esc(m.status||'')}</div>`).join('')}</div>
-      ${(c.candidatos||[]).length?`<p class="meta-line" style="margin:12px 0 6px">Candidatos mais prováveis até o fim do mês:</p><ul class="pcand">${c.candidatos.map(x=>`<li><b>${esc(x.nome)}:</b> ${md(x.texto)}</li>`).join('')}</ul>`:''}
-      ${c.nota?`<p class="meta-line" style="margin:10px 0 0">${md(c.nota)}</p>`:''}</section>`:''}
-    ${pl?`<section class="card wide"><h2>Plano de ação</h2>${pl.meta?`<p class="pmeta">${md(pl.meta)}</p>`:''}
-      ${(pl.apostar||[]).length?`<h3 class="psub">Onde apostar</h3><ul class="plist">${pl.apostar.map((x,i)=>`<li class="pi ok"><span class="pselo ok">${i+1}º</span><div class="pbody"><strong>${esc(x.nome)}</strong><p>${md(x.texto)}</p>${x.acao?`<p class="pacao">${md(x.acao)}</p>`:''}<div class="pactions"><button class="btn" data-act="mkTask" data-list="plano" data-i="${i}">+ Criar demanda</button></div></div></li>`).join('')}</ul>`:''}
-      ${(pl.nao_apostar||[]).length?`<h3 class="psub">Onde não vale apostar agora</h3><ul class="pcand">${pl.nao_apostar.map(x=>`<li><b>${esc(x.nome)}:</b> ${md(x.texto)}</li>`).join('')}</ul>`:''}
-      ${pl.fecho?`<p class="pmeta" style="margin-top:12px">${md(pl.fecho)}</p>`:''}</section>`:''}
-    ${cardContato(d)}
-    <section class="card wide"><h2>Atenção · clientes em risco</h2><ul class="plist">${(d.atencao||[]).map((x,i)=>painelItem(x,'atencao',i)).join('')||'<p class="meta-line">Nenhum cliente em risco.</p>'}</ul></section>
-    <section class="card wide"><h2>Oportunidades · o que aproveitar hoje</h2><ul class="plist">${(d.oportunidades||[]).map((x,i)=>painelItem(x,'oportunidades',i)).join('')||'<p class="meta-line">Nenhuma oportunidade hoje.</p>'}</ul></section>
-    ${(d.estrelas||[]).length?`<section class="card wide"><h2>Estrelas · clientes CLUB</h2><ul class="plist">${d.estrelas.map((x,i)=>painelItem(Object.assign({selo:'CLUB'},x),'estrelas',i)).join('')}</ul></section>`:''}
-    <section class="card wide"><h2>Todos os ativos · ${(d.ativos||[]).length}</h2><div class="tbl-wrap"><table class="ptable"><thead><tr><th>Cliente</th><th>Produto · etapa</th><th class="r">Seguidores</th><th class="r">Views (média 30 dias)</th><th class="r">Melhor reel da semana</th><th class="r">Último post</th><th>WhatsApp</th></tr></thead><tbody>${tbl}</tbody></table></div>
-      ${(d.notas||[]).map(n=>`<p class="meta-line" style="margin:10px 0 0">${md(n)}</p>`).join('')}</section>
-    ${(d.rodape||[]).length?`<section class="card wide pfoot">${d.rodape.map(n=>`<p>${md(n)}</p>`).join('')}</section>`:''}
-  </div></div>`;
+  return renderCarteira(main,banner);
 }
 
 /* ---------- Produção: relatório de prazos e pontos de atenção (export do cp.corestudio.ai) ---------- */
@@ -2144,13 +2018,6 @@ main.addEventListener('click',e=>{
     const done=()=>{el.textContent='Copiado';setTimeout(()=>el.textContent='Copiar',1600)};
     const sel=()=>{const r=document.createRange();r.selectNodeContents(t);const s_=getSelection();s_.removeAllRanges();s_.addRange(r);el.textContent='Selecionado'};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,sel);else sel();return}
-  if(act==='mkTask'){const d=Painel.data;const it=d&&((el.dataset.list==='plano'?(d.plano||{}).apostar:d[el.dataset.list])||[])[+el.dataset.i];if(!it)return;
-    const plain=v=>String(v||'').replace(/\*\*/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/^→\s*/,'').trim();
-    const acao=el.dataset.list==='contato'?'mandar mensagem no grupo':plain(it.acao)||plain(it.texto).split('. ')[0];
-    const proj=Ctx.data.projects.find(p=>/core/i.test(p))||'';
-    const t=newTask({title:`${it.nome}: ${acao}`.slice(0,140),description:plain(it.texto)+(it.sugestao?'\n\nSugestão de mensagem: '+it.sugestao:''),people:[it.nome],project:proj});
-    Store.put(t);if(aiReady())classify([t.id]);else renderAll();
-    toast('Demanda criada','Abrir',()=>openTask(t.id));return}
   if(act==='fday'){const t=Store.get(id);update(id,{focus_day:inDay(t)?null:today()},{detail:ui.sel===id});return}
   if(act==='fweek'){const t=Store.get(id);update(id,{focus_week:inWeek(t)?null:weekKey()},{detail:ui.sel===id});return}
   if(act==='accept'){update(id,{ai:null},{keepAi:true,detail:ui.sel===id});return toast('Revisada')}
@@ -2192,7 +2059,6 @@ main.addEventListener('click',e=>{
       Store.put(t);if(aiReady())classify([t.id]);else renderAll();return toast('Demanda criada','Abrir',()=>openTask(t.id))}
   }
   if(act==='prodDono'){ui.prodDono=el.dataset.k;return renderMain()}
-  if(act==='mentAba'){ui.mentAba=el.dataset.aba;saveUi();return renderMain()}
   if(act==='casoNovo')return casoNovo();
   if(act==='casoAbrir'){ui.casoOpen=ui.casoOpen===id?null:id;ui.casoDel=false;return renderMain()}
   if(ui.casoDel&&act!=='casoDel')ui.casoDel=false;
@@ -2573,7 +2439,7 @@ const Painel={data:null,updated:null,loading:false,mt:{},
   set(row){this.data=row.data;this.updated=row.updated_at;renderSide();if(ui.view==='mentorados')renderMain()},
   async load(){
     if(!sb||!currentUser)return;this.loading=true;
-    const {data:rows}=await sb.from('tasks').select('id,data,updated_at').in('id',['painel:core','mentorados:carteira','mentorados:followup','mentorados:pendencias','mentorados:sexta']);
+    const {data:rows}=await sb.from('tasks').select('id,data,updated_at').in('id',['mentorados:carteira']);
     this.loading=false;(rows||[]).filter(r=>r.id.startsWith('mentorados:')).forEach(routeSpecial);
     const data=(rows||[]).find(r=>r.id==='painel:core');if(data)this.set(data);else if(ui.view==='mentorados')renderMain();
   }};
