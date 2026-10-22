@@ -5,6 +5,7 @@
 //   node scripts/mentorados.mjs montar <ia.json> [--incremental]
 //        junta os números calculados dos snapshots do Instagram (código, sem IA) com a parte interpretada pela IA (ia.json)
 //        e publica. Formato do ia.json: scripts/mentorados-formato.md
+//   node scripts/mentorados.mjs numeros                  → métricas do Instagram calculadas dos snapshots (seguidores, mediana, melhor vídeo, meta)
 //   node scripts/mentorados.mjs semear                   → primeira carga, a partir dos painéis antigos (uso único)
 // Regras de situação e de casos críticos ficam no app (calculadas na hora, porque o tempo de espera cresce).
 import fs from 'node:fs';
@@ -150,6 +151,14 @@ async function contexto() {
   }
 }
 
+/* ---------- Números do Instagram já calculados (para a IA classificar e escrever, sem recalcular) ---------- */
+async function numeros() {
+  const c = await getRow('mentorados:carteira'), snaps = snapshots(), hoje = isoD(new Date());
+  const lista = c ? c.mentorados : contatos().map(x => ({ nome: x.cliente, ig: x.instagram }));
+  console.log(`Snapshot mais recente: ${snaps.length ? snaps[snaps.length - 1].data : 'nenhum'} · meta de viral pela Foto de Abertura do mês · média = mediana dos vídeos de 30 dias`);
+  for (const m of lista) console.log(JSON.stringify({ nome: m.nome, ig: m.ig, ...insta(m.ig, snaps, hoje, m.insta_excluir) }));
+}
+
 /* ---------- Primeira carga (uso único): converte os painéis antigos ---------- */
 const MES = { jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12 };
 function quando(txt, refIso) {
@@ -240,6 +249,7 @@ const [cmd, arg, flag] = process.argv.slice(2);
 try {
   if (cmd === 'montar' && arg) await montar(arg, flag === '--incremental');
   else if (cmd === 'contexto') await contexto();
+  else if (cmd === 'numeros') await numeros();
   else if (cmd === 'semear') await semear();
-  else console.log('Uso: node scripts/mentorados.mjs contexto | montar <ia.json> [--incremental] | semear');
+  else console.log('Uso: node scripts/mentorados.mjs contexto | numeros | montar <ia.json> [--incremental] | semear');
 } catch (e) { console.error('ERRO:', e.message); process.exit(1); }
