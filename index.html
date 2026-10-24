@@ -403,6 +403,8 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 /* Claude suggestions */
 .sug{color:var(--accent);font-size:11px;margin-left:4px;text-transform:none;letter-spacing:0}
 .sug-chip{font-size:11px;color:var(--accent);font-weight:600}
+.rmeta .deleg{font-weight:600;color:var(--fg)}
+.btn.acomp-link{margin-right:8px;color:var(--p1)}
 .dup-chip{font-size:11px;font-weight:600;color:var(--p2);cursor:pointer;border-radius:4px;padding:0 4px;background:color-mix(in srgb,var(--p2) 12%,transparent)}
 .dup-chip:hover{text-decoration:underline}
 .dupbar{border-color:color-mix(in srgb,var(--p2) 40%,transparent);background:color-mix(in srgb,var(--p2) 8%,transparent)}
@@ -712,6 +714,7 @@ function parseCapture(raw){
   // "toda segunda" é ritmo, não data
   take(new RegExp('(?<!tod[ao]s?)\\s('+DATE_RE+')(?=\\s)','i'),m=>{const d=resolveDate(m[1]);if(d)out.planned_date=d});
   take(/\s(?:às\s+)?(\d{1,2})(?:h(\d{2})?|:(\d{2}))(?=\s)/i,m=>{const h=+m[1],mi=+(m[2]||m[3]||0);if(h<24&&mi<60)out.planned_time=`${pad(h)}:${pad(mi)}`});
+  take(/\s@([^\s@]{2,})(?=\s)/,m=>out.responsible=resolvePessoa(m[1]));
   out.title=s.replace(/\s+/g,' ').trim();
   return out;
 }
@@ -814,7 +817,17 @@ window.addEventListener('pagehide',()=>Store.flushAll());
 const ui={prodFiltro:'',estFb:null,estAba:'aprovar',estOpen:null,estCfg:false,estNota:false,collapsed:[],view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
 try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;if(Array.isArray(s.collapsed))ui.collapsed=s.collapsed;if(s.estAba)ui.estAba=s.estAba;if(s.mentAba)ui.mentAba=s.mentAba}catch(e){}
 const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,collapsed:ui.collapsed,estAba:ui.estAba,mentAba:ui.mentAba}))}catch(e){}};
-const listViews=['inbox','revisar','pdia','psemana','hoje','atrasados','semana','todas','concluidas'];
+const listViews=['inbox','revisar','pdia','psemana','hoje','atrasados','acompanhamento','semana','todas','concluidas'];
+// Delegadas: o responsável não é o Cauê. Saem de Hoje, Semana, Atrasados e da conta de tempo; vivem na aba Acompanhamento.
+const EU='Cauê';
+const isDeleg=t=>!!(t&&t.responsible&&t.responsible.trim()&&t.responsible.trim()!==EU);
+const diaUtil=(z,n)=>{let d=fromIso(z),k=0;while(k<Math.abs(n)){d=addDays(d,n>0?1:-1);if(d.getDay()!==0&&d.getDay()!==6)k++}return iso(d)};
+// Cobrar: 1 dia útil antes do prazo combinado; depois de cada cobrança, no dia útil seguinte
+const cobrarEm=t=>{if(t.cobrar_em)return t.cobrar_em;if(t.deadline){const c=diaUtil(t.deadline,-1);return c<today()?today():c}return diaUtil(today(),1)};
+const primeiroNome=n=>String(n||'').trim().split(/\s+/)[0];
+function textoCobranca(t){const atr=t.deadline&&t.deadline<today();
+  return `${primeiroNome(t.responsible)}, como está "${t.title}"?${t.deadline?` Combinamos pra ${fmtDay(t.deadline).toLowerCase()}`:''}${atr?', consegue me atualizar hoje?':t.deadline?'.':''}`.replace(/\s+/g,' ').trim()}
+function resolvePessoa(x){const k=norm(x).trim();const p=(Ctx.data.people||[]).find(p=>p.name&&norm(p.name).trim().split(' ')[0]===k);return p?p.name:x.charAt(0).toUpperCase()+x.slice(1)}
 const weekKey=()=>iso(startOfWeek(new Date()));
 const inDay=t=>t.focus_day===today(),inWeek=t=>t.focus_week===weekKey();
 // Organized automatically (rules or Claude) and not confirmed yet
@@ -840,6 +853,7 @@ function update(id,patch,opts){
     const left=t.ai.fields.filter(k=>!(k in patch));
     if(left.length!==t.ai.fields.length)patch.ai=left.length?{fields:left,prev:t.ai.prev}:null;
   }
+  if('responsible' in patch&&isDeleg(patch)&&!t.delegado_em)patch.delegado_em=new Date().toISOString();
   if(patch.type&&patch.type!==t.type)learnType([t.title,t.description].join(' '),patch.type);
   if(patch.ai===null&&t.ai_review==='pendente')patch.ai_review=null;
   Store.put(Object.assign({},t,patch),(opts&&opts.delay)||0);
@@ -893,7 +907,8 @@ function capture(text,pasted){
     const p=parseCapture(ch[0]);if(!p.title)continue;
     const base={title:p.title};
     if(ch.length>1)base.description=ch.slice(1).join('\n');
-    ['type','priority','estimated_duration','deadline','planned_date','planned_time','external'].forEach(k=>{if(p[k]!=null)base[k]=p[k]});
+    ['type','priority','estimated_duration','deadline','planned_date','planned_time','external','responsible'].forEach(k=>{if(p[k]!=null)base[k]=p[k]});
+    if(base.responsible&&base.responsible!==EU){if(base.planned_date&&!base.deadline)base.deadline=base.planned_date;delete base.planned_date;delete base.planned_time;base.delegado_em=new Date().toISOString()}
     if(ui.view==='hoje'&&!base.planned_date&&!aiReady())base.planned_date=today();
     if(ui.view.startsWith('tipo:')&&!base.type)base.type=ui.view.slice(5);
     if(ui.view.startsWith('proj:'))base.project=ui.view.slice(5);
@@ -1017,13 +1032,17 @@ function ruleSuggest(t){
   const dur=type==='E'?90:type==='A'?60:type==='C'?15:30;
   const external=/ entreg| roteiro| deadline| cliente| apresentar pr| apresentacao pr| enviar pr| mandar pr/.test(x)||undefined;
   const deadline=t.deadline||workDay(priority===1);
+  // "pedir pro Leo…", "delegar para a Paulline…": delega a quem está em Pessoas
+  const dm=!isDeleg(t)&&x.match(/ (?:pedir|delegar|passar|repassar) (?:pro|pra|para o|para a|para|ao|a) ([a-z]+)/),dp=dm&&(c.people||[]).find(p=>p.name&&norm(p.name).trim().split(' ')[0]===dm[1]);
+  if(dp)return Object.assign(base(),{responsible:dp.name});
   let slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date)
     :(findSlot(dur,type,deadline,t.id)||findSlot(dur,type,null,t.id));
   // Conversas vão sempre às 11:00, 15 min (janela de mensagens): hoje se ainda não passou das 11h, senão o próximo dia de expediente
-  if(type==='C'){const fixo=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'));const now=new Date();let k=fixo?t.planned_date:null;
+  if(type==='C'&&!isDeleg(t)){const fixo=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'));const now=new Date();let k=fixo?t.planned_date:null;
     for(let i=0;!k&&i<14;i++){const d=addDays(now,i),h=Ctx.data.hours[d.getDay()];if(h&&h.on&&(i>0||now.getHours()<11))k=iso(d)}
     slot={date:k||workDay(false),time:'11:00'};
     return Object.assign(base(),{estimated_duration:t.estimated_duration||15,deadline:deadline&&deadline<slot.date?slot.date:deadline,planned_date:slot.date,planned_time:'11:00'});}
+  if(isDeleg(t))return base();
   return Object.assign(base(),{planned_date:slot&&slot.date,planned_time:slot&&slot.time});
   function base(){return {type,priority,external,estimated_duration:t.estimated_duration||dur,deadline,project,people,
     rhythm:/ diari| todo dia| todos os dias| toda manha/.test(x)?'diario':/ semanal| toda semana| toda (segunda|terca|quarta|quinta|sexta)| semanalmente/.test(x)?'semanal'
@@ -1050,7 +1069,7 @@ function askSpent(t){
 const spentOf=t=>t.spent_minutes||t.estimated_duration||30;
 function weekTime(wsIso){
   const ws=fromIso(wsIso),we=iso(addDays(ws,7)),now=new Date();const m={E:0,O:0,A:0,C:0,N:0};let est=0,tasks=0;
-  Store.all().forEach(t=>{if(!isDone(t)||!t.completed_at)return;const d=iso(new Date(t.completed_at));if(d<wsIso||d>=we)return;
+  Store.all().forEach(t=>{if(!isDone(t)||!t.completed_at||isDeleg(t))return;const d=iso(new Date(t.completed_at));if(d<wsIso||d>=we)return;
     m[t.type||'N']+=spentOf(t);tasks++;if(!t.spent_minutes)est++});
   if(Ctx.data.countFixed!==false)Ctx.data.fixed.forEach(f=>{if(!f.title)return;const day=addDays(ws,(+f.wd+6)%7);const mm=toMin(f.time)||0;
     const st=new Date(day.getFullYear(),day.getMonth(),day.getDate(),Math.floor(mm/60),mm%60);if(st<=now)m[f.type||'N']+=(+f.dur||60)});
@@ -1070,17 +1089,18 @@ function matchQ(t){
   return [t.title,t.description,t.project,t.responsible,(t.tags||[]).join(' ')].join(' ').toLowerCase().includes(q);
 }
 function buckets(){
-  const t=today(),all=Store.all();const open=all.filter(x=>!isDone(x));
-  const late=open.filter(x=>(x.planned_date&&x.planned_date<t)||(x.deadline&&x.deadline<t));
-  const tod=open.filter(x=>!late.includes(x)&&(x.planned_date===t||x.deadline===t));
-  const week=open.filter(x=>{const a=anchor(x);return a&&a>=t&&dd(t,a)<=7});
-  return {open,late,tod,week,done:all.filter(isDone),inbox:open.filter(isInbox)};
+  const t=today(),all=Store.all();const open=all.filter(x=>!isDone(x)),mine=open.filter(x=>!isDeleg(x));
+  const late=mine.filter(x=>(x.planned_date&&x.planned_date<t)||(x.deadline&&x.deadline<t));
+  const tod=mine.filter(x=>!late.includes(x)&&(x.planned_date===t||x.deadline===t));
+  const week=mine.filter(x=>{const a=anchor(x);return a&&a>=t&&dd(t,a)<=7});
+  const deleg=open.filter(isDeleg),cobrar=deleg.filter(x=>cobrarEm(x)<=t||(x.deadline&&x.deadline<t));
+  return {open,late,tod,week,done:all.filter(isDone),inbox:mine.filter(isInbox),deleg,cobrar};
 }
 function groups(){
-  const t=today(),all=Store.all().filter(matchQ);const open=all.filter(x=>!isDone(x)).sort(cmp);
+  const t=today(),all=Store.all().filter(matchQ);const open=all.filter(x=>!isDone(x)).sort(cmp);const mine=open.filter(x=>!isDeleg(x));
   const lateF=x=>(x.planned_date&&x.planned_date<t)||(x.deadline&&x.deadline<t);
   switch(ui.view.startsWith('proj:')?'proj':ui.view.startsWith('ritmo:')?'ritmo':ui.view){
-    case 'inbox':return [{items:open.filter(isInbox)}];
+    case 'inbox':return [{items:mine.filter(isInbox)}];
     case 'pdia':{const t0=today();
       return [{title:'Prioridades de hoje',items:open.filter(inDay)},
         {title:'Ficaram de dias anteriores',warn:true,items:open.filter(x=>x.focus_day&&x.focus_day<t0)},
@@ -1092,22 +1112,33 @@ function groups(){
     case 'revisar':{const r=open.filter(toReview).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
       return [{title:'Revisadas pelo Claude',items:r.filter(t=>t.ai.by==='claude')},{title:'Preenchidas automaticamente',items:r.filter(t=>t.ai.by!=='claude')}];}
     case 'hoje':{
-      const late=open.filter(lateF);
+      const late=mine.filter(lateF);
       return [{title:'Ficaram para trás',warn:true,items:late},
-        {title:'Hoje',items:open.filter(x=>!lateF(x)&&(x.planned_date===t||x.deadline===t||ui.aiPending.has(x.id)))},
+        {title:'Hoje',items:mine.filter(x=>!lateF(x)&&(x.planned_date===t||x.deadline===t||ui.aiPending.has(x.id)))},
         {title:'Concluídas hoje',items:all.filter(x=>isDone(x)&&x.completed_at&&iso(new Date(x.completed_at))===t)}];
+    }
+    case 'acompanhamento':{
+      const D=open.filter(isDeleg),feitas=all.filter(x=>isDone(x)&&isDeleg(x)&&x.completed_at&&dd(iso(new Date(x.completed_at)),t)<=7);
+      if(ui.acompPessoa){const P=[...new Set(D.concat(feitas).map(x=>x.responsible.trim()))].sort();
+        return P.map(pn=>{const ab=D.filter(x=>x.responsible.trim()===pn),at=ab.filter(x=>x.deadline&&x.deadline<t),fe=all.filter(x=>isDone(x)&&x.responsible&&x.responsible.trim()===pn&&x.deadline&&x.completed_at);
+          const noPrazo=fe.length?Math.round(fe.filter(x=>iso(new Date(x.completed_at))<=x.deadline).length/fe.length*100):null;
+          return {title:`${pn} · ${ab.length} aberta${ab.length===1?'':'s'}${at.length?` · ${at.length} atrasada${at.length>1?'s':''}`:''}${noPrazo!=null?` · ${noPrazo}% no prazo`:''}`,warn:!!at.length,items:ab.sort((a,b)=>cobrarEm(a).localeCompare(cobrarEm(b)))}})}
+      const atr=D.filter(x=>x.deadline&&x.deadline<t),cob=D.filter(x=>!atr.includes(x)&&cobrarEm(x)<=t);
+      const byC=(a,b)=>cobrarEm(a).localeCompare(cobrarEm(b))||cmp(a,b);
+      return [{title:'Atrasadas',warn:true,items:atr.sort((a,b)=>a.deadline.localeCompare(b.deadline))},{title:'Cobrar hoje',items:cob.sort(byC)},
+        {title:'Aguardando',items:D.filter(x=>!atr.includes(x)&&!cob.includes(x)).sort(byC)},{title:'Concluídas nos últimos 7 dias',items:feitas}];
     }
     case 'atrasados':{
       // Dia em que ficou para trás: o mais antigo entre planejado e prazo que já passaram
       const desde=x=>[x.planned_date,x.deadline].filter(d=>d&&d<t).sort()[0];
-      const late=open.filter(lateF).sort((a,b)=>desde(a).localeCompare(desde(b))||cmp(a,b));const age=x=>dd(desde(x),t);
+      const late=mine.filter(lateF).sort((a,b)=>desde(a).localeCompare(desde(b))||cmp(a,b));const age=x=>dd(desde(x),t);
       return [{title:'Há mais de 2 semanas',warn:true,items:late.filter(x=>age(x)>14)},
         {title:'Há 1 a 2 semanas',warn:true,items:late.filter(x=>age(x)>7&&age(x)<=14)},
         {title:'Nos últimos 7 dias',warn:true,items:late.filter(x=>age(x)<=7)}];
     }
     case 'semana':{
-      const rest=open.filter(x=>!lateF(x));const a=x=>anchor(x);const tm=iso(addDays(fromIso(t),1));
-      return [{title:'Ficaram para trás',warn:true,items:open.filter(lateF)},
+      const rest=mine.filter(x=>!lateF(x));const a=x=>anchor(x);const tm=iso(addDays(fromIso(t),1));
+      return [{title:'Ficaram para trás',warn:true,items:mine.filter(lateF)},
         {title:'Hoje',items:rest.filter(x=>a(x)===t)},
         {title:'Amanhã',items:rest.filter(x=>a(x)===tm)},
         {title:'Próximos dias',items:rest.filter(x=>a(x)&&a(x)>tm&&dd(t,a(x))<=7)},
@@ -1126,6 +1157,7 @@ function groups(){
   }
 }
 function leverage(list){
+  list=list.filter(x=>!isDeleg(x));
   const c={E:0,O:0,A:0,C:0,N:0};list.forEach(t=>c[t.type||'N']++);
   const typed=c.E+c.O+c.A+c.C;
   let verdict,cls,text;
@@ -1153,7 +1185,7 @@ function renderSide(){
       ${item('inbox','Caixa de entrada',svg('inbox','ico'),b.inbox.length||'')}
       ${item('revisar','A revisar',svg('sublist','ico'),Store.all().filter(toReview).length||'')}
       ${sec('prioridades','Prioridades',item('pdia','Prioridades do dia',svg('star','ico'),b.open.filter(inDay).length||'')+item('psemana','Prioridades da semana',svg('star','ico'),b.open.filter(inWeek).length||''))}
-      ${sec('listas','Listas',item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')+item('atrasados','Atrasados',svg('flag','ico'),b.late.length||'')+item('semana','Semana',svg('week','ico'),b.week.length||'')+item('todas','Todas as notas',svg('notes','ico'),b.open.length)+item('concluidas','Concluídas',svg('check','ico'),b.done.length||''))}
+      ${sec('listas','Listas',item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')+item('atrasados','Atrasados',svg('flag','ico'),b.late.length||'')+item('acompanhamento','Acompanhamento',svg('person','ico'),b.cobrar.length||'')+item('semana','Semana',svg('week','ico'),b.week.length||'')+item('todas','Todas as notas',svg('notes','ico'),b.open.length)+item('concluidas','Concluídas',svg('check','ico'),b.done.length||''))}
       ${sec('tipos','Tipos',TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join(''))}
       ${sec('ritmos','Ritmos',Object.keys(RHYTHM).map(k=>item('ritmo:'+k,RHYTHM[k],svg('clock','ico'),b.open.filter(t=>rhythmOf(t)===k).length||'')).join(''))}
       ${Ctx.data.projects.length?sec('projetos','Projetos',Ctx.data.projects.map(p=>item('proj:'+esc(p),esc(p),svg('folder','ico'),b.open.filter(t=>t.project===p).length||'')).join('')):''}
@@ -1173,7 +1205,7 @@ function renderSide(){
 function headFor(){
   const t=new Date();
   const map={inbox:['Caixa de entrada','Despeje aqui. Organize depois.'],pdia:['Prioridades do dia','O que precisa sair hoje'],psemana:['Prioridades da semana','O que precisa sair até domingo'],revisar:['A revisar','Organizadas automaticamente. Confira e confirme.'],hoje:['Hoje',fmtDay(today(),true).replace(/^Hoje$/,'')||`${WDL[t.getDay()]}, ${t.getDate()} de ${MON[t.getMonth()]}`],
-    atrasados:['Atrasados','Planejado ou prazo já passou, das mais antigas para as mais recentes'],semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
+    atrasados:['Atrasados','Planejado ou prazo já passou, das mais antigas para as mais recentes'],acompanhamento:['Acompanhamento','O que você delegou e precisa cobrar'],semana:['Hoje / Semana','Próximos 7 dias'],todas:['Todas as notas','Demandas abertas por tipo'],concluidas:['Concluídas','Mais recentes primeiro']};
   if(ui.view.startsWith('tipo:'))return [TYPES[ui.view.slice(5)],'Abertas, por prioridade'];
   if(ui.view.startsWith('proj:'))return [ui.view.slice(5),'Projeto · abertas, por tipo'];
   if(ui.view.startsWith('ritmo:'))return [RHYTHM[ui.view.slice(6)],({diario:'O que se repete ou acontece todo dia',semanal:'Rituais e acompanhamentos da semana',quinzenal:'O que acontece a cada duas semanas',mensal:'Processos, pessoas e planejamento do mês',trimestral:'Direção, estrutura e grandes apostas'})[ui.view.slice(6)]+' · abertas, por tipo'];
@@ -1193,12 +1225,16 @@ function rowHtml(t){
   if(t.subtasks.length)m.push(`<span>${svg('sublist')}${t.subtasks.filter(s=>s.done).length}/${t.subtasks.length}</span>`);
   if(isDone(t)&&t.spent_minutes)m.push(`<span>${svg('clock')}${fmtDur(t.spent_minutes)}</span>`);
   if(t.project)m.push(`<span>${svg('folder')}${esc(t.project)}</span>`);
-  if(t.responsible&&t.responsible!=='Cauê')m.push(`<span>→ ${esc(t.responsible)}</span>`);
+  if(isDeleg(t)){m.push(`<span class="deleg">→ ${esc(t.responsible)}</span>`);
+    if(!isDone(t)){const c=cobrarEm(t),n=(t.cobrancas||[]).length;m.push(`<span class="${c<=td?'late':''}">${c<=td?'Cobrar hoje':'Cobrar '+fmtDay(c).toLowerCase()}</span>`);
+      const de=t.delegado_em||t.created_at;if(de){const n=Math.max(0,dd(iso(new Date(de)),td));m.push(`<span>delegada há ${n} dia${n===1?'':'s'}</span>`)}
+      if(n)m.push(`<span>cobrada ${n}× · última ${fmtDay(t.cobrancas[n-1]).toLowerCase()}</span>`)}}
   (t.tags||[]).slice(0,3).forEach(g=>m.push(`<span class="tag">#${esc(g)}</span>`));
   return `<div class="row ${isDone(t)?'done':''} ${ui.sel===t.id?'sel':''}" data-id="${t.id}">
     <button class="chk" data-act="toggle" aria-label="${isDone(t)?'Reabrir':'Concluir'}: ${esc(t.title)}">${svg('tick')}</button>
     <div class="rbody" data-act="open" tabindex="0" role="button"><div class="rtitle">${esc(t.title)||'<span style="color:var(--faint)">Sem título</span>'}</div><div class="rmeta">${m.join('')}</div></div>
-    ${isDone(t)?'':`<div class="focus" role="group" aria-label="Prioridade"><button data-act="fday" class="${inDay(t)?'on':''}" aria-pressed="${inDay(t)}" title="Prioridade do dia">${svg('star')}Dia</button><button data-act="fweek" class="${inWeek(t)?'on':''}" aria-pressed="${inWeek(t)}" title="Prioridade da semana">${svg('star')}Semana</button></div>`}
+    ${ui.view==='acompanhamento'&&isDeleg(t)&&!isDone(t)?`<div class="focus"><button data-act="cobrei" title="Registra a cobrança e agenda a próxima para o próximo dia útil">Cobrei</button><button data-act="copiaCob">Copiar cobrança</button></div>`:''}
+    ${isDone(t)||(ui.view==='acompanhamento'&&isDeleg(t))?'':`<div class="focus" role="group" aria-label="Prioridade"><button data-act="fday" class="${inDay(t)?'on':''}" aria-pressed="${inDay(t)}" title="Prioridade do dia">${svg('star')}Dia</button><button data-act="fweek" class="${inWeek(t)?'on':''}" aria-pressed="${inWeek(t)}" title="Prioridade da semana">${svg('star')}Semana</button></div>`}
     ${ui.view==='revisar'&&toReview(t)?`<button class="btn okbtn" data-act="accept" aria-label="Marcar como revisada: ${esc(t.title)}">✓ Ok</button>`:''}
   </div>`;
 }
@@ -1206,7 +1242,7 @@ function emptyFor(){
   const any=Store.all().length;
   if(ui.q)return `<div class="empty"><h2>Nada encontrado</h2><p>Nenhuma demanda com “${esc(ui.q)}”.</p></div>`;
   if(!any)return `<div class="empty"><h2>Comece escrevendo uma linha</h2><p>Escreva qualquer coisa no campo acima e aperte Enter. Não precisa escolher categoria, prazo nem prioridade agora.</p><p>Pode colar uma lista inteira do seu bloco de notas: cada linha vira uma demanda.</p></div>`;
-  const msg={pdia:'Nenhuma prioridade para hoje. Toque em “Dia” nos cards das demandas que precisam sair hoje.',psemana:'Nenhuma prioridade para a semana. Toque em “Semana” nos cards das demandas que precisam sair nesta semana.',revisar:'Tudo revisado. As demandas organizadas automaticamente aparecem aqui até você confirmar.',inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',atrasados:'Nenhuma demanda atrasada.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
+  const msg={pdia:'Nenhuma prioridade para hoje. Toque em “Dia” nos cards das demandas que precisam sair hoje.',psemana:'Nenhuma prioridade para a semana. Toque em “Semana” nos cards das demandas que precisam sair nesta semana.',revisar:'Tudo revisado. As demandas organizadas automaticamente aparecem aqui até você confirmar.',inbox:'Caixa de entrada vazia. Tudo que você capturou já tem tipo ou data.',hoje:'Nada planejado para hoje.',atrasados:'Nenhuma demanda atrasada.',acompanhamento:'Nada delegado. Escreva @Pessoa na captura (ex.: @Paulline revisar onboarding sexta) ou use Responsável na demanda.',semana:'Nada nos próximos 7 dias.',todas:'Nenhuma demanda aberta.',concluidas:'Nada concluído ainda.'};
   return `<div class="empty"><p>${msg[ui.view]||'Nenhuma demanda aberta deste tipo.'}</p></div>`;
 }
 /* ---------- Demandas possivelmente duplicadas (títulos parecidos entre as abertas) ---------- */
@@ -1260,8 +1296,9 @@ function renderMain(){
         ${showLev?'<div class="levstrip" id="levstrip"></div>':''}
         ${ui.view==='inbox'?'<div class="toolbar" id="inboxBar"></div>':''}
         ${ui.view==='revisar'?'<div class="toolbar" id="reviewBar"></div>':''}
+        ${ui.view==='acompanhamento'?'<div class="toolbar" id="acompBar"></div>':''}
         ${ui.view!=='concluidas'&&ui.view!=='atrasados'?`<div class="capture"><div class="capture-row"><span class="plus" aria-hidden="true"></span>
-          <textarea id="cap" rows="1" placeholder="${ui.view==='hoje'?'Nova demanda para hoje…':'Nova demanda…'}" aria-label="Nova demanda"></textarea></div>
+          <textarea id="cap" rows="1" placeholder="${ui.view==='hoje'?'Nova demanda para hoje…':ui.view==='acompanhamento'?'Delegar: @Paulline revisar onboarding da Kenia sexta':'Nova demanda…'}" aria-label="Nova demanda"></textarea></div>
           <div class="chips" id="capPreview"></div>
           <div class="hint" id="capHint"></div></div>`:''}
         <div id="listBody"></div>
@@ -1278,10 +1315,13 @@ function renderMain(){
   const rb=$('#reviewBar');
   if(rb){const n=Store.all().filter(toReview).length;
     rb.innerHTML=n?`<span class="meta-line">Toque em ✓ Ok para confirmar, ou abra a demanda para ajustar. Ao editar um campo, ele deixa de ser sugestão.</span><button class="btn" data-act="acceptAll">✓ Marcar todas (${n}) como revisadas</button>`:''}
+  const ab=$('#acompBar');
+  if(ab)ab.innerHTML=`<div class="seg" role="group" aria-label="Agrupar"><button data-act="acompModo" data-v="" class="${ui.acompPessoa?'':'on'}">Por situação</button><button data-act="acompModo" data-v="1" class="${ui.acompPessoa?'on':''}">Por pessoa</button></div><span class="meta-line">Cobrança 1 dia útil antes do prazo e, depois, a cada dia útil até entregar.</span>`;
   const ls=$('#levstrip');
   if(ls){
     const scope=ui.view==='hoje'?buckets().late.concat(buckets().tod):buckets().week;const L=leverage(scope);
-    ls.innerHTML=L.typed?`<span>${ui.view==='hoje'?'Hoje':'Esta semana'}:</span>${stackBar(L.c)}<span><b>${L.c.E}</b> estratégicas · <b>${L.c.O}</b> operacionais · <b>${L.c.A}</b> analíticas</span>${L.cls==='op'?'<span class="warn">· modo operador</span>':''}`:'';
+    const bq=buckets(),cobr=ui.view==='hoje'&&bq.cobrar.length?`<button class="btn acomp-link" data-view-go="acompanhamento">${bq.cobrar.length} cobrança${bq.cobrar.length>1?'s':''} hoje →</button>`:'';
+    ls.innerHTML=cobr+(L.typed?`<span>${ui.view==='hoje'?'Hoje':'Esta semana'}:</span>${stackBar(L.c)}<span><b>${L.c.E}</b> estratégicas · <b>${L.c.O}</b> operacionais · <b>${L.c.A}</b> analíticas</span>${L.cls==='op'?'<span class="warn">· modo operador</span>':''}`:'');
   }
   renderList();
 }
@@ -1290,7 +1330,7 @@ function renderMain(){
 // Previsão da semana: tempo planejado por tipo (feito conta o tempo gasto) e se o estratégico fica na meta
 function calForecast(days){
   const goal=+Ctx.data.goalE||30,m={E:0,O:0,A:0,C:0,N:0},ds=new Set(days);
-  Store.all().forEach(t=>{if(t.planned_date&&ds.has(t.planned_date))m[t.type||'N']+=isDone(t)?spentOf(t):(t.estimated_duration||30)});
+  Store.all().forEach(t=>{if(t.planned_date&&ds.has(t.planned_date)&&!isDeleg(t))m[t.type||'N']+=isDone(t)?spentOf(t):(t.estimated_duration||30)});
   if(Ctx.data.countFixed!==false)Ctx.data.fixed.forEach(f=>{if(f.title)m[f.type||'N']+=(+f.dur||60)});
   const typed=m.E+m.O+m.A+m.C;
   if(!typed)return `<span class="calfc">Previsão da semana: nada planejado com tipo ainda · arraste para replanejar</span>`;
@@ -1303,7 +1343,7 @@ function calForecast(days){
 }
 function calItems(day){
   const all=Store.all();
-  return {plan:all.filter(t=>t.planned_date===day),dl:all.filter(t=>t.deadline===day&&t.external)};
+  return {plan:all.filter(t=>t.planned_date===day&&!isDeleg(t)),dl:all.filter(t=>t.deadline===day&&t.external)};
 }
 function layoutDay(evs){
   evs.sort((a,b)=>a.s-b.s||b.e-a.e);let cluster=[],end=-1;const out=[];
@@ -1444,6 +1484,11 @@ function renderLeverage(main,banner){
       <p class="meta-line" style="margin:10px 0 0">${wt.tasks} demanda${wt.tasks===1?'':'s'} concluída${wt.tasks===1?'':'s'}${wt.est?`, ${wt.est} com tempo estimado (sem confirmação)`:''}${Ctx.data.countFixed!==false&&Ctx.data.fixed.length?' · inclui compromissos fixos que já aconteceram':''}.</p></section>
     <section class="card"><h2>Feito × planejado nesta semana</h2><div class="bars">${TKN.map(pf).join('')}</div>
       <p class="meta-line" style="margin:12px 0 0">Barra clara: planejado (estimativas + compromissos fixos). Barra cheia: feito.</p></section>
+    ${(()=>{const all=Store.all().filter(isDeleg);if(!all.length)return '';const P=[...new Set(all.map(x=>x.responsible.trim()))].sort();const t0=today();
+      const rows=P.map(pn=>{const L=all.filter(x=>x.responsible.trim()===pn),ab=L.filter(x=>!isDone(x)),at=ab.filter(x=>x.deadline&&x.deadline<t0),fe=L.filter(x=>isDone(x)&&x.deadline&&x.completed_at&&dd(iso(new Date(x.completed_at)),t0)<=30);
+        const pc=fe.length?Math.round(fe.filter(x=>iso(new Date(x.completed_at))<=x.deadline).length/fe.length*100):null;
+        return `<tr><td>${esc(pn)}</td><td class="r">${ab.length}</td><td class="r ${at.length?'late':''}">${at.length}</td><td class="r">${fe.length}</td><td class="r">${pc==null?'—':pc+'%'}</td></tr>`}).join('');
+      return `<section class="card wide"><h2>Delegadas por pessoa</h2><p class="meta-line" style="margin:-4px 0 10px">Entregas no prazo contam os últimos 30 dias. Ajuda a ver em quem dá para confiar mais e quem pede acompanhamento de perto.</p><div class="tbl-wrap"><table class="ptable"><thead><tr><th>Pessoa</th><th class="r">Abertas</th><th class="r">Atrasadas</th><th class="r">Concluídas (30 dias)</th><th class="r">No prazo</th></tr></thead><tbody>${rows}</tbody></table></div></section>`})()}
     <section class="card wide"><h2>Evolução semanal · % do tempo por tipo</h2>${historyChart(goal)}</section>
     <section class="card"><h2>Interrupções nesta semana</h2>
       <div style="display:flex;align-items:baseline;gap:10px"><span class="stat-big">${interrupts.length}</span><span>operacionais que chegaram e foram feitas no mesmo dia</span></div>
@@ -1932,9 +1977,11 @@ function renderDetail(){
         <div class="fld"><label for="d-dur">Tempo estimado${sg('estimated_duration')}</label><select class="inp" id="d-dur" data-f="estimated_duration"><option value="">—</option>${DURS.map(m=>`<option value="${m}" ${t.estimated_duration===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select></div>
         <label class="ext-row" for="d-ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}><span><b>Avisar prazo no calendário</b>${sg('external')}<small>Mostra o prazo real como aviso vermelho no topo do dia. Use para entregas combinadas com outras pessoas.</small></span></label>
       </div>
+      ${isDeleg(t)&&!isDone(t)?`<div class="aibar"><span>Delegada para <b>${esc(t.responsible)}</b>${t.deadline?` · prazo ${fmtDay(t.deadline).toLowerCase()}`:''} · cobrar ${cobrarEm(t)<=today()?'hoje':fmtDay(cobrarEm(t)).toLowerCase()}</span><button data-dact="copiaCob">Copiar cobrança</button><button data-dact="cobrei">Cobrei</button></div>`:''}
       <div class="insights">${insights(t).map(([c,txt,btn,act])=>`<div class="ins ${c}"><span>${esc(txt)}</span>${btn?`<button data-dact="${act}">${esc(btn)}</button>`:''}</div>`).join('')}</div>
       <div class="grid2">
-        <div class="fld"><label for="d-resp">Responsável${sg('responsible')}</label><input class="inp" id="d-resp" data-f="responsible" list="people" value="${esc(t.responsible)}"><datalist id="people"><option value="Cauê"><option value="Sanchez"></datalist></div>
+        <div class="fld"><label for="d-resp">Responsável${sg('responsible')}</label><input class="inp" id="d-resp" data-f="responsible" list="people" value="${esc(t.responsible)}"><datalist id="people"><option value="Cauê">${(Ctx.data.people||[]).filter(p=>p.name).map(p=>`<option value="${esc(p.name)}">`).join('')}</datalist></div>
+        ${isDeleg(t)&&!isDone(t)?`<div class="fld"><label for="d-cobrar">Cobrar em</label><input class="inp" type="date" id="d-cobrar" data-f="cobrar_em" value="${cobrarEm(t)}"><small>${(t.cobrancas||[]).length?`Cobrada ${(t.cobrancas||[]).length}× · última ${fmtDay(t.cobrancas[t.cobrancas.length-1]).toLowerCase()}`:'1 dia útil antes do prazo'}</small></div>`:''}
         <div class="fld"><label for="d-proj">Projeto${sg('project')}</label><input class="inp" id="d-proj" data-f="project" list="projs" value="${esc(t.project)}" placeholder="—"><datalist id="projs">${Ctx.data.projects.map(p=>`<option value="${esc(p)}">`).join('')}</datalist></div>
         <div class="fld"><label for="d-rhythm">Ritmo${sg('rhythm')}</label><select class="inp" id="d-rhythm" data-f="rhythm"><option value="">—</option>${opt(RHYTHM,t.rhythm)}</select></div>
         <div class="fld"><label for="d-repeat">Repetir</label><select class="inp" id="d-repeat" data-f="repeat">${opt(REPEAT,t.repeat)}</select></div>
@@ -1983,6 +2030,7 @@ $('#side').addEventListener('click',e=>{
 /* ---------- Events: main ---------- */
 const main=$('#main');
 main.addEventListener('click',e=>{
+  const go=e.target.closest('[data-view-go]');if(go){const b=document.querySelector(`#side [data-view="${go.dataset.viewGo}"]`);if(b)b.click();return}
   // Fecha a lista de entregas ao clicar fora dela
   if(ui.calDl&&!e.target.closest('.dlpop,[data-act="calDl"]')){ui.calDl=null;if(!e.target.closest('[data-act]'))return renderMain()}
   const el=e.target.closest('[data-act]');if(!el)return;
@@ -2041,6 +2089,9 @@ main.addEventListener('click',e=>{
     return}
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
   if(act==='open')return openTask(id);
+  if(act==='acompModo'){ui.acompPessoa=!!el.dataset.v;return renderMain()}
+  if(act==='cobrei'){const t=Store.get(id);if(!t)return;update(id,{cobrancas:(t.cobrancas||[]).concat(today()),cobrar_em:diaUtil(today(),1)},{detail:ui.sel===id});return toast(`Cobrança registrada. Próxima: ${fmtDay(diaUtil(today(),1)).toLowerCase()}`)}
+  if(act==='copiaCob'){const t=Store.get(id);if(!t)return;const txt=textoCobranca(t);if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast('Cobrança copiada. Depois de mandar, toque em Cobrei.'),()=>toast(txt));else toast(txt);return}
   if(act==='dup')return openTask(el.dataset.dup);
   if(act==='mcFiltro'){ui.mc.f=el.dataset.f;ui.mc.mais='';return renderMain()}
   if(act==='mcCart'){ui.mc.cart=true;renderMain();const d=document.querySelector('.mcfold');d&&d.scrollIntoView({behavior:'smooth',block:'start'});return}
@@ -2200,6 +2251,8 @@ det.addEventListener('click',e=>{
     case 'dupopen':return openTask(a.dataset.dup);
     case 'dupno':{const o=Store.get(a.dataset.dup);if(o)Store.put(Object.assign({},o,{notDup:[...new Set((o.notDup||[]).concat(t.id))]}));
       return update(t.id,{notDup:[...new Set((t.notDup||[]).concat(a.dataset.dup))]},{detail:true})}
+    case 'cobrei':update(t.id,{cobrancas:(t.cobrancas||[]).concat(today()),cobrar_em:diaUtil(today(),1)},{detail:true});return toast(`Cobrança registrada. Próxima: ${fmtDay(diaUtil(today(),1)).toLowerCase()}`);
+    case 'copiaCob':{const txt=textoCobranca(t);if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast('Cobrança copiada. Depois de mandar, toque em Cobrei.'),()=>toast(txt));else toast(txt);return}
     case 'aiaccept':return update(t.id,{ai:null},{detail:true,keepAi:true});
     case 'aiorg':return classify([t.id],true);
     case 'rmperson':{const x=arr('people');x.splice(i,1);return update(t.id,{people:x},{detail:true})}
@@ -2217,7 +2270,7 @@ det.addEventListener('input',e=>{
 det.addEventListener('change',e=>{
   const t=cur();if(!t)return;const el=e.target;const f=el.dataset.f;
   if(f==='external')return update(t.id,{external:el.checked},{detail:true});
-  if(['planned_date','deadline','planned_time','rhythm'].includes(f))return update(t.id,{[f]:el.value||null},{detail:true});
+  if(['planned_date','deadline','planned_time','rhythm','cobrar_em'].includes(f))return update(t.id,{[f]:el.value||null},{detail:true});
   if(f==='repeat')return update(t.id,{repeat:el.value},{detail:true});
   if(f==='spent_minutes')return update(t.id,{spent_minutes:el.value?+el.value:null},{detail:true});
   if(f==='estimated_duration')return update(t.id,{estimated_duration:el.value?+el.value:null},{detail:true});

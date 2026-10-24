@@ -100,6 +100,8 @@ PRIORIDADE (impacto no setor × urgência real): 1 = fazer agora; 2 = nesta sema
 PRAZO REAL (deadline): se o texto citar prazo ou data de entrega, use-o.
 ENTREGA COMBINADA (external): true só quando o prazo foi combinado com outras pessoas (entregar algo a alguém, ex.: roteiros, materiais para cliente ou mentorado). Essas aparecem na agenda. Nos outros casos, omita. Senão: ${ctx.deadlineRule || '1 dia útil a partir de hoje; P1 é hoje.'}
 
+DELEGAÇÃO: quando o texto delega a demanda a outra pessoa ("pedir para o Maykon…", "Sanchez vai…", "@Paulline…", "delegar pro Leo…"), preencha responsible com o nome dessa pessoa (use o nome como está em PESSOAS CONHECIDAS). Demanda delegada não ocupa a agenda do Cauê: deixe planned_date e planned_time vazios, e use deadline como o prazo combinado com a pessoa. Se o texto não delega, responsible = "Cauê".
+
 DATA PLANEJADA (planned_date e planned_time): escolha horário livre na agenda abaixo, dentro do expediente, nunca depois do deadline. Estratégico pede bloco de 90 min ou mais em dia com tempo de produção. Operacional vai em janela curta, perto de outros operacionais. P1 vai para hoje no próximo horário livre. Se o texto citar dia ou horário, respeite.
 
 PROJETOS (use exatamente um destes nomes, ou ""): ${(ctx.projects || []).map(p => JSON.stringify(p)).join(', ') || 'nenhum'}
@@ -144,6 +146,9 @@ function review(t, r) {
   if (!(t.subtasks || []).length) set('subtasks', strs(r.subtasks, 8).map(x => ({ t: x, done: false })));
   // Conversas: sempre 11:00 e 15 min (a regra do Cauê vale acima da escolha do modelo)
   if ((patch.type || t.type) === 'C') { set('planned_time', '11:00'); set('estimated_duration', 15); }
+  // Delegada não ganha horário na agenda do Cauê
+  const resp = (patch.responsible || t.responsible || 'Cauê').trim();
+  if (resp && resp !== 'Cauê') { delete patch.planned_date; delete patch.planned_time; delete prev.planned_date; delete prev.planned_time; }
   const dl = patch.deadline || t.deadline, pd = patch.planned_date || t.planned_date;
   if (dl && pd && pd > dl && 'planned_date' in patch) patch.planned_date = dl;
   const old = t.ai || { fields: [], prev: {} };
