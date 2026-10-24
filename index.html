@@ -820,13 +820,25 @@ const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view
 const listViews=['inbox','revisar','pdia','psemana','hoje','atrasados','acompanhamento','semana','todas','concluidas'];
 // Delegadas: o responsável não é o Cauê. Saem de Hoje, Semana, Atrasados e da conta de tempo; vivem na aba Acompanhamento.
 const EU='Cauê';
-const isDeleg=t=>!!(t&&t.responsible&&t.responsible.trim()&&t.responsible.trim()!==EU);
+// Acompanhamento: delegada a outra pessoa, ou texto com "cobrar" / "ver se" (a não ser que você marque "É minha")
+const ACOMP_RE=/(^|[^a-zà-ú])(cobrar|ver se)([^a-zà-ú]|$)/i;
+const isDeleg=t=>!!t&&t.acomp!==false&&!!((t.responsible&&t.responsible.trim()&&t.responsible.trim()!==EU)||t.acomp===true||ACOMP_RE.test(t.title||''));
+// Com quem está: o responsável, ou a primeira pessoa de Contexto → Pessoas citada no texto
+function quemAcomp(t){if(t.responsible&&t.responsible.trim()&&t.responsible.trim()!==EU)return t.responsible.trim();
+  const x=' '+norm((t.title||'')+' '+(t.description||''))+' ';const p=(Ctx.data.people||[]).find(p=>p.name&&x.includes(' '+norm(p.name).trim().split(' ')[0]+' '));return p?p.name:'A definir'}
 const diaUtil=(z,n)=>{let d=fromIso(z),k=0;while(k<Math.abs(n)){d=addDays(d,n>0?1:-1);if(d.getDay()!==0&&d.getDay()!==6)k++}return iso(d)};
 // Cobrar: 1 dia útil antes do prazo combinado; depois de cada cobrança, no dia útil seguinte
 const cobrarEm=t=>{if(t.cobrar_em)return t.cobrar_em;if(t.deadline){const c=diaUtil(t.deadline,-1);return c<today()?today():c}return diaUtil(today(),1)};
 const primeiroNome=n=>String(n||'').trim().split(/\s+/)[0];
-function textoCobranca(t){const atr=t.deadline&&t.deadline<today();
-  return `${primeiroNome(t.responsible)}, como está "${t.title}"?${t.deadline?` Combinamos pra ${fmtDay(t.deadline).toLowerCase()}`:''}${atr?', consegue me atualizar hoje?':t.deadline?'.':''}`.replace(/\s+/g,' ').trim()}
+function textoCobranca(t){
+  const q=quemAcomp(t),nome=q==='A definir'?'Oi':primeiroNome(q),atr=t.deadline&&t.deadline<today();
+  const prazo=t.deadline?` Combinamos pra ${fmtDay(t.deadline).toLowerCase()}${atr?', consegue me atualizar hoje?':'.'}`:'';
+  let tt=String(t.title||'').trim();const m=tt.match(/^(cobrar|ver se)\s+/i);
+  if(!m)return `${nome}, como está "${tt}"?${prazo}`;
+  tt=tt.slice(m[0].length);
+  if(q!=='A definir')tt=tt.replace(new RegExp('^(o |a |do |da |com o |com a )?'+primeiroNome(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s+(sobre |de |do |da |a |o )?','i'),'');
+  return /^ver se/i.test(m[1])?`${nome}, ${tt}?${prazo}`:`${nome}, me atualiza sobre ${tt}?${prazo}`;
+}
 function resolvePessoa(x){const k=norm(x).trim();const p=(Ctx.data.people||[]).find(p=>p.name&&norm(p.name).trim().split(' ')[0]===k);return p?p.name:x.charAt(0).toUpperCase()+x.slice(1)}
 const weekKey=()=>iso(startOfWeek(new Date()));
 const inDay=t=>t.focus_day===today(),inWeek=t=>t.focus_week===weekKey();
@@ -1119,8 +1131,8 @@ function groups(){
     }
     case 'acompanhamento':{
       const D=open.filter(isDeleg),feitas=all.filter(x=>isDone(x)&&isDeleg(x)&&x.completed_at&&dd(iso(new Date(x.completed_at)),t)<=7);
-      if(ui.acompPessoa){const P=[...new Set(D.concat(feitas).map(x=>x.responsible.trim()))].sort();
-        return P.map(pn=>{const ab=D.filter(x=>x.responsible.trim()===pn),at=ab.filter(x=>x.deadline&&x.deadline<t),fe=all.filter(x=>isDone(x)&&x.responsible&&x.responsible.trim()===pn&&x.deadline&&x.completed_at);
+      if(ui.acompPessoa){const P=[...new Set(D.concat(feitas).map(quemAcomp))].sort();
+        return P.map(pn=>{const ab=D.filter(x=>quemAcomp(x)===pn),at=ab.filter(x=>x.deadline&&x.deadline<t),fe=all.filter(x=>isDone(x)&&isDeleg(x)&&quemAcomp(x)===pn&&x.deadline&&x.completed_at);
           const noPrazo=fe.length?Math.round(fe.filter(x=>iso(new Date(x.completed_at))<=x.deadline).length/fe.length*100):null;
           return {title:`${pn} · ${ab.length} aberta${ab.length===1?'':'s'}${at.length?` · ${at.length} atrasada${at.length>1?'s':''}`:''}${noPrazo!=null?` · ${noPrazo}% no prazo`:''}`,warn:!!at.length,items:ab.sort((a,b)=>cobrarEm(a).localeCompare(cobrarEm(b)))}})}
       const atr=D.filter(x=>x.deadline&&x.deadline<t),cob=D.filter(x=>!atr.includes(x)&&cobrarEm(x)<=t);
@@ -1225,7 +1237,7 @@ function rowHtml(t){
   if(t.subtasks.length)m.push(`<span>${svg('sublist')}${t.subtasks.filter(s=>s.done).length}/${t.subtasks.length}</span>`);
   if(isDone(t)&&t.spent_minutes)m.push(`<span>${svg('clock')}${fmtDur(t.spent_minutes)}</span>`);
   if(t.project)m.push(`<span>${svg('folder')}${esc(t.project)}</span>`);
-  if(isDeleg(t)){m.push(`<span class="deleg">→ ${esc(t.responsible)}</span>`);
+  if(isDeleg(t)){m.push(`<span class="deleg">→ ${esc(quemAcomp(t))}</span>`);
     if(!isDone(t)){const c=cobrarEm(t),n=(t.cobrancas||[]).length;m.push(`<span class="${c<=td?'late':''}">${c<=td?'Cobrar hoje':'Cobrar '+fmtDay(c).toLowerCase()}</span>`);
       const de=t.delegado_em||t.created_at;if(de){const n=Math.max(0,dd(iso(new Date(de)),td));m.push(`<span>delegada há ${n} dia${n===1?'':'s'}</span>`)}
       if(n)m.push(`<span>cobrada ${n}× · última ${fmtDay(t.cobrancas[n-1]).toLowerCase()}</span>`)}}
@@ -1484,8 +1496,8 @@ function renderLeverage(main,banner){
       <p class="meta-line" style="margin:10px 0 0">${wt.tasks} demanda${wt.tasks===1?'':'s'} concluída${wt.tasks===1?'':'s'}${wt.est?`, ${wt.est} com tempo estimado (sem confirmação)`:''}${Ctx.data.countFixed!==false&&Ctx.data.fixed.length?' · inclui compromissos fixos que já aconteceram':''}.</p></section>
     <section class="card"><h2>Feito × planejado nesta semana</h2><div class="bars">${TKN.map(pf).join('')}</div>
       <p class="meta-line" style="margin:12px 0 0">Barra clara: planejado (estimativas + compromissos fixos). Barra cheia: feito.</p></section>
-    ${(()=>{const all=Store.all().filter(isDeleg);if(!all.length)return '';const P=[...new Set(all.map(x=>x.responsible.trim()))].sort();const t0=today();
-      const rows=P.map(pn=>{const L=all.filter(x=>x.responsible.trim()===pn),ab=L.filter(x=>!isDone(x)),at=ab.filter(x=>x.deadline&&x.deadline<t0),fe=L.filter(x=>isDone(x)&&x.deadline&&x.completed_at&&dd(iso(new Date(x.completed_at)),t0)<=30);
+    ${(()=>{const all=Store.all().filter(isDeleg);if(!all.length)return '';const P=[...new Set(all.map(quemAcomp))].sort();const t0=today();
+      const rows=P.map(pn=>{const L=all.filter(x=>quemAcomp(x)===pn),ab=L.filter(x=>!isDone(x)),at=ab.filter(x=>x.deadline&&x.deadline<t0),fe=L.filter(x=>isDone(x)&&x.deadline&&x.completed_at&&dd(iso(new Date(x.completed_at)),t0)<=30);
         const pc=fe.length?Math.round(fe.filter(x=>iso(new Date(x.completed_at))<=x.deadline).length/fe.length*100):null;
         return `<tr><td>${esc(pn)}</td><td class="r">${ab.length}</td><td class="r ${at.length?'late':''}">${at.length}</td><td class="r">${fe.length}</td><td class="r">${pc==null?'—':pc+'%'}</td></tr>`}).join('');
       return `<section class="card wide"><h2>Delegadas por pessoa</h2><p class="meta-line" style="margin:-4px 0 10px">Entregas no prazo contam os últimos 30 dias. Ajuda a ver em quem dá para confiar mais e quem pede acompanhamento de perto.</p><div class="tbl-wrap"><table class="ptable"><thead><tr><th>Pessoa</th><th class="r">Abertas</th><th class="r">Atrasadas</th><th class="r">Concluídas (30 dias)</th><th class="r">No prazo</th></tr></thead><tbody>${rows}</tbody></table></div></section>`})()}
@@ -1977,7 +1989,7 @@ function renderDetail(){
         <div class="fld"><label for="d-dur">Tempo estimado${sg('estimated_duration')}</label><select class="inp" id="d-dur" data-f="estimated_duration"><option value="">—</option>${DURS.map(m=>`<option value="${m}" ${t.estimated_duration===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select></div>
         <label class="ext-row" for="d-ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}><span><b>Avisar prazo no calendário</b>${sg('external')}<small>Mostra o prazo real como aviso vermelho no topo do dia. Use para entregas combinadas com outras pessoas.</small></span></label>
       </div>
-      ${isDeleg(t)&&!isDone(t)?`<div class="aibar"><span>Delegada para <b>${esc(t.responsible)}</b>${t.deadline?` · prazo ${fmtDay(t.deadline).toLowerCase()}`:''} · cobrar ${cobrarEm(t)<=today()?'hoje':fmtDay(cobrarEm(t)).toLowerCase()}</span><button data-dact="copiaCob">Copiar cobrança</button><button data-dact="cobrei">Cobrei</button></div>`:''}
+      ${isDeleg(t)&&!isDone(t)?`<div class="aibar"><span>Acompanhamento · com <b>${esc(quemAcomp(t))}</b>${t.deadline?` · prazo ${fmtDay(t.deadline).toLowerCase()}`:''} · cobrar ${cobrarEm(t)<=today()?'hoje':fmtDay(cobrarEm(t)).toLowerCase()}</span><button data-dact="copiaCob">Copiar cobrança</button><button data-dact="cobrei">Cobrei</button>${t.responsible&&t.responsible.trim()!==EU?'':'<button data-dact="ehMinha" title="Tira do Acompanhamento">É minha</button>'}</div>`:''}
       <div class="insights">${insights(t).map(([c,txt,btn,act])=>`<div class="ins ${c}"><span>${esc(txt)}</span>${btn?`<button data-dact="${act}">${esc(btn)}</button>`:''}</div>`).join('')}</div>
       <div class="grid2">
         <div class="fld"><label for="d-resp">Responsável${sg('responsible')}</label><input class="inp" id="d-resp" data-f="responsible" list="people" value="${esc(t.responsible)}"><datalist id="people"><option value="Cauê">${(Ctx.data.people||[]).filter(p=>p.name).map(p=>`<option value="${esc(p.name)}">`).join('')}</datalist></div>
@@ -2251,6 +2263,7 @@ det.addEventListener('click',e=>{
     case 'dupopen':return openTask(a.dataset.dup);
     case 'dupno':{const o=Store.get(a.dataset.dup);if(o)Store.put(Object.assign({},o,{notDup:[...new Set((o.notDup||[]).concat(t.id))]}));
       return update(t.id,{notDup:[...new Set((t.notDup||[]).concat(a.dataset.dup))]},{detail:true})}
+    case 'ehMinha':update(t.id,{acomp:false},{detail:true});return toast('Voltou para as suas demandas');
     case 'cobrei':update(t.id,{cobrancas:(t.cobrancas||[]).concat(today()),cobrar_em:diaUtil(today(),1)},{detail:true});return toast(`Cobrança registrada. Próxima: ${fmtDay(diaUtil(today(),1)).toLowerCase()}`);
     case 'copiaCob':{const txt=textoCobranca(t);if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast('Cobrança copiada. Depois de mandar, toque em Cobrei.'),()=>toast(txt));else toast(txt);return}
     case 'aiaccept':return update(t.id,{ai:null},{detail:true,keepAi:true});
