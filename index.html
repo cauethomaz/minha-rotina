@@ -840,7 +840,8 @@ function textoCobranca(t){
   return /^ver se/i.test(m[1])?`${nome}, ${tt}?${prazo}`:`${nome}, me atualiza sobre ${tt}?${prazo}`;
 }
 function resolvePessoa(x){const k=norm(x).trim();const p=(Ctx.data.people||[]).find(p=>p.name&&norm(p.name).trim().split(' ')[0]===k);return p?p.name:x.charAt(0).toUpperCase()+x.slice(1)}
-const weekKey=()=>iso(startOfWeek(new Date()));
+// No domingo (dia de planejar), a semana das prioridades já é a que começa amanhã
+const weekKey=()=>{const d=new Date();return iso(startOfWeek(d.getDay()===0?addDays(d,1):d))};
 const inDay=t=>t.focus_day===today(),inWeek=t=>t.focus_week===weekKey();
 // Organized automatically (rules or Claude) and not confirmed yet
 const toReview=t=>!isDone(t)&&!!(t.ai&&t.ai.fields&&t.ai.fields.length);
