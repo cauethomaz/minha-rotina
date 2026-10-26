@@ -151,6 +151,17 @@ function review(t, r) {
   // "cobrar" e "ver se" também são acompanhamento (vão para a aba Acompanhamento, sem horário na agenda)
   const acomp = /(^|[^a-zà-ú])(cobrar|ver se)([^a-zà-ú]|$)/i.test(patch.title || t.title || '') && t.acomp !== false;
   if ((resp && resp !== 'Cauê') || acomp) { delete patch.planned_date; delete patch.planned_time; delete prev.planned_date; delete prev.planned_time; }
+  // Trava das regras de agenda do Cauê: horário fora do expediente (11h–20h), no almoço (13h) ou,
+  // quando a demanda envolve outras pessoas, terminando depois das 17h → mantém o horário que o app já tinha escolhido
+  if ('planned_time' in patch) {
+    const ini = toMin(patch.planned_time), fim = ini + (patch.estimated_duration || t.estimated_duration || 30);
+    const txt = ' ' + String(patch.title || t.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') + ' ';
+    const comPessoas = (patch.type || t.type) === 'C' || / reuni| alinhar| alinhamento| conversar| falar com| call com| com o time| com a equipe| treinar o| apresentar pr/.test(txt);
+    if (ini < 11 * 60 || fim > 20 * 60 || (ini < 14 * 60 && fim > 13 * 60) || (comPessoas && fim > 17 * 60)) {
+      delete patch.planned_time; delete prev.planned_time;
+      if ('planned_date' in patch && !t.planned_time) { delete patch.planned_date; delete prev.planned_date; }
+    }
+  }
   const dl = patch.deadline || t.deadline, pd = patch.planned_date || t.planned_date;
   if (dl && pd && pd > dl && 'planned_date' in patch) patch.planned_date = dl;
   const old = t.ai || { fields: [], prev: {} };
