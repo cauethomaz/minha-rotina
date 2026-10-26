@@ -1014,14 +1014,15 @@ function learnType(text,type){
   wordsOf(text).forEach(w=>{L[w]=L[w]||{};L[w][type]=(L[w][type]||0)+1});
   Ctx.save();
 }
-function findSlot(dur,type,deadline,selfId,onlyDate){
+// comPessoas: reunião, conversa ou alinhamento termina até as 17h (depois disso o time começa a sair do escritório)
+function findSlot(dur,type,deadline,selfId,onlyDate,comPessoas){
   const now=new Date(),busyTasks=Store.all().filter(x=>x.id!==selfId&&!isDone(x)&&x.planned_date&&x.planned_time);
   for(let i=0;i<21;i++){
     const d=addDays(now,i),k=iso(d),h=Ctx.data.hours[d.getDay()];
     if(onlyDate&&k!==onlyDate)continue;
     if(!onlyDate&&deadline&&k>deadline)break;
     if(!h||!h.on||(type==='E'&&!h.prod&&!onlyDate))continue;
-    let s0=toMin(h.start);const e0=toMin(h.end);
+    let s0=toMin(h.start);const e0=comPessoas?Math.min(toMin(h.end),17*60):toMin(h.end);
     if(i===0){const nm=now.getHours()*60+now.getMinutes();s0=Math.max(s0,Math.ceil((nm+10)/15)*15)}
     const busy=Ctx.data.fixed.filter(f=>+f.wd===d.getDay()&&f.title).map(f=>[toMin(f.time),toMin(f.time)+(+f.dur||60)])
       .concat(busyTasks.filter(x=>x.planned_date===k).map(x=>[toMin(x.planned_time),toMin(x.planned_time)+(x.estimated_duration||30)]));
@@ -1048,8 +1049,10 @@ function ruleSuggest(t){
   // "pedir pro Leo…", "delegar para a Paulline…": delega a quem está em Pessoas
   const dm=!isDeleg(t)&&x.match(/ (?:pedir|delegar|passar|repassar) (?:pro|pra|para o|para a|para|ao|a) ([a-z]+)/),dp=dm&&(c.people||[]).find(p=>p.name&&norm(p.name).trim().split(' ')[0]===dm[1]);
   if(dp)return Object.assign(base(),{responsible:dp.name});
-  let slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date)
-    :(findSlot(dur,type,deadline,t.id)||findSlot(dur,type,null,t.id));
+  // Envolve outras pessoas? Conversa, reunião, alinhamento, call com alguém ou demanda com pessoas citadas
+  const comP=type==='C'||/ reuni| alinhar| alinhamento| conversar| falar com| call com| com o time| com a equipe| treinar o| apresentar pr/.test(x);
+  let slot=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'))?findSlot(dur,type,null,t.id,t.planned_date,comP)
+    :(findSlot(dur,type,deadline,t.id,null,comP)||findSlot(dur,type,null,t.id,null,comP));
   // Conversas vão sempre às 11:00, 15 min (janela de mensagens): hoje se ainda não passou das 11h, senão o próximo dia de expediente
   if(type==='C'&&!isDeleg(t)){const fixo=t.planned_date&&!(t.ai&&t.ai.fields.includes('planned_date'));const now=new Date();let k=fixo?t.planned_date:null;
     for(let i=0;!k&&i<14;i++){const d=addDays(now,i),h=Ctx.data.hours[d.getDay()];if(h&&h.on&&(i>0||now.getHours()<11))k=iso(d)}
