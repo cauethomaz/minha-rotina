@@ -298,8 +298,12 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
 .card h2{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:600}
 .card.wide{grid-column:1/-1}
-main[data-view="assistente"]{display:flex;flex-direction:column}
-.chscroll{padding-bottom:12px}.chlista{display:flex;flex-direction:column;gap:12px;max-width:820px;margin:0 auto}
+#chatpop{position:fixed;right:20px;bottom:20px;z-index:40;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.chfab{order:2;width:52px;height:52px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:24px;position:relative;cursor:pointer}
+.chfab svg{width:24px;height:24px}.chfab-n{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--p1);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+.chpanel{order:1;width:400px;height:min(620px,calc(100vh - 110px));background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden}
+.chhead{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}.chhead b{display:block}.chhead .meta-line{margin:0;font-size:12px}
+.chlista{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:12px}.chvazio{margin:auto 6px}
 .chm{display:flex;flex-direction:column;max-width:86%}.chm.eu{align-self:flex-end;align-items:flex-end}.chm.ia{align-self:flex-start}
 .chb{padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;background:var(--panel2)}
 .chm.eu .chb{background:var(--accent);color:var(--on-accent);border-bottom-right-radius:4px}.chm.ia .chb{border:1px solid var(--line);background:var(--panel);border-bottom-left-radius:4px}
@@ -308,9 +312,9 @@ main[data-view="assistente"]{display:flex;flex-direction:column}
 .chacs{display:grid;gap:6px;margin-top:10px}.cha{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:var(--panel2)}
 .cha input{margin-top:3px}.cha .pselo{flex:none}.cha.feito{opacity:.75}
 .chest{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.chinput{display:flex;gap:8px;align-items:flex-end;padding:10px 28px 16px;border-top:1px solid var(--line);background:var(--bg)}
+.chinput{display:flex;gap:8px;align-items:flex-end;padding:10px;border-top:1px solid var(--line);background:var(--panel)}
 .chinput textarea{flex:1;max-width:none;resize:none}
-@media (max-width:820px){.chinput{padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px))}.chm{max-width:94%}}
+@media (max-width:820px){#chatpop{right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}.chpanel{position:fixed;inset:0;width:auto;height:auto;border-radius:0}.chinput{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}.chm{max-width:94%}#chatpop:has(.chpanel) .chfab{display:none}}
 .mcpage{gap:12px}
 .mctopo{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .mcfontes{display:flex;gap:8px;flex-wrap:wrap}
@@ -1212,7 +1216,6 @@ function renderSide(){
     <div class="brand"><div class="brand-mark">${svg('notes','ico')}</div><div><b>Minha Rotina</b><small>Growth Ops · Core</small></div></div>
     <nav class="nav">
       ${item('inbox','Caixa de entrada',svg('inbox','ico'),b.inbox.length||'')}
-      ${item('assistente','Assistente',svg('notes','ico'),Chat.all().filter(m=>m.role==='assistant'&&(m.acoes||[]).length&&!m.aplicada&&!m.descartada&&!m.desfeita).length||'')}
       ${item('revisar','A revisar',svg('sublist','ico'),Store.all().filter(toReview).length||'')}
       ${sec('prioridades','Prioridades',item('pdia','Prioridades do dia',svg('star','ico'),b.open.filter(inDay).length||'')+item('psemana','Prioridades da semana',svg('star','ico'),b.open.filter(inWeek).length||''))}
       ${sec('listas','Listas',item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')+item('atrasados','Atrasados',svg('flag','ico'),b.late.length||'')+item('acompanhamento','Acompanhamento',svg('person','ico'),b.cobrar.length||'')+item('semana','Semana',svg('week','ico'),b.week.length||'')+item('todas','Todas as notas',svg('notes','ico'),b.open.length)+item('concluidas','Concluídas',svg('check','ico'),b.done.length||''))}
@@ -1313,7 +1316,6 @@ function renderMain(){
   if(ui.view==='mentorados')return renderMentorados(main,banner);
   if(ui.view==='conteudos')return renderConteudos(main,banner);
   if(ui.view==='producao')return renderProducao(main,banner);
-  if(ui.view==='assistente'){const foc=document.activeElement&&document.activeElement.id==='chat-txt';renderAssistente(main,banner);if(foc){const t=$('#chat-txt');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}return}
   if(ui.view==='insatisfacoes')return renderCasos(main,banner);
   const [h,sub]=headFor();
   // Keep capture + search DOM alive while typing; rebuild only the list body.
@@ -2038,7 +2040,7 @@ function renderDetail(){
   autoGrow($('#d-title'));
 }
 const autoGrow=el=>{if(!el)return;el.style.height='auto';el.style.height=el.scrollHeight+'px'};
-function renderAll(){renderSide();renderMain();renderDetail()}
+function renderAll(){chatRender();renderSide();renderMain();renderDetail()}
 let firstData=true;
 function onData(){
   if(firstData){firstData=false;renderAll();return}
@@ -2124,11 +2126,6 @@ main.addEventListener('click',e=>{
   if(act==='cobrei'){const t=Store.get(id);if(!t)return;update(id,{cobrancas:(t.cobrancas||[]).concat(today()),cobrar_em:diaUtil(today(),1)},{detail:ui.sel===id});return toast(`Cobrança registrada. Próxima: ${fmtDay(diaUtil(today(),1)).toLowerCase()}`)}
   if(act==='copiaCob'){const t=Store.get(id);if(!t)return;const txt=textoCobranca(t);if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast('Cobrança copiada. Depois de mandar, toque em Cobrei.'),()=>toast(txt));else toast(txt);return}
   if(act==='dup')return openTask(el.dataset.dup);
-  if(act==='chatEnviar')return chatEnviar();
-  if(act==='chatAplicar')return chatAplicar(el.dataset.id);
-  if(act==='chatDesfazer')return chatDesfazer(el.dataset.id);
-  if(act==='chatDescartar'){const m=Chat.msgs.get(el.dataset.id);if(m)Chat.save(el.dataset.id,Object.assign({},m,{descartada:new Date().toISOString()}));return}
-  if(act==='chatLimpar'){if(ui.chatLimpar){ui.chatLimpar=false;return Chat.limpar()}ui.chatLimpar=true;el.textContent='Toque de novo para limpar';setTimeout(()=>{ui.chatLimpar=false},4000);return}
   if(act==='mcFiltro'){ui.mc.f=el.dataset.f;ui.mc.mais='';return renderMain()}
   if(act==='mcCart'){ui.mc.cart=true;renderMain();const d=document.querySelector('.mcfold');d&&d.scrollIntoView({behavior:'smooth',block:'start'});return}
   if(act==='mcCartTog'){if(e.target.closest('summary'))ui.mc.cart=!el.open;return}
@@ -2189,7 +2186,6 @@ function ctxField(el){
   return null;
 }
 main.addEventListener('change',e=>{
-  if(e.target.dataset.chatAcao){ui.chatOff=ui.chatOff||{};ui.chatOff[e.target.dataset.chatAcao+':'+e.target.dataset.i]=!e.target.checked;return}
   if(e.target.dataset.casoF){const id=ui.casoOpen;if(!id||!Casos.itens.has(id))return;
     const k=e.target.dataset.casoF,v=e.target.value.trim();const p={[k]:v};if(ui.casoNovo===id&&k==='nome')ui.casoNovo=null;
     const c=Casos.itens.get(id);
@@ -2205,10 +2201,8 @@ main.addEventListener('change',e=>{
   if(e.target.id==='ctx-import'){const f=e.target.files&&e.target.files[0];if(f)importBackup(f);return}
   const r=ctxField(e.target);if(r===null)return;Ctx.save();if(r){ui.ctxForce=true;renderMain();renderSide()}
 });
-main.addEventListener('keydown',e=>{if(e.target.id==='chat-txt'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();chatEnviar()}});
 main.addEventListener('input',e=>{
   if(e.target.id==='q'){ui.q=e.target.value;renderList();return}
-  if(e.target.id==='chat-txt'){ui.chatRascunho=e.target.value;return}
   if(e.target.id==='mc-q'){ui.mc.q=e.target.value;const pos=e.target.selectionStart;renderMain();const q=$('#mc-q');if(q){q.focus();q.setSelectionRange(pos,pos)}return}
   if(e.target.matches('input[type=text],input:not([type]),textarea,input[type=number]')&&ctxField(e.target)!==null){Ctx.save();return}
   if(e.target.id==='cap'){
@@ -2489,12 +2483,12 @@ const Chat={msgs:new Map(),status:null,
   all(){return [...this.msgs.values()].sort((a,b)=>String(a.criadoEm).localeCompare(String(b.criadoEm)))},
   online(){return !!(this.status&&this.status.visto&&Date.now()-new Date(this.status.visto)<3*60000)},
   local(){try{localStorage.setItem('minharotina.chat',JSON.stringify(this.all()))}catch(e){}},
-  async save(id,data){this.msgs.set(id,Object.assign({},data,{id}));if(ui.view==='assistente')renderMain();
+  async save(id,data){this.msgs.set(id,Object.assign({},data,{id}));chatRender();
     if(!sb||!currentUser){this.local();return true}
     const d=Object.assign({},data);delete d.id;
     const {error}=await sb.from('tasks').upsert({id,user_id:currentUser.id,data:d,updated_at:new Date().toISOString()});
     if(error){toast('Não salvou a mensagem. Verifique a conexão.');return false}return true},
-  async limpar(){const ids=[...this.msgs.keys()];this.msgs.clear();renderMain();if(sb&&currentUser&&ids.length)await sb.from('tasks').delete().in('id',ids);else this.local()}};
+  async limpar(){const ids=[...this.msgs.keys()];this.msgs.clear();chatRender();if(sb&&currentUser&&ids.length)await sb.from('tasks').delete().in('id',ids);else this.local()}};
 try{if(!window.SUPABASE_URL)JSON.parse(localStorage.getItem('minharotina.chat')||'[]').forEach(m=>Chat.msgs.set(m.id,m))}catch(e){}
 const CAMPOS_CHAT={titulo:'title',tipo:'type',prioridade:'priority',data:'planned_date',hora:'planned_time',duracao:'estimated_duration',prazo:'deadline',pessoas:'people',responsavel:'responsible',descricao:'description'};
 function chatPatch(a){const p={};Object.entries(CAMPOS_CHAT).forEach(([k,f])=>{if(k in a&&a[k]!==undefined)p[f]=a[k]});
@@ -2526,9 +2520,16 @@ async function chatEnviar(){
   await Chat.save(id,{role:'user',texto:v,status:'pendente',criadoEm:new Date().toISOString()});
   const t=$('#chat-txt');t&&t.focus();
 }
-function renderAssistente(main,banner){
-  main.dataset.view='assistente';
+// Popup do assistente: botão flutuante em todas as telas; abre uma janela de chat por cima do que estiver aberto
+function chatRender(){
+  let box=document.getElementById('chatpop');
+  if(!box){box=document.createElement('div');box.id='chatpop';document.body.appendChild(box);chatEventos(box)}
+  if(sb&&!currentUser){box.innerHTML='';return}
   const L=Chat.all(),on=Chat.online(),fila=L.filter(m=>m.role==='user'&&(m.status==='pendente'||m.status==='processando'));
+  const pend=L.filter(m=>m.role==='assistant'&&(m.acoes||[]).length&&!m.aplicada&&!m.descartada&&!m.desfeita).length;
+  const foc=document.activeElement&&document.activeElement.id==='chat-txt';
+  const fab=`<button class="chfab ${ui.chatAberto?'aberto':''}" data-act="chatToggle" aria-label="${ui.chatAberto?'Fechar o assistente':'Abrir o assistente'}" aria-expanded="${!!ui.chatAberto}">${ui.chatAberto?'×':svg('notes')}${!ui.chatAberto&&(pend||fila.length)?`<span class="chfab-n">${pend||'…'}</span>`:''}</button>`;
+  if(!ui.chatAberto){box.innerHTML=fab;return}
   const bolha=m=>{
     if(m.role==='user')return `<div class="chm eu"><div class="chb">${esc(m.texto).replace(/\n/g,'<br>')}</div><span class="cht">${fmtStamp(m.criadoEm)}${m.status==='pendente'?' · na fila':m.status==='processando'?' · Claude pensando…':m.status==='erro'?' · erro':''}</span></div>`;
     const acs=(m.acoes||[]).map((a,i)=>{const off=!!(ui.chatOff&&ui.chatOff[m.id+':'+i]);
@@ -2537,18 +2538,33 @@ function renderAssistente(main,banner){
       :m.descartada?'<span class="meta-line">Descartado</span>':m.desfeita?'<span class="meta-line">Desfeito</span>'
       :(m.acoes||[]).length?`<button class="btn pri-b" data-act="chatAplicar" data-id="${m.id}">Aplicar</button><button class="btn" data-act="chatDescartar" data-id="${m.id}">Descartar</button>`:'';
     return `<div class="chm ia"><div class="chb ${m.erro?'erro':''}">${md(m.texto||'').replace(/\n/g,'<br>')}${acs?`<div class="chacs">${acs}</div>`:''}${est?`<div class="chest">${est}</div>`:''}</div><span class="cht">${fmtStamp(m.criadoEm)}</span></div>`};
-  main.innerHTML=`<header class="mhead"><div><h1>Assistente</h1><div class="sub"><span class="dotf ${on?'ok':'warn'}"></span> ${on?'Mac online: responde em uns 30 segundos':'Mac offline: as mensagens esperam na fila e são respondidas quando ele ligar'}</div></div><div class="grow"></div>${L.length?'<button class="btn" data-act="chatLimpar">Limpar conversa</button>':''}</header>${banner}
-    <div class="scroll chscroll" id="chat-scroll"><div class="chlista">
-      ${L.length?L.map(bolha).join(''):`<div class="empty"><h2>Fale com a sua agenda</h2><p>Exemplos: “reunião com o Juan amanhã às 11h30”, “o Fabio passou pras 15h”, “reorganiza minha quinta considerando as prioridades”, “o que tenho amanhã?”. Nada muda sem você tocar em Aplicar.</p></div>`}
-      ${fila.length?'<div class="chm ia"><div class="chb pensando">Claude pensando…</div></div>':''}
-    </div></div>
-    <div class="chinput"><textarea class="inp" id="chat-txt" rows="2" placeholder="Escreva para o assistente… (Enter envia, Shift+Enter quebra linha)" aria-label="Mensagem para o assistente">${esc(ui.chatRascunho||'')}</textarea><button class="btn pri-b" data-act="chatEnviar">Enviar</button></div>`;
-  const sc=$('#chat-scroll');if(sc)sc.scrollTop=sc.scrollHeight;
+  box.innerHTML=fab+`<section class="chpanel" role="dialog" aria-label="Assistente">
+    <header class="chhead"><div><b>Assistente</b><span class="meta-line"><span class="dotf ${on?'ok':'warn'}"></span> ${on?'Mac online':'Mac offline: fica na fila'}</span></div><span class="grow"></span>${L.length?'<button class="btn" data-act="chatLimpar">Limpar</button>':''}<button class="ibtn" data-act="chatToggle" aria-label="Fechar">×</button></header>
+    <div class="chlista" id="chat-scroll">${L.length?L.map(bolha).join(''):`<p class="meta-line chvazio">Escreva como você fala comigo: “reunião com o Juan amanhã às 11h30”, “o Fabio passou pras 15h”, “reorganiza minha quinta”, “o que tenho amanhã?”. Nada muda sem você tocar em Aplicar.</p>`}
+      ${fila.length?'<div class="chm ia"><div class="chb pensando">Claude pensando…</div></div>':''}</div>
+    <div class="chinput"><textarea class="inp" id="chat-txt" rows="2" placeholder="Escreva… (Enter envia)" aria-label="Mensagem para o assistente">${esc(ui.chatRascunho||'')}</textarea><button class="btn pri-b" data-act="chatEnviar">Enviar</button></div></section>`;
+  const sc=document.getElementById('chat-scroll');if(sc)sc.scrollTop=sc.scrollHeight;
+  if(foc||ui.chatFocar){ui.chatFocar=false;const t=document.getElementById('chat-txt');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}
 }
+function chatEventos(box){
+  box.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const act=el.dataset.act;
+    if(act==='chatToggle'){ui.chatAberto=!ui.chatAberto;ui.chatFocar=ui.chatAberto;try{localStorage.setItem('minharotina.chatAberto',ui.chatAberto?'1':'')}catch(_){}return chatRender()}
+    if(act==='chatEnviar')return chatEnviar();
+    if(act==='chatAplicar')return chatAplicar(el.dataset.id);
+    if(act==='chatDesfazer')return chatDesfazer(el.dataset.id);
+    if(act==='chatDescartar'){const m=Chat.msgs.get(el.dataset.id);if(m)Chat.save(el.dataset.id,Object.assign({},m,{descartada:new Date().toISOString()}));return}
+    if(act==='chatLimpar'){if(ui.chatLimpar){ui.chatLimpar=false;return Chat.limpar()}ui.chatLimpar=true;el.textContent='Toque de novo';setTimeout(()=>{ui.chatLimpar=false;chatRender()},4000);return}});
+  box.addEventListener('change',e=>{if(e.target.dataset.chatAcao){ui.chatOff=ui.chatOff||{};ui.chatOff[e.target.dataset.chatAcao+':'+e.target.dataset.i]=!e.target.checked}});
+  box.addEventListener('input',e=>{if(e.target.id==='chat-txt')ui.chatRascunho=e.target.value});
+  box.addEventListener('keydown',e=>{if(e.target.id==='chat-txt'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();chatEnviar()}
+    if(e.key==='Escape'){ui.chatAberto=false;chatRender()}});
+}
+try{ui.chatAberto=localStorage.getItem('minharotina.chatAberto')==='1'}catch(_){}
+setInterval(()=>{if(document.visibilityState==='visible')chatRender()},60000);
 /* Linhas especiais da tabela tasks: painel:core (Mentorados), roteiro:<id> e esteira:config (Conteúdos) */
 function routeSpecial(row){
-  if(row.id.startsWith('chat:')){Chat.msgs.set(row.id,Object.assign({},row.data,{id:row.id}));renderSide();if(ui.view==='assistente')renderMain();return}
-  if(row.id==='assistente:status'){Chat.status=row.data;if(ui.view==='assistente')renderMain();return}
+  if(row.id.startsWith('chat:')){Chat.msgs.set(row.id,Object.assign({},row.data,{id:row.id}));chatRender();return}
+  if(row.id==='assistente:status'){Chat.status=row.data;chatRender();return}
   if(row.id==='painel:producao'){Producao.data=row.data;Producao.updated=row.updated_at;Producao.cache=null;return}
   if(row.id==='painel:producao-hist'){Producao.hist=(row.data&&row.data.dias)||[];return}
   if(row.id.startsWith('mentorados:')){Painel.mt[row.id.slice(11)]=row.data||null;if(ui.view==='mentorados')renderMain();return}
@@ -2633,7 +2649,7 @@ function supaDb(uid){
             next({docChanges:()=>data.filter(r=>!r.id.includes(':')).map(r=>({type:'added',doc:docSnap(r.id,r.data)}))});
           });
           sb.channel('tasks-'+uid).on('postgres_changes',{event:'*',schema:'public',table:'tasks'},p=>{
-            if(p.eventType==='DELETE'&&p.old&&p.old.id&&p.old.id.includes(':')){if(p.old.id.startsWith('chat:')){Chat.msgs.delete(p.old.id);if(ui.view==='assistente')renderMain();return}if(p.old.id.startsWith('caso:'))Casos.itens.delete(p.old.id.slice(5));else Esteira.itens.delete(p.old.id.slice(8));Esteira.changed();return}
+            if(p.eventType==='DELETE'&&p.old&&p.old.id&&p.old.id.includes(':')){if(p.old.id.startsWith('chat:')){Chat.msgs.delete(p.old.id);chatRender();return}if(p.old.id.startsWith('caso:'))Casos.itens.delete(p.old.id.slice(5));else Esteira.itens.delete(p.old.id.slice(8));Esteira.changed();return}
             if(p.eventType==='DELETE'){if(p.old&&p.old.id)next({docChanges:()=>[{type:'removed',doc:docSnap(p.old.id,null)}]});return}
             if(p.new&&p.new.id&&p.new.id.includes(':')){if(p.new.user_id===uid){routeSpecial(p.new);Esteira.changed()}return}
             if(p.new&&p.new.user_id===uid)next({docChanges:()=>[{type:'modified',doc:docSnap(p.new.id,p.new.data)}]});
