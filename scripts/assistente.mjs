@@ -10,6 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { sincronizar as sincronizarGoogle } from './google-agenda.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const env = Object.fromEntries(fs.readFileSync(path.join(root, '.env'), 'utf8').split('\n')
@@ -40,6 +41,7 @@ async function contexto() {
   const [st] = await api('settings?select=data&limit=1');
   const C = st.data || {};
   const rows = await api('tasks?select=id,data');
+  const gcal = ((rows.find(r => r.id === 'gcal:agenda') || {}).data || {}).eventos || [];
   const hoje = isoLocal(new Date()), ontem = isoLocal(new Date(Date.now() - 2 * 864e5));
   const tarefas = rows.filter(r => !r.id.includes(':')).map(r => ({ ...r.data, id: r.id }))
     .filter(t => t.status !== 'concluida' || (t.completed_at && t.completed_at.slice(0, 10) >= ontem));
@@ -61,6 +63,7 @@ async function contexto() {
   for (let i = 0; i < 8; i++) {
     const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + i), k = isoLocal(d), h = (C.hours || {})[d.getDay()];
     const blocos = (C.fixed || []).filter(f => f.title && +f.wd === d.getDay()).map(f => [toMin(f.time), toMin(f.time) + (+f.dur || 60), `${f.title} (fixo)`])
+      .concat(gcal.filter(e => e.data === k).map(e => [toMin(e.ini), toMin(e.ini) + e.dur, `${e.titulo} (reunião do Google Agenda, não mexer)`]))
       .concat(minhas.filter(t => t.planned_date === k).map(t => [toMin(t.planned_time), toMin(t.planned_time) + (t.estimated_duration || 30), `${t.title} [${t.id}]`]))
       .sort((a, b) => a[0] - b[0]);
     dias.push(`${i === 0 ? 'HOJE' : i === 1 ? 'AMANHÃ' : WD[d.getDay()].toUpperCase()} ${WD[d.getDay()]} ${k} · ${h && h.on ? `expediente ${h.start}–${h.end}` : 'não trabalha'}\n${blocos.map(b => `  ${hm(b[0])}–${hm(b[1])} ${b[2]}`).join('\n') || '  (livre)'}`);
@@ -86,6 +89,7 @@ REGRAS DE AGENDA (obrigatórias):
 - Planejar só dentro do expediente (seg–sex 11h–20h). O que ele faz de manhã é adiantamento: não planeje antes das 11h.
 - Almoço às 13h por 1h: nada nesse horário. Respeite os compromissos fixos e as demandas que já têm hora; não sobreponha (exceto se ele pedir).
 - Demanda que envolve outras pessoas (reunião, conversa, alinhamento, cobrança, falar com alguém, treinar alguém) termina até as 17h. Demanda solo (analisar gravação, planejar, estudar, escrever) pode ir até as 20h.
+- Reuniões marcadas "(reunião do Google Agenda, não mexer)" vêm da agenda do Google da Core: são horário ocupado. Não proponha mudar, concluir nem recriar como demanda; se ele pedir para mover uma delas, diga que precisa mudar no Google Agenda. Se ele contar de uma reunião que já está lá, não crie outra.
 - Conversas (tipo C) curtas vão numa janela às 11h, 15 min cada.
 - Sexta é de treinamentos e alinhamentos: não planeje trabalho estratégico na sexta.
 - Prioridades: o que tem "dia:<hoje>" é prioridade do dia; "semana:<semana atual>" é prioridade da semana. Ao reorganizar, prioridades do dia primeiro, depois as da semana, o mais cedo possível na semana; P1 antes de P2.
@@ -154,10 +158,12 @@ async function batimento() { try { await upsert('assistente:status', { online: t
 
 if (process.argv[2] === 'uma-vez') { await batimento(); await processar(); process.exit(0); }
 log('assistente no ar');
-let ocupado = false, ultimoBat = 0;
+let ocupado = false, ultimoBat = 0, ultimoGoogle = 0;
 setInterval(async () => {
   if (ocupado) return; ocupado = true;
-  try { if (Date.now() - ultimoBat > 60000) { ultimoBat = Date.now(); await batimento(); } await processar(); }
+  try { if (Date.now() - ultimoBat > 60000) { ultimoBat = Date.now(); await batimento(); } await processar();
+    if (env.GCAL_ICS_URL && Date.now() - ultimoGoogle > 5 * 60000) { ultimoGoogle = Date.now();
+      await sincronizarGoogle({ url: env.GCAL_ICS_URL, email: env.GCAL_EMAIL || 'caue.thomaz@coreeducacao.com', upsert, log }).catch(e => log('agenda do Google falhou', e.message)); } }
   catch (e) { log('falha', e.message); }
   finally { ocupado = false; }
 }, 5000);

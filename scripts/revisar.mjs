@@ -51,7 +51,11 @@ function locked(t) {
   return out;
 }
 
+// Reuniões da agenda Google da Core (linha gcal:agenda, gravada por scripts/google-agenda.mjs): horário ocupado
+let GCAL = [];
+async function loadGcal() { GCAL = (((await api('tasks?select=data&id=eq.gcal:agenda'))[0] || {}).data || {}).eventos || []; }
 async function loadAll() {
+  await loadGcal();
   const st = (await api('settings?select=user_id,data&limit=1'))[0];
   const uid = ENV.USER_ID || (st && st.user_id);
   const rows = await api(`tasks?select=id,data${uid ? `&user_id=eq.${uid}` : ''}`);
@@ -65,6 +69,7 @@ function agenda(ctx, tasks) {
     const d = addDays(now, i), k = iso(d), wd = d.getDay(), h = (ctx.hours || {})[wd];
     const busy = (ctx.fixed || []).filter(f => +f.wd === wd && f.title)
       .map(f => `${f.time}-${fromMin(toMin(f.time) + (+f.dur || 60))} ${f.title} (fixo)`)
+      .concat(GCAL.filter(e => e.data === k).map(e => `${e.ini}-${fromMin(toMin(e.ini) + e.dur)} ${String(e.titulo).slice(0, 40)} (reunião do Google)`))
       .concat(open.filter(t => t.planned_date === k)
         .map(t => `${t.planned_time}-${fromMin(toMin(t.planned_time) + (t.estimated_duration || 30))} ${String(t.title).slice(0, 40)}`))
       .sort();
@@ -151,13 +156,15 @@ function review(t, r) {
   // "cobrar" e "ver se" também são acompanhamento (vão para a aba Acompanhamento, sem horário na agenda)
   const acomp = /(^|[^a-zà-ú])(cobrar|ver se)([^a-zà-ú]|$)/i.test(patch.title || t.title || '') && t.acomp !== false;
   if ((resp && resp !== 'Cauê') || acomp) { delete patch.planned_date; delete patch.planned_time; delete prev.planned_date; delete prev.planned_time; }
-  // Trava das regras de agenda do Cauê: horário fora do expediente (11h–20h), no almoço (13h) ou,
+  // Trava das regras de agenda do Cauê: horário fora do expediente (11h–20h), no almoço (13h), em cima de reunião do Google ou,
   // quando a demanda envolve outras pessoas, terminando depois das 17h → mantém o horário que o app já tinha escolhido
   if ('planned_time' in patch) {
     const ini = toMin(patch.planned_time), fim = ini + (patch.estimated_duration || t.estimated_duration || 30);
     const txt = ' ' + String(patch.title || t.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') + ' ';
     const comPessoas = (patch.type || t.type) === 'C' || / reuni| alinhar| alinhamento| conversar| falar com| call com| com o time| com a equipe| treinar o| apresentar pr/.test(txt);
-    if (ini < 11 * 60 || fim > 20 * 60 || (ini < 14 * 60 && fim > 13 * 60) || (comPessoas && fim > 17 * 60)) {
+    const dia = patch.planned_date || t.planned_date;
+    const bateGoogle = GCAL.some(e => e.data === dia && ini < toMin(e.ini) + e.dur && fim > toMin(e.ini));
+    if (ini < 11 * 60 || fim > 20 * 60 || (ini < 14 * 60 && fim > 13 * 60) || (comPessoas && fim > 17 * 60) || bateGoogle) {
       delete patch.planned_time; delete prev.planned_time;
       if ('planned_date' in patch && !t.planned_time) { delete patch.planned_date; delete prev.planned_date; }
     }
@@ -175,6 +182,7 @@ async function aplicar(file) {
   const raw = fs.readFileSync(file, 'utf8');
   const j = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
   let n = 0;
+  await loadGcal();
   for (const r of j.items || []) {
     if (!r || !r.id) continue;
     const row = (await api(`tasks?select=id,data&id=eq.${encodeURIComponent(r.id)}`))[0];

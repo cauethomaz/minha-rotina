@@ -437,6 +437,10 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .toast [data-spent]:last-child{color:var(--accent)}
 /* Calendar extras */
 .off{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--line) 70%,transparent) 6px 7px);pointer-events:none}
+.ev.gcal{cursor:default;background:color-mix(in srgb,var(--muted) 14%,var(--panel));border:1px solid color-mix(in srgb,var(--muted) 40%,transparent);border-left:3px solid var(--muted);color:var(--fg)}
+.chipev.gcal{cursor:default;background:color-mix(in srgb,var(--muted) 14%,var(--panel));border-left:3px solid var(--muted)}.chipev.gcal .gtm{color:var(--muted);margin-right:4px;font-variant-numeric:tabular-nums}
+.gsw{display:inline-block;width:12px;height:10px;border-radius:3px;background:color-mix(in srgb,var(--muted) 30%,var(--panel));border-left:3px solid var(--muted);margin-right:4px;vertical-align:-1px}
+.greun{flex-basis:100%;font-size:13px;color:var(--muted)}.greun b{color:var(--fg);font-weight:600}
 .ev.fixed{cursor:default;border-left-style:dashed;background-image:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--panel) 45%,transparent) 5px 7px)}
 .wk-head small{display:block;font-size:10px;color:var(--faint);margin-top:2px}
 /* Time tracking */
@@ -1032,6 +1036,11 @@ function learnType(text,type){
   Ctx.save();
 }
 // comPessoas: reunião, conversa ou alinhamento termina até as 17h (depois disso o time começa a sair do escritório)
+/* Reuniões da agenda Google da Core (só leitura). O Mac grava a linha gcal:agenda (scripts/google-agenda.mjs) */
+const GCal={data:null,
+  dia(k){return ((this.data&&this.data.eventos)||[]).filter(e=>e.data===k)},
+  busy(k){return this.dia(k).map(e=>[toMin(e.ini),toMin(e.ini)+e.dur])}};
+const gcalTip=e=>`Google Agenda · ${e.ini}–${fromMin(toMin(e.ini)+e.dur)} · ${e.titulo}. Para mudar, altere no Google Agenda.`;
 function findSlot(dur,type,deadline,selfId,onlyDate,comPessoas){
   const now=new Date(),busyTasks=Store.all().filter(x=>x.id!==selfId&&!isDone(x)&&x.planned_date&&x.planned_time);
   for(let i=0;i<21;i++){
@@ -1042,7 +1051,7 @@ function findSlot(dur,type,deadline,selfId,onlyDate,comPessoas){
     let s0=toMin(h.start);const e0=comPessoas?Math.min(toMin(h.end),17*60):toMin(h.end);
     if(i===0){const nm=now.getHours()*60+now.getMinutes();s0=Math.max(s0,Math.ceil((nm+10)/15)*15)}
     const busy=Ctx.data.fixed.filter(f=>+f.wd===d.getDay()&&f.title).map(f=>[toMin(f.time),toMin(f.time)+(+f.dur||60)])
-      .concat(busyTasks.filter(x=>x.planned_date===k).map(x=>[toMin(x.planned_time),toMin(x.planned_time)+(x.estimated_duration||30)]));
+      .concat(busyTasks.filter(x=>x.planned_date===k).map(x=>[toMin(x.planned_time),toMin(x.planned_time)+(x.estimated_duration||30)])).concat(GCal.busy(k));
     for(let m=s0;m+dur<=e0;m+=15)if(busy.every(([a,b])=>m+dur<=a||m>=b))return {date:k,time:fromMin(m)};
   }
   return null;
@@ -1354,7 +1363,9 @@ function renderMain(){
   if(ls){
     const scope=ui.view==='hoje'?buckets().late.concat(buckets().tod):buckets().week;const L=leverage(scope);
     const bq=buckets(),cobr=ui.view==='hoje'&&bq.cobrar.length?`<button class="btn acomp-link" data-view-go="acompanhamento">${bq.cobrar.length} cobrança${bq.cobrar.length>1?'s':''} hoje →</button>`:'';
-    ls.innerHTML=cobr+(L.typed?`<span>${ui.view==='hoje'?'Hoje':'Esta semana'}:</span>${stackBar(L.c)}<span><b>${L.c.E}</b> estratégicas · <b>${L.c.O}</b> operacionais · <b>${L.c.A}</b> analíticas</span>${L.cls==='op'?'<span class="warn">· modo operador</span>':''}`:'');
+    const gh=ui.view==='hoje'?GCal.dia(today()):[];
+    const reun=gh.length?`<span class="greun" title="Da sua agenda Google da Core"><b>Reuniões hoje:</b> ${gh.map(e=>`${e.ini} ${esc(e.titulo)}`).join(' · ')}</span>`:'';
+    ls.innerHTML=reun+cobr+(L.typed?`<span>${ui.view==='hoje'?'Hoje':'Esta semana'}:</span>${stackBar(L.c)}<span><b>${L.c.E}</b> estratégicas · <b>${L.c.O}</b> operacionais · <b>${L.c.A}</b> analíticas</span>${L.cls==='op'?'<span class="warn">· modo operador</span>':''}`:'');
   }
   renderList();
 }
@@ -1419,10 +1430,11 @@ function renderCalendar(main,banner){
     const cols=days.map(d=>{
       const wd=fromIso(d).getDay(),hr=Ctx.data.hours[wd];
       const fx=Ctx.data.fixed.filter(f=>+f.wd===wd&&f.title).map(f=>{const s=Math.max(toMin(f.time),H0*60);return {f,s,e:s+(+f.dur||60)}});
-      const evs=layoutDay(calItems(d).plan.filter(t=>t.planned_time).map(t=>{const s=Math.max(toMin(t.planned_time),H0*60);return {t,s,e:s+Math.max(t.estimated_duration||30,20)}}).concat(fx));
+      const evs=layoutDay(calItems(d).plan.filter(t=>t.planned_time).map(t=>{const s=Math.max(toMin(t.planned_time),H0*60);return {t,s,e:s+Math.max(t.estimated_duration||30,20)}}).concat(fx).concat(GCal.dia(d).map(g=>{const s=Math.max(toMin(g.ini),H0*60);return {g,s,e:Math.max(s+g.dur,s+20)}})));
       const yOf=m=>(Math.min(Math.max(m,H0*60),H1*60)-H0*60)/60*48;
       const off=!hr.on?`<div class="off" style="top:0;height:100%"></div>`:`<div class="off" style="top:0;height:${yOf(toMin(hr.start))}px"></div><div class="off" style="top:${yOf(toMin(hr.end))}px;bottom:0"></div>`;
-      const blocks=evs.map(({t,f,s,e,lane,n})=>{const top=(s-H0*60)/60*48,h=Math.max((e-s)/60*48-2,18);
+      const blocks=evs.map(({t,f,g,s,e,lane,n})=>{const top=(s-H0*60)/60*48,h=Math.max((e-s)/60*48-2,18);
+        if(g)return `<div class="ev gcal" style="top:${top}px;height:${h}px;left:calc(${lane/n*100}% + 3px);width:calc(${100/n}% - 6px);right:auto" title="${esc(gcalTip(g))}"><span class="tm">${g.ini} · ${fmtDur(g.dur)} · Google</span>${esc(g.titulo)}</div>`;
         if(f)return `<div class="ev fixed ${f.type||'N'}" style="top:${top}px;height:${h}px;left:calc(${lane/n*100}% + 3px);width:calc(${100/n}% - 6px);right:auto" title="Compromisso fixo · ${esc(f.title)}"><span class="tm">${f.time} · fixo</span>${esc(f.title)}</div>`;
         const pz=!isDone(t)&&t.deadline&&t.deadline<d?'<span class="evdl late" title="Planejada depois do prazo">⚑ após o prazo</span>':!isDone(t)&&t.external&&t.deadline===d?'<span class="evdl" title="Entrega combinada para este dia">⚑ entrega</span>':'';
         return `<button class="ev ${tcls(t)} ${prioCls(t)} ${isDone(t)?'done':''}" style="top:${top}px;height:${h}px;left:calc(${lane/n*100}% + 3px);width:calc(${100/n}% - 6px);right:auto" draggable="true" data-drag="${t.id}" data-kind="plan" data-act="open" data-id="${t.id}"><span class="tm">${t.planned_time}${t.estimated_duration?' · '+fmtDur(t.estimated_duration):''}${pz}</span>${prioMark(t)}${esc(t.title)}</button>`}).join('');
@@ -1437,17 +1449,17 @@ function renderCalendar(main,banner){
     const first=new Date(a.getFullYear(),a.getMonth(),1);const gs=startOfWeek(first);
     title=`${MON[a.getMonth()][0].toUpperCase()+MON[a.getMonth()].slice(1)} de ${a.getFullYear()}`;
     const cells=[...Array(42)].map((_,i)=>{const dt=addDays(gs,i),d=iso(dt);const {plan,dl}=calItems(d);
-      const items=[...dl.map(t=>[t,'dl']),...plan.sort(cmp).map(t=>[t,'plan'])];const vis=items.slice(0,3);
+      const items=[...dl.map(t=>chip(t,'dl')),...GCal.dia(d).map(g=>`<span class="chipev gcal" title="${esc(gcalTip(g))}"><span class="gtm">${g.ini}</span>${esc(g.titulo)}</span>`),...plan.sort(cmp).map(t=>chip(t,'plan'))];const vis=items.slice(0,3);
       return `<div class="mcell ${dt.getMonth()!==a.getMonth()?'out':''} ${d===td?'today':''}" data-drop-month="${d}">
         <button class="mnum" data-act="gotoWeek" data-date="${d}" aria-label="Ver semana de ${dt.getDate()}/${dt.getMonth()+1}">${dt.getDate()}</button>
-        ${vis.map(([t,k])=>chip(t,k)).join('')}${items.length>3?`<button class="more" data-act="gotoWeek" data-date="${d}">+${items.length-3} mais</button>`:''}</div>`}).join('');
+        ${vis.join('')}${items.length>3?`<button class="more" data-act="gotoWeek" data-date="${d}">+${items.length-3} mais</button>`:''}</div>`}).join('');
     body=`<div class="month-wrap"><div class="month">${['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>`<div class="dow">${x}</div>`).join('')}${cells}</div></div>`;
   }
   main.innerHTML=`<header class="mhead"><div><h1>${esc(title)}</h1><div class="sub">${ui.cal==='semana'?calForecast(days):'Clique num dia para abrir a semana · arraste para replanejar'}</div></div><div class="grow"></div>
     <div class="calbar"><div class="seg" role="group" aria-label="Visualização"><button data-act="calmode" data-mode="semana" class="${ui.cal==='semana'?'on':''}">Semana</button><button data-act="calmode" data-mode="mes" class="${ui.cal==='mes'?'on':''}">Mês</button></div>
     <div class="calnav"><button class="ibtn" data-act="calprev" aria-label="Anterior">${svg('left')}</button><button class="btn" data-act="caltoday">Hoje</button><button class="ibtn" data-act="calnext" aria-label="Próximo">${svg('right')}</button></div></div></header>
     ${banner}${body}
-    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Entregas</span><span><span class="pmark day">★</span>Prioridade do dia</span><span><span class="pmark wk">☆</span>Prioridade da semana</span></div>`;
+    <div class="legend">${TK.map(k=>`<span><span class="dot d${k}"></span>${TYPES[k]}</span>`).join('')}<span><span class="dot dN"></span>Sem tipo</span><span>${svg('flag')}Entregas</span><span><span class="pmark day">★</span>Prioridade do dia</span><span><span class="pmark wk">☆</span>Prioridade da semana</span>${GCal.data?`<span><span class="gsw"></span>Reunião do Google Agenda (atualizada ${fmtStamp(GCal.data.atualizado)})</span>`:''}</div>`;
   const sc=$('#calScroll');if(sc&&!ui.scrolled){sc.scrollTop=(8-H0)*48;ui.scrolled=true}
 }
 
@@ -2564,6 +2576,7 @@ setInterval(()=>{if(document.visibilityState==='visible')chatRender()},60000);
 /* Linhas especiais da tabela tasks: painel:core (Mentorados), roteiro:<id> e esteira:config (Conteúdos) */
 function routeSpecial(row){
   if(row.id.startsWith('chat:')){Chat.msgs.set(row.id,Object.assign({},row.data,{id:row.id}));chatRender();return}
+  if(row.id==='gcal:agenda'){GCal.data=row.data;if(ui.view==='calendario')renderMain();else if(ui.view==='hoje')renderAll();return}
   if(row.id==='assistente:status'){Chat.status=row.data;chatRender();return}
   if(row.id==='painel:producao'){Producao.data=row.data;Producao.updated=row.updated_at;Producao.cache=null;return}
   if(row.id==='painel:producao-hist'){Producao.hist=(row.data&&row.data.dias)||[];return}
