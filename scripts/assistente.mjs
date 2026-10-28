@@ -54,7 +54,7 @@ async function contexto() {
     (t.subtasks || []).length ? `checklist ${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}` : ''].filter(Boolean).join(' | ');
   const ord = (a, b) => ((a.planned_date || '9') + (a.planned_time || '99')).localeCompare((b.planned_date || '9') + (b.planned_time || '99'));
   const horas = Object.entries(C.hours || {}).map(([d, h]) => `${WD[d]}: ${h.on ? `${h.start}–${h.end}` : 'não trabalha'}`).join(' · ');
-  const FIX = rows.some(r => r.id === 'gcal:agenda') ? [] : (C.fixed || []); // com o Google ligado, os fixos vêm de lá
+  const FIX = C.fixed || []; // só o que não fica no Google; o resto vem da agenda Google
   const fixos = FIX.filter(f => f.title).map(f => `${WD[f.wd]} ${f.time} (${f.dur || 60}min) ${f.title}`).join('\n');
   const agora = new Date();
   // Agenda já montada por código, dia a dia (o modelo erra menos lendo assim)
@@ -72,8 +72,8 @@ async function contexto() {
   }
   return `AGENDA DOS PRÓXIMOS DIAS (ocupado; o que não aparece está livre):\n${dias.join('\n')}\n\nAGORA: ${WD[agora.getDay()]} ${hoje} ${pad(agora.getHours())}:${pad(agora.getMinutes())} (horário de Brasília). A "semana" das prioridades começa na segunda; no domingo, vale a semana seguinte.
 EXPEDIENTE: ${horas}
-COMPROMISSOS FIXOS (toda semana):
-${fixos || '(vêm da agenda do Google e já estão na agenda acima)'}
+COMPROMISSOS FIXOS FORA DO GOOGLE (toda semana):
+${fixos || '(nenhum)'}
 PESSOAS: ${(C.people || []).filter(p => p.name).map(p => `${p.name} (${p.role || ''})`).join('; ')}
 REGRA DE P1: ${C.p1 || ''}
 OBSERVAÇÕES DO CAUÊ: ${C.notes || ''}

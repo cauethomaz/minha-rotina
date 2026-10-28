@@ -1040,11 +1040,11 @@ function learnType(text,type){
 const GCal={data:null,criados:{},
   dia(k){return ((this.data&&this.data.eventos)||[]).filter(e=>e.data===k)},
   busy(k){return this.dia(k).map(e=>[toMin(e.ini),toMin(e.ini)+e.dur])}};
-// Com a agenda Google ligada, os compromissos fixos vêm de lá (os do Contexto deixam de valer)
-const fixos=()=>GCal.data?[]:Ctx.data.fixed;
+// Compromissos fixos do Contexto: só o que não fica no Google (o resto vem da agenda Google, com a repetição de lá)
+const fixos=()=>Ctx.data.fixed;
 // Reuniões do Google em horário de expediente, com tipo deduzido pelo título (para a previsão e o tempo da semana)
-const GC_PESSOAL=/almo[cç]o|tr[aâ]nsito|^treino\b|psic[oó]log|consulta|feriado/i;
-function tipoTitulo(s){const x=norm(s),sc={E:0,A:0,C:0,O:0};Object.keys(KW).forEach(k=>KW[k].forEach(w=>{if(has(x,w))sc[k]+=k==='C'?1.2:1}));const t=Object.keys(sc).sort((a,b)=>sc[b]-sc[a])[0];return sc[t]?t:'C'}
+const GC_PESSOAL=/almo[cç]o|tr[aâ]nsito|^treino\b|consulta|feriado/i,GC_SEMTIPO=/psic[oó]log/i; // pessoal no meio do expediente: ocupa o dia, sem tipo
+function tipoTitulo(s){if(GC_SEMTIPO.test(s))return 'N';const x=norm(s),sc={E:0,A:0,C:0,O:0};Object.keys(KW).forEach(k=>KW[k].forEach(w=>{if(has(x,w))sc[k]+=k==='C'?1.2:1}));const t=Object.keys(sc).sort((a,b)=>sc[b]-sc[a])[0];return sc[t]?t:'C'}
 function gcalTrabalho(days){return days.flatMap(d=>{const h=Ctx.data.hours[fromIso(d).getDay()];if(!h||!h.on)return [];
   return GCal.dia(d).filter(e=>!GC_PESSOAL.test(e.titulo)&&toMin(e.ini)>=toMin(h.start)&&toMin(e.ini)<toMin(h.end)).map(e=>({type:tipoTitulo(e.titulo),dur:e.dur,data:d,ini:e.ini}))})}
 const semanaDe=ws=>[...Array(7)].map((_,i)=>iso(addDays(fromIso(ws),i)));
@@ -1985,7 +1985,7 @@ function renderContext(main,banner){
     <section class="card"><h2>Expediente</h2>
       ${[1,2,3,4,5,6,0].map(w=>{const h=c.hours[w];return `<div class="crow hour"><label><input type="checkbox" id="ctx-hon-${w}" data-ctx-hour="${w}" data-k="on" ${h.on?'checked':''}> ${WD[w]}</label><span class="meta-line">${h.on?'':'folga'}</span><input class="inp" type="time" id="ctx-hs-${w}" data-ctx-hour="${w}" data-k="start" value="${h.start}" ${h.on?'':'disabled'} aria-label="Início ${WDL[w]}"><input class="inp" type="time" id="ctx-he-${w}" data-ctx-hour="${w}" data-k="end" value="${h.end}" ${h.on?'':'disabled'} aria-label="Fim ${WDL[w]}"><label><input type="checkbox" id="ctx-hp-${w}" data-ctx-hour="${w}" data-k="prod" ${h.prod?'checked':''} ${h.on?'':'disabled'}> tempo de produção</label></div>`}).join('')}
     </section>
-    <section class="card"><h2>Compromissos fixos</h2>${GCal.data?'<p class="help"><b>A agenda Google da Core está ligada:</b> os compromissos agora vêm de lá, com a repetição que você definir no Google (semanal, quinzenal, mensal). A lista abaixo fica guardada, mas não vale mais.</p>':'<p class="help">Aparecem no calendário toda semana, ocupam a agenda que o Claude usa para planejar e contam no seu tempo.</p>'}
+    <section class="card"><h2>Compromissos fixos</h2>${GCal.data?'<p class="help"><b>A agenda Google da Core está ligada:</b> os compromissos agora vêm de lá, com a repetição que você definir no Google (semanal, quinzenal, mensal). Aqui ficam só os que você não quer no Google (a rede da Core vê a sua agenda).</p>':'<p class="help">Aparecem no calendário toda semana, ocupam a agenda que o Claude usa para planejar e contam no seu tempo.</p>'}
       ${c.fixed.map((f,i)=>`<div class="crow fixed"><select class="inp" id="ctx-fw-${i}" data-ctx-fixed="${i}" data-k="wd">${wdOpts(f.wd)}</select><input class="inp" type="time" id="ctx-ft-${i}" data-ctx-fixed="${i}" data-k="time" value="${f.time}"><select class="inp" id="ctx-fd-${i}" data-ctx-fixed="${i}" data-k="dur">${DURS.map(m=>`<option value="${m}" ${+f.dur===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select><input class="inp" id="ctx-fn-${i}" data-ctx-fixed="${i}" data-k="title" value="${esc(f.title)}" placeholder="Ex.: 1:1 com liderados"><select class="inp" id="ctx-fy-${i}" data-ctx-fixed="${i}" data-k="type">${typeOpts(f.type)}</select><button class="x" data-act="ctxRmFixed" data-i="${i}" aria-label="Remover compromisso">${svg('x')}</button></div>`).join('')}
       <button class="btn addbtn" data-act="ctxAddFixed">+ Compromisso fixo</button></section>
     <section class="card"><h2>Outras observações para o Claude</h2><textarea class="inp" id="ctx-notes" data-ctx="notes" rows="4" placeholder="Ex.: demandas da Joyce são co-produção; NF e banco são Pessoal.">${esc(c.notes)}</textarea></section>
