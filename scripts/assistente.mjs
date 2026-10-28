@@ -11,6 +11,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { sincronizar as sincronizarGoogle } from './google-agenda.mjs';
+import { sincronizarReunioes } from './google-escrever.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const env = Object.fromEntries(fs.readFileSync(path.join(root, '.env'), 'utf8').split('\n')
@@ -53,7 +54,8 @@ async function contexto() {
     (t.subtasks || []).length ? `checklist ${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}` : ''].filter(Boolean).join(' | ');
   const ord = (a, b) => ((a.planned_date || '9') + (a.planned_time || '99')).localeCompare((b.planned_date || '9') + (b.planned_time || '99'));
   const horas = Object.entries(C.hours || {}).map(([d, h]) => `${WD[d]}: ${h.on ? `${h.start}–${h.end}` : 'não trabalha'}`).join(' · ');
-  const fixos = (C.fixed || []).filter(f => f.title).map(f => `${WD[f.wd]} ${f.time} (${f.dur || 60}min) ${f.title}`).join('\n');
+  const FIX = rows.some(r => r.id === 'gcal:agenda') ? [] : (C.fixed || []); // com o Google ligado, os fixos vêm de lá
+  const fixos = FIX.filter(f => f.title).map(f => `${WD[f.wd]} ${f.time} (${f.dur || 60}min) ${f.title}`).join('\n');
   const agora = new Date();
   // Agenda já montada por código, dia a dia (o modelo erra menos lendo assim)
   const toMin = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + m; };
@@ -62,7 +64,7 @@ async function contexto() {
   const dias = [];
   for (let i = 0; i < 8; i++) {
     const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + i), k = isoLocal(d), h = (C.hours || {})[d.getDay()];
-    const blocos = (C.fixed || []).filter(f => f.title && +f.wd === d.getDay()).map(f => [toMin(f.time), toMin(f.time) + (+f.dur || 60), `${f.title} (fixo)`])
+    const blocos = FIX.filter(f => f.title && +f.wd === d.getDay()).map(f => [toMin(f.time), toMin(f.time) + (+f.dur || 60), `${f.title} (fixo)`])
       .concat(gcal.filter(e => e.data === k).map(e => [toMin(e.ini), toMin(e.ini) + e.dur, `${e.titulo} (reunião do Google Agenda, não mexer)`]))
       .concat(minhas.filter(t => t.planned_date === k).map(t => [toMin(t.planned_time), toMin(t.planned_time) + (t.estimated_duration || 30), `${t.title} [${t.id}]`]))
       .sort((a, b) => a[0] - b[0]);
@@ -71,7 +73,7 @@ async function contexto() {
   return `AGENDA DOS PRÓXIMOS DIAS (ocupado; o que não aparece está livre):\n${dias.join('\n')}\n\nAGORA: ${WD[agora.getDay()]} ${hoje} ${pad(agora.getHours())}:${pad(agora.getMinutes())} (horário de Brasília). A "semana" das prioridades começa na segunda; no domingo, vale a semana seguinte.
 EXPEDIENTE: ${horas}
 COMPROMISSOS FIXOS (toda semana):
-${fixos}
+${fixos || '(vêm da agenda do Google e já estão na agenda acima)'}
 PESSOAS: ${(C.people || []).filter(p => p.name).map(p => `${p.name} (${p.role || ''})`).join('; ')}
 REGRA DE P1: ${C.p1 || ''}
 OBSERVAÇÕES DO CAUÊ: ${C.notes || ''}
@@ -89,6 +91,7 @@ REGRAS DE AGENDA (obrigatórias):
 - Planejar só dentro do expediente (seg–sex 11h–20h). O que ele faz de manhã é adiantamento: não planeje antes das 11h.
 - Almoço às 13h por 1h: nada nesse horário. Respeite os compromissos fixos e as demandas que já têm hora; não sobreponha (exceto se ele pedir).
 - Demanda que envolve outras pessoas (reunião, conversa, alinhamento, cobrança, falar com alguém, treinar alguém) termina até as 17h. Demanda solo (analisar gravação, planejar, estudar, escrever) pode ir até as 20h.
+- Demanda que é o compromisso acontecendo (reunião, alinhamento, treinamento; não a preparação deles) vai sozinha para a agenda Google da Core quando tem data e hora: crie como demanda normal, com data e hora.
 - Reuniões marcadas "(reunião do Google Agenda, não mexer)" vêm da agenda do Google da Core: são horário ocupado. Não proponha mudar, concluir nem recriar como demanda; se ele pedir para mover uma delas, diga que precisa mudar no Google Agenda. Se ele contar de uma reunião que já está lá, não crie outra.
 - Conversas (tipo C) curtas vão numa janela às 11h, 15 min cada.
 - Sexta é de treinamentos e alinhamentos: não planeje trabalho estratégico na sexta.
@@ -158,12 +161,20 @@ async function batimento() { try { await upsert('assistente:status', { online: t
 
 if (process.argv[2] === 'uma-vez') { await batimento(); await processar(); process.exit(0); }
 log('assistente no ar');
-let ocupado = false, ultimoBat = 0, ultimoGoogle = 0;
+let ocupado = false, ultimoBat = 0, ultimoGoogle = 0, escrevendo = false;
+// Demandas de reunião/alinhamento/treinamento → agenda Google (a cada 2 min, em paralelo ao chat)
+setInterval(async () => {
+  if (escrevendo) return; escrevendo = true;
+  try { await sincronizarReunioes({ api, upsert, log, CLAUDE }); } catch (e) { log('Google: falha', e.message); }
+  finally { escrevendo = false; }
+}, 120000);
 setInterval(async () => {
   if (ocupado) return; ocupado = true;
   try { if (Date.now() - ultimoBat > 60000) { ultimoBat = Date.now(); await batimento(); } await processar();
     if (env.GCAL_ICS_URL && Date.now() - ultimoGoogle > 5 * 60000) { ultimoGoogle = Date.now();
-      await sincronizarGoogle({ url: env.GCAL_ICS_URL, email: env.GCAL_EMAIL || 'caue.thomaz@coreeducacao.com', upsert, log }).catch(e => log('agenda do Google falhou', e.message)); } }
+      const mapa = (((await api('tasks?select=data&id=eq.gcal:criados'))[0] || {}).data || {}).mapa || {};
+      const pular = new Set(Object.values(mapa).map(m => m.id.split('_')[0] + '|' + m.data));
+      await sincronizarGoogle({ url: env.GCAL_ICS_URL, email: env.GCAL_EMAIL || 'caue.thomaz@coreeducacao.com', upsert, log, pular }).catch(e => log('agenda do Google falhou', e.message)); } }
   catch (e) { log('falha', e.message); }
   finally { ocupado = false; }
 }, 5000);

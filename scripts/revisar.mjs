@@ -52,8 +52,8 @@ function locked(t) {
 }
 
 // Reuniões da agenda Google da Core (linha gcal:agenda, gravada por scripts/google-agenda.mjs): horário ocupado
-let GCAL = [];
-async function loadGcal() { GCAL = (((await api('tasks?select=data&id=eq.gcal:agenda'))[0] || {}).data || {}).eventos || []; }
+let GCAL = [], GCAL_ON = false;
+async function loadGcal() { const r = (await api('tasks?select=data&id=eq.gcal:agenda'))[0]; GCAL_ON = !!r; GCAL = ((r || {}).data || {}).eventos || []; }
 async function loadAll() {
   await loadGcal();
   const st = (await api('settings?select=user_id,data&limit=1'))[0];
@@ -67,7 +67,7 @@ function agenda(ctx, tasks) {
   const open = tasks.filter(t => t.status !== 'concluida' && t.planned_date && t.planned_time);
   for (let i = 0; i < 14; i++) {
     const d = addDays(now, i), k = iso(d), wd = d.getDay(), h = (ctx.hours || {})[wd];
-    const busy = (ctx.fixed || []).filter(f => +f.wd === wd && f.title)
+    const busy = (GCAL_ON ? [] : (ctx.fixed || [])).filter(f => +f.wd === wd && f.title)
       .map(f => `${f.time}-${fromMin(toMin(f.time) + (+f.dur || 60))} ${f.title} (fixo)`)
       .concat(GCAL.filter(e => e.data === k).map(e => `${e.ini}-${fromMin(toMin(e.ini) + e.dur)} ${String(e.titulo).slice(0, 40)} (reunião do Google)`))
       .concat(open.filter(t => t.planned_date === k)

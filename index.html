@@ -1037,9 +1037,17 @@ function learnType(text,type){
 }
 // comPessoas: reunião, conversa ou alinhamento termina até as 17h (depois disso o time começa a sair do escritório)
 /* Reuniões da agenda Google da Core (só leitura). O Mac grava a linha gcal:agenda (scripts/google-agenda.mjs) */
-const GCal={data:null,
+const GCal={data:null,criados:{},
   dia(k){return ((this.data&&this.data.eventos)||[]).filter(e=>e.data===k)},
   busy(k){return this.dia(k).map(e=>[toMin(e.ini),toMin(e.ini)+e.dur])}};
+// Com a agenda Google ligada, os compromissos fixos vêm de lá (os do Contexto deixam de valer)
+const fixos=()=>GCal.data?[]:Ctx.data.fixed;
+// Reuniões do Google em horário de expediente, com tipo deduzido pelo título (para a previsão e o tempo da semana)
+const GC_PESSOAL=/almo[cç]o|tr[aâ]nsito|^treino\b|psic[oó]log|consulta|feriado/i;
+function tipoTitulo(s){const x=norm(s),sc={E:0,A:0,C:0,O:0};Object.keys(KW).forEach(k=>KW[k].forEach(w=>{if(has(x,w))sc[k]+=k==='C'?1.2:1}));const t=Object.keys(sc).sort((a,b)=>sc[b]-sc[a])[0];return sc[t]?t:'C'}
+function gcalTrabalho(days){return days.flatMap(d=>{const h=Ctx.data.hours[fromIso(d).getDay()];if(!h||!h.on)return [];
+  return GCal.dia(d).filter(e=>!GC_PESSOAL.test(e.titulo)&&toMin(e.ini)>=toMin(h.start)&&toMin(e.ini)<toMin(h.end)).map(e=>({type:tipoTitulo(e.titulo),dur:e.dur,data:d,ini:e.ini}))})}
+const semanaDe=ws=>[...Array(7)].map((_,i)=>iso(addDays(fromIso(ws),i)));
 const gcalTip=e=>`Google Agenda · ${e.ini}–${fromMin(toMin(e.ini)+e.dur)} · ${e.titulo}. Para mudar, altere no Google Agenda.`;
 function findSlot(dur,type,deadline,selfId,onlyDate,comPessoas){
   const now=new Date(),busyTasks=Store.all().filter(x=>x.id!==selfId&&!isDone(x)&&x.planned_date&&x.planned_time);
@@ -1050,7 +1058,7 @@ function findSlot(dur,type,deadline,selfId,onlyDate,comPessoas){
     if(!h||!h.on||(type==='E'&&!h.prod&&!onlyDate))continue;
     let s0=toMin(h.start);const e0=comPessoas?Math.min(toMin(h.end),17*60):toMin(h.end);
     if(i===0){const nm=now.getHours()*60+now.getMinutes();s0=Math.max(s0,Math.ceil((nm+10)/15)*15)}
-    const busy=Ctx.data.fixed.filter(f=>+f.wd===d.getDay()&&f.title).map(f=>[toMin(f.time),toMin(f.time)+(+f.dur||60)])
+    const busy=fixos().filter(f=>+f.wd===d.getDay()&&f.title).map(f=>[toMin(f.time),toMin(f.time)+(+f.dur||60)])
       .concat(busyTasks.filter(x=>x.planned_date===k).map(x=>[toMin(x.planned_time),toMin(x.planned_time)+(x.estimated_duration||30)])).concat(GCal.busy(k));
     for(let m=s0;m+dur<=e0;m+=15)if(busy.every(([a,b])=>m+dur<=a||m>=b))return {date:k,time:fromMin(m)};
   }
@@ -1113,7 +1121,8 @@ function weekTime(wsIso){
   const ws=fromIso(wsIso),we=iso(addDays(ws,7)),now=new Date();const m={E:0,O:0,A:0,C:0,N:0};let est=0,tasks=0;
   Store.all().forEach(t=>{if(!isDone(t)||!t.completed_at||isDeleg(t))return;const d=iso(new Date(t.completed_at));if(d<wsIso||d>=we)return;
     m[t.type||'N']+=spentOf(t);tasks++;if(!t.spent_minutes)est++});
-  if(Ctx.data.countFixed!==false)Ctx.data.fixed.forEach(f=>{if(!f.title)return;const day=addDays(ws,(+f.wd+6)%7);const mm=toMin(f.time)||0;
+  if(Ctx.data.countFixed!==false&&GCal.data)gcalTrabalho(semanaDe(wsIso)).forEach(e=>{const mm=toMin(e.ini),dt=fromIso(e.data);if(new Date(dt.getFullYear(),dt.getMonth(),dt.getDate(),Math.floor(mm/60),mm%60)<=now)m[e.type]+=e.dur});
+  if(Ctx.data.countFixed!==false)fixos().forEach(f=>{if(!f.title)return;const day=addDays(ws,(+f.wd+6)%7);const mm=toMin(f.time)||0;
     const st=new Date(day.getFullYear(),day.getMonth(),day.getDate(),Math.floor(mm/60),mm%60);if(st<=now)m[f.type||'N']+=(+f.dur||60)});
   const typed=m.E+m.O+m.A+m.C;return {m,typed,total:typed+m.N,est,tasks};
 }
@@ -1375,7 +1384,8 @@ function renderMain(){
 function calForecast(days){
   const goal=+Ctx.data.goalE||30,m={E:0,O:0,A:0,C:0,N:0},ds=new Set(days);
   Store.all().forEach(t=>{if(t.planned_date&&ds.has(t.planned_date)&&!isDeleg(t))m[t.type||'N']+=isDone(t)?spentOf(t):(t.estimated_duration||30)});
-  if(Ctx.data.countFixed!==false)Ctx.data.fixed.forEach(f=>{if(f.title)m[f.type||'N']+=(+f.dur||60)});
+  if(Ctx.data.countFixed!==false)fixos().forEach(f=>{if(f.title)m[f.type||'N']+=(+f.dur||60)});
+  if(Ctx.data.countFixed!==false)gcalTrabalho(days).forEach(e=>{m[e.type]+=e.dur});
   const typed=m.E+m.O+m.A+m.C;
   if(!typed)return `<span class="calfc">Previsão da semana: nada planejado com tipo ainda · arraste para replanejar</span>`;
   const pct=k=>Math.round(m[k]/typed*100),e=pct('E'),g=goal/100;
@@ -1429,7 +1439,7 @@ function renderCalendar(main,banner){
     const now=new Date();const nowMin=now.getHours()*60+now.getMinutes();
     const cols=days.map(d=>{
       const wd=fromIso(d).getDay(),hr=Ctx.data.hours[wd];
-      const fx=Ctx.data.fixed.filter(f=>+f.wd===wd&&f.title).map(f=>{const s=Math.max(toMin(f.time),H0*60);return {f,s,e:s+(+f.dur||60)}});
+      const fx=fixos().filter(f=>+f.wd===wd&&f.title).map(f=>{const s=Math.max(toMin(f.time),H0*60);return {f,s,e:s+(+f.dur||60)}});
       const evs=layoutDay(calItems(d).plan.filter(t=>t.planned_time).map(t=>{const s=Math.max(toMin(t.planned_time),H0*60);return {t,s,e:s+Math.max(t.estimated_duration||30,20)}}).concat(fx).concat(GCal.dia(d).map(g=>{const s=Math.max(toMin(g.ini),H0*60);return {g,s,e:Math.max(s+g.dur,s+20)}})));
       const yOf=m=>(Math.min(Math.max(m,H0*60),H1*60)-H0*60)/60*48;
       const off=!hr.on?`<div class="off" style="top:0;height:100%"></div>`:`<div class="off" style="top:0;height:${yOf(toMin(hr.start))}px"></div><div class="off" style="top:${yOf(toMin(hr.end))}px;bottom:0"></div>`;
@@ -1501,7 +1511,7 @@ function renderLeverage(main,banner){
   }
   const thisWeek=Store.all().filter(t=>t.planned_date&&t.planned_date>=ws&&t.planned_date<=we);
   const plan={E:0,O:0,A:0,C:0,N:0};thisWeek.forEach(t=>{plan[t.type||'N']+=t.estimated_duration||30});
-  Ctx.data.fixed.forEach(f=>{if(f.title)plan[f.type||'N']+=(+f.dur||60)});
+  fixos().forEach(f=>{if(f.title)plan[f.type||'N']+=(+f.dur||60)});gcalTrabalho(semanaDe(ws)).forEach(e=>{plan[e.type]+=e.dur});
   const maxPF=Math.max(1,...TKN.map(k=>Math.max(plan[k],wt.m[k])));
   const pf=k=>`<div class="bar-row"><span class="nm"><span class="dot d${k}"></span>${k==='N'?'Sem tipo':TYPES[k]}</span><span style="display:flex;flex-direction:column;gap:3px"><span class="track" title="Planejado"><i style="width:${plan[k]/maxPF*100}%;background:color-mix(in srgb,var(--${k==='N'?'faint':'t'+k}) 35%,transparent)"></i></span><span class="track" title="Feito"><i class="d${k}" style="width:${wt.m[k]/maxPF*100}%"></i></span></span><span class="val">${fmtDur(wt.m[k])||'0'} / ${fmtDur(plan[k])||'0'}</span></div>`;
   const doneWeek=Store.all().filter(t=>isDone(t)&&t.completed_at&&iso(new Date(t.completed_at))>=ws&&iso(new Date(t.completed_at))<=we);
@@ -1975,7 +1985,7 @@ function renderContext(main,banner){
     <section class="card"><h2>Expediente</h2>
       ${[1,2,3,4,5,6,0].map(w=>{const h=c.hours[w];return `<div class="crow hour"><label><input type="checkbox" id="ctx-hon-${w}" data-ctx-hour="${w}" data-k="on" ${h.on?'checked':''}> ${WD[w]}</label><span class="meta-line">${h.on?'':'folga'}</span><input class="inp" type="time" id="ctx-hs-${w}" data-ctx-hour="${w}" data-k="start" value="${h.start}" ${h.on?'':'disabled'} aria-label="Início ${WDL[w]}"><input class="inp" type="time" id="ctx-he-${w}" data-ctx-hour="${w}" data-k="end" value="${h.end}" ${h.on?'':'disabled'} aria-label="Fim ${WDL[w]}"><label><input type="checkbox" id="ctx-hp-${w}" data-ctx-hour="${w}" data-k="prod" ${h.prod?'checked':''} ${h.on?'':'disabled'}> tempo de produção</label></div>`}).join('')}
     </section>
-    <section class="card"><h2>Compromissos fixos</h2><p class="help">Aparecem no calendário toda semana, ocupam a agenda que o Claude usa para planejar e contam no seu tempo.</p>
+    <section class="card"><h2>Compromissos fixos</h2>${GCal.data?'<p class="help"><b>A agenda Google da Core está ligada:</b> os compromissos agora vêm de lá, com a repetição que você definir no Google (semanal, quinzenal, mensal). A lista abaixo fica guardada, mas não vale mais.</p>':'<p class="help">Aparecem no calendário toda semana, ocupam a agenda que o Claude usa para planejar e contam no seu tempo.</p>'}
       ${c.fixed.map((f,i)=>`<div class="crow fixed"><select class="inp" id="ctx-fw-${i}" data-ctx-fixed="${i}" data-k="wd">${wdOpts(f.wd)}</select><input class="inp" type="time" id="ctx-ft-${i}" data-ctx-fixed="${i}" data-k="time" value="${f.time}"><select class="inp" id="ctx-fd-${i}" data-ctx-fixed="${i}" data-k="dur">${DURS.map(m=>`<option value="${m}" ${+f.dur===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select><input class="inp" id="ctx-fn-${i}" data-ctx-fixed="${i}" data-k="title" value="${esc(f.title)}" placeholder="Ex.: 1:1 com liderados"><select class="inp" id="ctx-fy-${i}" data-ctx-fixed="${i}" data-k="type">${typeOpts(f.type)}</select><button class="x" data-act="ctxRmFixed" data-i="${i}" aria-label="Remover compromisso">${svg('x')}</button></div>`).join('')}
       <button class="btn addbtn" data-act="ctxAddFixed">+ Compromisso fixo</button></section>
     <section class="card"><h2>Outras observações para o Claude</h2><textarea class="inp" id="ctx-notes" data-ctx="notes" rows="4" placeholder="Ex.: demandas da Joyce são co-produção; NF e banco são Pessoal.">${esc(c.notes)}</textarea></section>
@@ -2022,6 +2032,7 @@ function renderDetail(){
         <div class="fld"><label for="d-dur">Tempo estimado${sg('estimated_duration')}</label><select class="inp" id="d-dur" data-f="estimated_duration"><option value="">—</option>${DURS.map(m=>`<option value="${m}" ${t.estimated_duration===m?'selected':''}>${fmtDur(m)}</option>`).join('')}</select></div>
         <label class="ext-row" for="d-ext"><input type="checkbox" id="d-ext" data-f="external" ${t.external?'checked':''}><span><b>Avisar prazo no calendário</b>${sg('external')}<small>Mostra o prazo real como aviso vermelho no topo do dia. Use para entregas combinadas com outras pessoas.</small></span></label>
       </div>
+      ${GCal.criados[t.id]?`<p class="meta-line" style="margin:0 0 10px">${GCal.criados[t.id].criado?'Está na sua agenda Google da Core (privado: a equipe vê só “ocupado”). Mudou aqui, muda lá.':'Ligada a um evento que já estava na sua agenda Google.'}</p>`:''}
       ${isDeleg(t)&&!isDone(t)?`<div class="aibar"><span>Acompanhamento · com <b>${esc(quemAcomp(t))}</b>${t.deadline?` · prazo ${fmtDay(t.deadline).toLowerCase()}`:''} · cobrar ${cobrarEm(t)<=today()?'hoje':fmtDay(cobrarEm(t)).toLowerCase()}</span><button data-dact="copiaCob">Copiar cobrança</button><button data-dact="cobrei">Cobrei</button>${t.responsible&&t.responsible.trim()!==EU?'':'<button data-dact="ehMinha" title="Tira do Acompanhamento">É minha</button>'}</div>`:''}
       <div class="insights">${insights(t).map(([c,txt,btn,act])=>`<div class="ins ${c}"><span>${esc(txt)}</span>${btn?`<button data-dact="${act}">${esc(btn)}</button>`:''}</div>`).join('')}</div>
       <div class="grid2">
@@ -2576,6 +2587,7 @@ setInterval(()=>{if(document.visibilityState==='visible')chatRender()},60000);
 /* Linhas especiais da tabela tasks: painel:core (Mentorados), roteiro:<id> e esteira:config (Conteúdos) */
 function routeSpecial(row){
   if(row.id.startsWith('chat:')){Chat.msgs.set(row.id,Object.assign({},row.data,{id:row.id}));chatRender();return}
+  if(row.id==='gcal:criados'){GCal.criados=(row.data&&row.data.mapa)||{};if(ui.sel)renderDetail();return}
   if(row.id==='gcal:agenda'){GCal.data=row.data;if(ui.view==='calendario')renderMain();else if(ui.view==='hoje')renderAll();return}
   if(row.id==='assistente:status'){Chat.status=row.data;chatRender();return}
   if(row.id==='painel:producao'){Producao.data=row.data;Producao.updated=row.updated_at;Producao.cache=null;return}

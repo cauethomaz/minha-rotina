@@ -100,7 +100,7 @@ function ocorrencias(ini, rrule, ate) {
 }
 
 // ---------- monta a lista que o app usa ----------
-export function montar(ics, { email = '', desde, ate }) {
+export function montar(ics, { email = '', desde, ate, pular = new Set() }) {
   const evs = eventos(ics), em = email.toLowerCase();
   const recusado = ev => ev.attendees.some(a => a.valor.toLowerCase().replace(/^mailto:/, '') === em && a.params.PARTSTAT === 'DECLINED');
   const valido = ev => ev.DTSTART && (ev.STATUS || {}).valor !== 'CANCELLED' && (ev.TRANSP || {}).valor !== 'TRANSPARENT' && !recusado(ev);
@@ -120,6 +120,7 @@ export function montar(ics, { email = '', desde, ate }) {
     if (s + durMs < desde || s > ate) return;
     const p = partes(s, TZ), e = partes(s + durMs, TZ);
     const data = `${p.y}-${pad(p.mo)}-${pad(p.d)}`, minIni = p.h * 60 + p.mi;
+    if (ev.UID && pular.has(ev.UID.valor.replace(/@google\.com$/, '').split('_')[0] + '|' + data)) return; // já aparece como demanda
     const minFim = `${e.y}-${pad(e.mo)}-${pad(e.d)}` === data ? e.h * 60 + e.mi : 24 * 60;
     out.push({ id: `${ev.UID ? ev.UID.valor : 'x'}|${s}`.slice(-90), titulo: ev.SUMMARY ? texto(ev.SUMMARY.valor) : '(sem título)',
       data, ini: `${pad(p.h)}:${pad(p.mi)}`, dur: Math.max(15, minFim - minIni) });
@@ -140,14 +141,14 @@ export function montar(ics, { email = '', desde, ate }) {
 }
 
 let ultimo = { json: '', em: 0 };
-export async function sincronizar({ url, email, upsert, log = () => {} }) {
+export async function sincronizar({ url, email, upsert, log = () => {}, pular }) {
   if (!url) return null;
   const r = await fetch(url, { headers: { 'User-Agent': 'minha-rotina' } });
   if (!r.ok) throw new Error(`a agenda do Google respondeu ${r.status}`);
   const ics = await r.text();
   if (!ics.includes('BEGIN:VCALENDAR')) throw new Error('o endereço não devolveu uma agenda (.ics)');
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-  const lista = montar(ics, { email, desde: hoje.getTime() - 864e5, ate: hoje.getTime() + 43 * 864e5 });
+  const lista = montar(ics, { email, pular, desde: hoje.getTime() - 864e5, ate: hoje.getTime() + 43 * 864e5 });
   const json = JSON.stringify(lista);
   // Só regrava quando muda (ou a cada 30 min, para o app saber que está atualizado)
   if (json !== ultimo.json || Date.now() - ultimo.em > 30 * 60000) {
