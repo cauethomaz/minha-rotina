@@ -27,8 +27,8 @@ const C = { n: col('nome'), p: col('produto'), s: col('situacao'), cp: col('resp
 const linhaDe = p => {
   if (/audience 2\.0/i.test(p) && !/scale/i.test(p)) return 'Audience 2.0';
   if (/audience 1\.0/i.test(p)) return 'Audience 1.0';
-  if (/experience 3\.0/i.test(p)) return 'Experience 3.0';
-  if (/experience 2\.0/i.test(p)) return 'Experience 2.0/1.0';
+  // Experience 3.0, 2.0 e 1.0 são um produto só nas visualizações (escolha do Cauê, 21/11/2026)
+  if (/experience/i.test(p)) return 'Experience';
   if (/boost/i.test(p)) return 'Boost 2.0';
   if (/ouro/i.test(p)) return 'Mentoria Ouro';
   return 'Outros';
