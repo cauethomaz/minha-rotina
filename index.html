@@ -107,14 +107,60 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .levstrip{display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--muted);padding:2px 0 14px;flex-wrap:wrap}
 .levstrip .stack{width:160px}
 .levstrip b{color:var(--fg);font-weight:600}
-/* Projetos: mesmos componentes da Alavancagem (card, rhythm, badge, stack) e linhas de demanda das listas */
-.pjc{cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:10px}.pjc:hover{border-color:var(--faint)}
-.pjc .t{display:flex;gap:8px;align-items:center}.pjc .t b{font-family:var(--display);font-size:16px;letter-spacing:-.01em;flex:1;min-width:0}
-.pjc p{margin:0;color:var(--muted);font-size:13px}.pjc .stack i{background:var(--accent)}
-.pjnums{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}.pjnums b{color:var(--fg);font-variant-numeric:tabular-nums}
-.pjnext{border-top:1px dashed var(--line);padding-top:10px;font-size:13px}
-.pjnovo{border-style:dashed;color:var(--muted);align-items:center;justify-content:center;min-height:150px}
-.pjcard-rows .row{padding-left:0;padding-right:0}.pjcard-rows .row:last-child{border-bottom:0}
+.pjv{max-width:1080px;padding-bottom:60px}
+.pjv h2{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:600}
+.pjhero{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin:4px 0 18px}
+.pjh{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;min-width:0}
+.pjbig{font:800 54px/1 var(--display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}.pjbig small{font-size:16px;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:6px}
+.pjweek{display:flex;gap:10px;margin-top:18px;align-items:flex-end}
+.pjwd{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+.pjwd i{width:100%;min-height:4px;border-radius:8px;background:var(--panel2);display:block;transition:height .6s cubic-bezier(.2,.9,.3,1.3)}
+.pjwd.on i{background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 55%,transparent))}.pjwd.hoje{color:var(--fg);font-weight:700}
+.pjmsg{margin-top:14px;font-size:13.5px}.pjmsg b{color:var(--ok)}
+.pjfoco{display:flex;flex-direction:column;gap:10px}
+.pjfx{display:flex;gap:12px;align-items:center;background:var(--panel2);border-radius:14px;padding:12px}
+.pjfx .n{font:800 26px var(--display);min-width:44px;text-align:center}.pjfx span{font-size:13px;color:var(--muted)}.pjfx b{color:var(--fg);display:block;font-size:14px}
+.pjgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.pjpc{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;text-align:left;display:flex;flex-direction:column;gap:14px;transition:transform .15s,box-shadow .15s,border-color .15s;cursor:pointer;min-width:0}
+.pjpc:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--faint)}
+.pjtop{display:flex;gap:16px;align-items:center}
+.pjring{flex:none;position:relative}.pjring svg{transform:rotate(-90deg);display:block}.pjring .v{position:absolute;inset:0;display:grid;place-items:center;font:800 20px var(--display)}
+.pjring circle{fill:none;stroke-width:9}.pjring .bg{stroke:var(--panel2)}.pjring .fg{stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.2,.9,.3,1)}
+.pjpc h3{margin:0;font:700 18px/1.2 var(--display);letter-spacing:-.01em}
+.pjtags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pjtag{font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--panel2);color:var(--muted)}
+.pjtag.p1{background:var(--warn-soft);color:var(--p1)}.pjtag.ok{background:var(--ok-soft);color:var(--ok)}.pjtag.at{background:var(--accent-soft);color:var(--accent)}
+.pjobj{color:var(--muted);font-size:13px;margin:0}
+.pjchips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pjch{background:var(--panel2);border-radius:12px;padding:8px 10px}.pjch b{display:block;font:800 20px var(--display)}.pjch b small{font-size:12px;color:var(--muted)}.pjch span{font-size:11.5px;color:var(--muted)}
+.pjch.r b{color:var(--p1)}.pjch.g b{color:var(--ok)}
+.pjnextb{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 12px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.pjnextb .l{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}.pjnextb .t{font-weight:600;font-size:13.5px}.pjnextb .go{margin-left:auto;font-size:18px;color:var(--accent)}
+.pjnextb.late{background:var(--warn-soft);border-color:color-mix(in srgb,var(--p1) 35%,transparent)}.pjnextb.late .l,.pjnextb.late .go{color:var(--p1)}
+.pjnovo{border:1.5px dashed var(--line);border-radius:18px;display:grid;place-items:center;color:var(--muted);min-height:200px;cursor:pointer}.pjnovo:hover{background:var(--panel2)}
+.pjareas{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;align-items:center;font-size:12.5px;color:var(--muted)}
+.pjdh{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px}
+.pjdh h1{margin:0}.pjdh .pjring .v{font-size:32px}
+.pjsteps{display:flex;gap:6px;margin-top:14px}.pjsteps i{flex:1;height:8px;border-radius:9px;background:var(--panel2)}.pjsteps i.on{background:var(--ok)}
+.pjacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pjnow{margin:18px 0;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 22%,var(--panel)),var(--panel));border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:20px;padding:20px;display:flex;gap:16px;align-items:center}
+.pjnow .l{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.pjnow .t{font:700 20px/1.25 var(--display);margin-top:4px;cursor:pointer}.pjnow .m{color:var(--muted);font-size:13px;margin-top:4px}
+.pjdone{margin-left:auto;flex:none;background:var(--ok);color:#fff;border-radius:14px;padding:14px 18px;font-weight:800;font-size:15px;box-shadow:0 8px 24px color-mix(in srgb,var(--ok) 35%,transparent)}.pjdone:active{transform:scale(.96)}
+.pjcols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pjsec{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;min-width:0}
+.pjtk{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.pjtk:last-child{border:0}
+.pjck{width:22px;height:22px;border-radius:7px;border:2px solid var(--faint);flex:none;display:grid;place-items:center;transition:all .2s;color:#fff;font-weight:800;font-size:13px}
+.pjck:hover{border-color:var(--ok);background:var(--ok-soft)}.pjtk.feito .pjck{background:var(--ok);border-color:var(--ok)}
+.pjtk .tt{flex:1;min-width:0;font-size:13.5px;cursor:pointer}.pjtk .tt:hover{color:var(--accent)}.pjtk.feito .tt{color:var(--muted);text-decoration:line-through}
+.pjtk small{display:block;color:var(--muted);font-size:11.5px;text-decoration:none}.pjtk small.late{color:var(--p1)}
+.pjty{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px}
+.pjty.E{background:var(--tE-soft);color:var(--tE)}.pjty.O{background:var(--tO-soft);color:var(--tO)}.pjty.A{background:var(--tA-soft);color:var(--tA)}.pjty.C{background:var(--tC-soft);color:var(--tC)}
+.pjwho{font-size:11.5px;background:var(--panel2);border-radius:999px;padding:2px 8px;color:var(--muted)}
+#pjcf{position:fixed;inset:0;pointer-events:none;z-index:90}
+.pjcel{position:fixed;left:50%;top:22px;transform:translateX(-50%) translateY(-30px);opacity:0;background:var(--ok);color:#fff;padding:12px 18px;border-radius:14px;font-weight:700;transition:all .35s cubic-bezier(.2,.9,.3,1.3);z-index:91;pointer-events:none;box-shadow:var(--shadow)}
+.pjcel.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:900px){.pjhero,.pjcols{grid-template-columns:1fr}.pjdh{grid-template-columns:1fr;justify-items:center;text-align:center}.pjnow{flex-direction:column;align-items:flex-start}.pjdone{margin-left:0}}
 .levstrip .warn{color:var(--p1)}
 
 .capture{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:18px}
@@ -1522,46 +1568,74 @@ function pjCalc(n){
   const ult=done.map(t=>(t.completed_at||'').slice(0,10)).sort().pop()||'';
   const ativo=(ult&&dd(ult,t0)<=10)||fut.some(t=>dd(t0,t.planned_date)<=7);
   const status=late.length?['Atenção','at']:open.length&&!ativo?['Parado','']:!open.length&&done.length?['Sem pendências','ok']:['Em ritmo','ok'];
-  return {all,done:done.sort((a,b)=>(b.completed_at||'').localeCompare(a.completed_at||'')),open,mine,deleg,late,p1,lateF,
+  const ws=iso(startOfWeek(new Date())),sem=done.filter(t=>t.completed_at&&iso(new Date(t.completed_at))>=ws).length;
+  const ord=[...mine].sort((a,b)=>(lateF(b)-lateF(a))||((a.priority||9)-(b.priority||9))||((a.planned_date||'9')+(a.planned_time||'')).localeCompare((b.planned_date||'9')+(b.planned_time||'')));
+  return {sem,ord,all,done:done.sort((a,b)=>(b.completed_at||'').localeCompare(a.completed_at||'')),open,mine,deleg,late,p1,lateF,
     pct:all.length?Math.round(done.length/all.length*100):0,next:fut[0]||late[0]||mine[0],status};
 }
 const pjQuando=(t,lateF)=>{const d=t.planned_date||t.deadline;if(!d)return 'sem data';const s=fmtDay(d)+(t.planned_time&&t.planned_date?' · '+t.planned_time:'');return lateF&&lateF(t)?'atrasada · '+s:s};
-const pjBadge=c=>`<span class="badge ${c.status[1]==='at'?'mid':c.status[1]==='ok'?'lead':'op'}">${c.status[0]}</span>`;
+const pjCor=c=>c.late.length?'var(--p1)':c.pct>=60?'var(--ok)':'var(--accent)';
+const pjSt=c=>c.late.length?['Atenção','at']:c.sem||c.status[0]==='Em ritmo'?['Em ritmo','ok']:!c.open.length?['Sem pendências','ok']:['Parado',''];
+// Anel: começa no último % mostrado deste projeto e anima até o atual (na primeira vez, de 0)
+function pjRing(n,pct,size,col){ui.pjPct=ui.pjPct||{};const de=ui.pjPct[n]==null?0:ui.pjPct[n];ui.pjPct[n]=pct;
+  const r=size/2-7,c=2*Math.PI*r;return `<div class="pjring" style="width:${size}px;height:${size}px"><svg width="${size}" height="${size}"><circle class="bg" cx="${size/2}" cy="${size/2}" r="${r}"/><circle class="fg" cx="${size/2}" cy="${size/2}" r="${r}" stroke="${col}" stroke-dasharray="${c}" style="stroke-dashoffset:${c*(1-de/100)}" data-off="${c*(1-pct/100)}"/></svg><span class="v">${pct}%</span></div>`}
+function pjAnimar(){requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll('.pjring .fg').forEach(e=>e.style.strokeDashoffset=e.dataset.off);document.querySelectorAll('.pjwd i').forEach(e=>e.style.height=e.dataset.h)}))}
 function renderProjetos(main,banner){
   main.dataset.view='projetos';
   const L=pjAtivos(),cs=L.map(pjCalc),areas=Ctx.data.projects.filter(n=>!L.includes(n));
   const sum=k=>cs.reduce((a,c)=>a+c[k].length,0);
-  main.innerHTML=`<header class="mhead"><div><h1>Projetos</h1><div class="sub">O que cada projeto precisa entregar e em que pé está</div></div><div class="grow"></div><button class="btn" data-act="pjNovo">+ Novo projeto</button></header>${banner}
-  <div class="lev">
-    <section class="card wide"><h2>Resumo</h2><div class="rhythm"><div><b>${L.length}</b><span>projetos ativos</span></div><div><b style="color:var(--p1)">${sum('p1')}</b><span>P1 abertas</span></div><div><b style="color:${sum('late')?'var(--p1)':'inherit'}">${sum('late')}</b><span>atrasadas</span></div><div><b>${sum('deleg')}</b><span>no Acompanhamento</span></div></div></section>
-    ${L.map((n,k)=>{const c=cs[k],i=pjInfo(n),nx=c.next;
-    return `<section class="card pjc" data-act="pjAbrir" data-i="${Ctx.data.projects.indexOf(n)}" role="button" tabindex="0">
-      <div class="t"><b>${esc(n)}</b><span class="pri pri${i.prio||2}">P${i.prio||2}</span>${pjBadge(c)}</div>
-      <p>${esc(i.obj||'Sem objetivo escrito')}</p>
-      <div class="stack"><i style="width:${c.pct}%"></i></div>
-      <div class="pjnums"><span><b>${c.pct}%</b> feito (${c.done.length} de ${c.all.length})</span><span><b class="pri1">${c.p1.length}</b> P1</span><span><b>${c.late.length}</b> atrasadas</span><span><b>${c.deleg.length}</b> acompanhar</span></div>
-      <div class="pjnext"><span class="meta-line">Próxima</span><br>${nx?`${esc(nx.title)} <span class="meta-line">· ${pjQuando(nx,c.lateF)}</span>`:'<span class="meta-line">nenhuma demanda aberta</span>'}</div></section>`}).join('')}
-    <button class="card pjc pjnovo" data-act="pjNovo">+ Novo projeto</button>
-    ${areas.length?`<section class="card wide"><h2>Áreas</h2><p class="meta-line" style="margin:-4px 0 10px">Continuam como hoje, sem objetivo nem etapas.</p><div class="tags">${areas.map(n=>`<button class="chip" data-view-go="proj:${esc(n)}">${esc(n)} · ${Store.all().filter(t=>t.project===n&&!isDone(t)).length}</button>`).join('')}</div></section>`:''}
-  </div>`;
+  const ws=startOfWeek(new Date()),td=today(),dias=[0,1,2,3,4].map(k=>iso(addDays(ws,k)));
+  const feitas=Store.all().filter(t=>isDone(t)&&t.completed_at).map(t=>iso(new Date(t.completed_at))).filter(d=>d>=dias[0]);
+  const porDia=dias.map(d=>feitas.filter(x=>x===d).length),mx=Math.max(1,...porDia),nSem=feitas.length;
+  const animarSemana=ui.pjSemanaVista!==td;ui.pjSemanaVista=td;
+  main.innerHTML=`<header class="mhead"><div><h1>Projetos</h1><div class="sub">${esc(fmtDay(td,true))}</div></div><div class="grow"></div><button class="btn" data-act="pjNovo">+ Novo projeto</button></header>${banner}
+  <div class="pjv"><div class="pjhero">
+    <div class="pjh"><h2>Sua semana</h2><div class="pjbig">${nSem}<small>demanda${nSem===1?'':'s'} concluída${nSem===1?'':'s'}</small></div>
+      <div class="pjweek">${porDia.map((n,i)=>{const h=Math.max(4,Math.round(n/mx*52))+'px';return `<div class="pjwd ${n?'on':''} ${dias[i]===td?'hoje':''}"><i data-h="${h}" style="height:${animarSemana?'4px':h}"></i>${WD[(i+1)%7]}<b>${n||''}</b></div>`}).join('')}</div>
+      <div class="pjmsg">${nSem>=10?`🔥 <b>Semana forte.</b> Mais uma e você chega a ${nSem+1}.`:nSem?`<b>${nSem} feita${nSem>1?'s':''}.</b> Cada demanda concluída enche o anel do projeto.`:'Conclua a primeira da semana e o gráfico começa a subir.'}</div></div>
+    <div class="pjh pjfoco"><h2>Onde olhar agora</h2>
+      <div class="pjfx"><span class="n" style="color:var(--p1)">${sum('p1')}</span><div><b>P1 abertas</b><span>nos ${L.length} projetos</span></div></div>
+      <div class="pjfx"><span class="n" style="color:var(--accent)">${sum('late')}</span><div><b>Atrasadas</b><span>destravar primeiro</span></div></div>
+      <div class="pjfx"><span class="n">${sum('deleg')}</span><div><b>Com outras pessoas</b><span>no Acompanhamento</span></div></div></div></div>
+  <div class="pjgrid">${L.map((n,k)=>{const c=cs[k],i=pjInfo(n),s=pjSt(c),nx=c.ord[0];
+    return `<div class="pjpc" data-act="pjAbrir" data-i="${Ctx.data.projects.indexOf(n)}" role="button" tabindex="0">
+      <div class="pjtop">${pjRing(n,c.pct,84,pjCor(c))}<div style="min-width:0"><h3>${esc(n)}</h3><div class="pjtags"><span class="pjtag ${+i.prio===1?'p1':''}">P${i.prio||2}</span><span class="pjtag ${s[1]}">${s[0]}</span>${c.sem?`<span class="pjtag ok">+${c.sem} esta semana</span>`:''}</div></div></div>
+      <p class="pjobj">${esc(i.obj||'Sem objetivo escrito')}</p>
+      <div class="pjchips"><div class="pjch g"><b>${c.done.length}<small>/${c.all.length}</small></b><span>feitas</span></div><div class="pjch ${c.p1.length?'r':''}"><b>${c.p1.length}</b><span>P1</span></div><div class="pjch ${c.late.length?'r':''}"><b>${c.late.length}</b><span>atrasadas</span></div></div>
+      ${nx?`<div class="pjnextb ${c.lateF(nx)?'late':''}"><div><div class="l">${c.lateF(nx)?'Destravar':'Próximo passo'}</div><div class="t">${esc(nx.title)}</div></div><span class="go">→</span></div>`:'<div class="pjnextb"><div><div class="l">🎉 Tudo em dia</div><div class="t">Nenhuma demanda aberta</div></div></div>'}
+    </div>`}).join('')}<div class="pjnovo" data-act="pjNovo" role="button" tabindex="0">+ Novo projeto</div></div>
+  ${areas.length?`<div class="pjareas">Áreas, que continuam como hoje: ${areas.map(n=>`<button class="chip" data-view-go="proj:${esc(n)}">${esc(n)} · ${Store.all().filter(t=>t.project===n&&!isDone(t)).length}</button>`).join('')}</div>`:''}</div>`;
+  pjAnimar();
 }
+function pjTk(t,lateF){const d=isDone(t);
+  return `<div class="pjtk ${d?'feito':''}" data-id="${t.id}"><button class="pjck" data-act="toggle" aria-label="${d?'Reabrir':'Concluir'}: ${esc(t.title)}">${d?'✓':''}</button><div class="tt" data-act="open">${esc(t.title)||'Sem título'}<small class="${!d&&lateF(t)?'late':''}">${d?'feito '+fmtDay(iso(new Date(t.completed_at||Date.now()))).toLowerCase():pjQuando(t,lateF)}</small></div>${isDeleg(t)&&t.responsible&&t.responsible!==EU?`<span class="pjwho">${esc(t.responsible)}</span>`:''}${t.type?`<span class="pjty ${t.type}">${t.type}</span>`:''}${t.priority?`<span class="pri pri${t.priority}">P${t.priority}</span>`:''}</div>`}
 function renderProjeto(main,banner,i){
   const n=Ctx.data.projects[+i],info=n&&pjInfo(n);
   if(!info){ui.view='projetos';return renderProjetos(main,banner)}
   main.dataset.view='pj:'+i;
-  const c=pjCalc(n),agora=c.mine.filter(t=>t.priority===1||c.lateF(t)),prox=c.mine.filter(t=>!agora.includes(t));
+  const c=pjCalc(n),s=pjSt(c),nx=c.ord[0],agora=c.ord.filter(t=>t!==nx&&(t.priority===1||c.lateF(t))),prox=c.ord.filter(t=>t!==nx&&!(t.priority===1||c.lateF(t)));
   const feito=ui.pjFeito?c.done:c.done.slice(0,8);
-  const sec=(t,arr,extra='')=>`<section class="card"><h2>${t} · ${arr.length}</h2><div class="pjcard-rows">${arr.map(rowHtml).join('')||'<p class="meta-line">nada</p>'}</div>${extra}</section>`;
-  main.innerHTML=`<header class="mhead"><div><h1>${esc(n)}</h1><div class="sub">${esc(info.obj||'Sem objetivo escrito')}</div></div><div class="grow"></div><button class="btn" data-view-go="projetos">‹ Projetos</button></header>${banner}
-  <div class="lev">
-    <section class="card wide"><div class="verdict"><span class="badge ${c.status[1]==='at'?'mid':c.status[1]==='ok'?'lead':'op'}">${c.status[0]}</span><div style="flex:1;min-width:240px">
-      <div class="stack" style="max-width:420px"><i style="width:${c.pct}%;background:var(--accent)"></i></div>
-      <div class="pjnums" style="margin-top:8px"><span><b>${c.pct}%</b> feito (${c.done.length} de ${c.all.length})</span><span><b class="pri1">${c.p1.length}</b> P1</span><span><b>${c.late.length}</b> atrasadas</span><span><span class="pri pri${info.prio||2}">P${info.prio||2}</span> prioridade do projeto</span></div></div>
-      <div class="tags"><button class="btn pri-b" data-act="pjAdd" data-i="${i}">+ Demanda</button><button class="btn" data-act="pjSugerir" data-i="${i}">✦ Sugestões</button><button class="btn" data-act="pjEditar" data-i="${i}">Editar</button><button class="btn" data-act="pjArquivar" data-i="${i}">Arquivar</button></div></div></section>
-    ${sec('Agora · P1 e atrasadas',agora)}${sec('Próximas',prox)}${sec('Acompanhar',c.deleg)}
-    ${sec('Feito',feito,c.done.length>feito.length?`<button class="btn" style="margin-top:8px" data-act="pjMaisFeito">Ver todas (${c.done.length})</button>`:'')}
-  </div>`;
+  const sec=(t,arr,vazio,extra='')=>`<div class="pjsec"><h2>${t} · ${arr.length}</h2>${arr.map(x=>pjTk(x,c.lateF)).join('')||`<span class="meta-line">${vazio}</span>`}${extra}</div>`;
+  main.innerHTML=`<header class="mhead"><div><button class="btn" data-view-go="projetos">‹ Projetos</button></div></header>${banner}
+  <div class="pjv"><div class="pjdh">${pjRing(n,c.pct,132,pjCor(c))}<div style="min-width:0"><h1>${esc(n)}</h1><div class="sub">${esc(info.obj||'Sem objetivo escrito')}</div>
+    <div class="pjtags" style="margin-top:10px"><span class="pjtag ${+info.prio===1?'p1':''}">P${info.prio||2}</span><span class="pjtag ${s[1]}">${s[0]}</span><span class="pjtag ok">${c.done.length} de ${c.all.length} feitas</span>${c.sem?`<span class="pjtag ok">+${c.sem} esta semana</span>`:''}</div>
+    <div class="pjsteps">${c.all.slice().sort((a,b)=>isDone(b)-isDone(a)).map(t=>`<i class="${isDone(t)?'on':''}"></i>`).join('')}</div>
+    <div class="pjacts"><button class="btn pri-b" data-act="pjAdd" data-i="${i}">+ Demanda</button><button class="btn" data-act="pjSugerir" data-i="${i}">✦ Sugestões</button><button class="btn" data-act="pjEditar" data-i="${i}">Editar</button><button class="btn" data-act="pjArquivar" data-i="${i}">Arquivar</button></div></div></div>
+  ${nx?`<div class="pjnow" data-id="${nx.id}"><div style="min-width:0"><div class="l">${c.lateF(nx)?'⚡ Destrave isto primeiro':'⚡ Faça agora'}</div><div class="t" data-act="open">${esc(nx.title)}</div><div class="m">${nx.type?TYPES[nx.type]+' · ':''}${fmtDur(nx.estimated_duration||30)}${nx.planned_date?' · '+fmtDay(nx.planned_date).toLowerCase():''}${c.lateF(nx)?' · atrasada':''}</div></div><button class="pjdone" data-act="toggle">✓ Concluí</button></div>`
+     :`<div class="pjnow"><div><div class="l">🎉 Tudo em dia</div><div class="t">Nenhuma demanda sua aberta neste projeto.</div></div></div>`}
+  <div class="pjcols">${sec('Agora · P1 e atrasadas',agora,'nada aqui 🙌')}${sec('Próximas',prox,'nada')}${sec('Com outras pessoas',c.deleg,'nada')}
+    ${sec('Feito 🏆',feito,'a primeira vitória está a um clique',c.done.length>feito.length?`<button class="btn" style="margin-top:8px" data-act="pjMaisFeito">Ver todas (${c.done.length})</button>`:'')}</div></div>`;
+  pjAnimar();
 }
+// Comemoração ao concluir pela tela de projeto: confete + aviso com o novo %
+function pjCelebrar(id){const t=Store.get(id);if(!t||!isDone(t)||!t.project||!pjInfo(t.project))return;
+  const c=pjCalc(t.project);let el=document.querySelector('.pjcel');if(!el){el=document.createElement('div');el.className='pjcel';document.body.appendChild(el)}
+  el.textContent=c.mine.length?`Boa! ${t.project} agora está em ${c.pct}%`:`🎉 ${t.project}: nada seu pendente!`;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600);
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  let cv=document.getElementById('pjcf');if(!cv){cv=document.createElement('canvas');cv.id='pjcf';document.body.appendChild(cv)}
+  const x=cv.getContext('2d');cv.width=innerWidth;cv.height=innerHeight;
+  const cs=['#f5b638','#46c98d','#4d86e8','#cf5fae','#ff6a63'],ps=Array.from({length:110},()=>({x:innerWidth/2,y:innerHeight*.4,vx:(Math.random()-.5)*14,vy:-Math.random()*13-4,s:Math.random()*6+4,c:cs[Math.random()*5|0],r:Math.random()*6}));
+  let f=0;(function tick(){x.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.vy+=.45;p.x+=p.vx;p.y+=p.vy;p.r+=.2;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);x.restore()});if(++f<90)requestAnimationFrame(tick);else x.clearRect(0,0,cv.width,cv.height)})()}
 function pjAcao(act,el){
   const c=Ctx.data;c.projInfo=c.projInfo||{};const n=c.projects[+el.dataset.i];
   if(act==='pjAbrir'){ui.view='pj:'+el.dataset.i;ui.pjFeito=false;saveUi();return renderAll()}
@@ -2179,7 +2253,7 @@ main.addEventListener('click',e=>{
   if(ui.calDl&&!e.target.closest('.dlpop,[data-act="calDl"]')){ui.calDl=null;if(!e.target.closest('[data-act]'))return renderMain()}
   const el=e.target.closest('[data-act]');if(!el)return;
   const act=el.dataset.act;const id=el.dataset.id||(el.closest('[data-id]')||{}).dataset?.id;
-  if(act==='toggle')return toggleDone(id);
+  if(act==='toggle'){const era=Store.get(id)&&isDone(Store.get(id));toggleDone(id);if(!era&&ui.view.startsWith('pj:'))pjCelebrar(id);return}
   if(act==='estAba'){ui.estAba=el.dataset.aba;saveUi();return renderMain()}
   if(act==='estAbrir'){ui.estOpen=el.dataset.id;ui.estCfg=false;ui.estNota=false;ui.estFb=null;return renderMain()}
   if(act==='estCfg'){ui.estCfg=true;ui.estOpen=null;return renderMain()}
