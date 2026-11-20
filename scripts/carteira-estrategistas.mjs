@@ -49,6 +49,7 @@ for (const r of rows.slice(1)) {
 }
 const ativos = rows.slice(1).filter(r => (r[C.s] || '').trim().toLowerCase() === 'ativo');
 const base = {}, cart = {};
+let copyAssumido = 0;
 for (const r of ativos) {
   const produto = (r[C.p] || '').trim() || 'Sem produto', linha = linhaDe(produto);
   // Audience 2.0 com roteiros: o CP marca com "Roteiros" no nome do mentorado (ex.: "Fulano - Roteiros"); pesa como Audience 1.0
@@ -59,6 +60,9 @@ for (const r of ativos) {
   const papeis = {};
   if (m) papeis[m] = 'Só mentor';
   if (c) papeis[c] = papeis[c] ? 'Mentor e copy' : 'Só copy';
+  // Copy "A definir" ou vazio num produto com roteiro: quem faz os roteiros é o próprio mentor, então ele conta como mentor e copy
+  // (o Cauê decidiu em 21/11/2026). No Audience 2.0 sem roteiros e no Boost não há roteiro, então nada muda.
+  if (m && !c && !['Audience 2.0', 'Boost 2.0'].includes(linhaCart)) { papeis[m] = 'Mentor e copy'; copyAssumido++; }
   for (const [estrategista, funcao] of Object.entries(papeis)) {
     const k = [estrategista, funcao, linhaCart].join('|');
     (cart[k] ??= { estrategista, funcao, linha: linhaCart, mentorados: 0 }).mentorados++;
@@ -89,6 +93,7 @@ for (const r of rows.slice(1).filter(r => r.length > 3)) {
 const self = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
 const meta = [{ label: 'carteira.mjs', value: self, type: 'code', lang: 'javascript' },
   { label: 'Entrada', value: path.basename(csvPath) + ' (Controle de Produção → Clientes → Exportar CSV)' },
+  { label: 'Copy assumido pelo mentor', value: String(copyAssumido) },
   ...(redArqs.length ? [{ label: 'Redistribuição aplicada', value: redArqs.join(', ') + ` · ${trocou} trocas de responsável ainda não lançadas no CP` }] : [])];
 const ord = (a, b) => Object.values(a).join('|').localeCompare(Object.values(b).join('|'));
 fs.writeFileSync(path.join(outDir, 'base.json'), JSON.stringify({ rows: Object.values(base).sort(ord), meta }));
@@ -96,4 +101,4 @@ fs.writeFileSync(path.join(outDir, 'carteira.json'), JSON.stringify({ rows: Obje
 fs.writeFileSync(path.join(outDir, 'entradas.json'), JSON.stringify({ rows: Object.values(ent).sort(ord), meta }));
 fs.writeFileSync(path.join(outDir, 'semanas.json'), JSON.stringify({ base: baseCsv, rows: Object.values(sem).sort((a, b) => a.semana.localeCompare(b.semana)) }));
 console.log('ativos', ativos.length, 'produtos', Object.keys(base).length, 'linhas carteira', Object.keys(cart).length,
-  'estrategistas', new Set(Object.values(cart).map(x => x.estrategista)).size, 'trocas', trocou);
+  'estrategistas', new Set(Object.values(cart).map(x => x.estrategista)).size, 'trocas', trocou, 'copy assumido pelo mentor', copyAssumido);
