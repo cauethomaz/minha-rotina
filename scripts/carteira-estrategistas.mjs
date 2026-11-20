@@ -5,6 +5,9 @@
 // Alimenta o dashboard "Carteira dos Estrategistas" (https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr).
 //   node scripts/carteira-estrategistas.mjs <clientes_AAAA-MM-DD.csv> [pasta de saída]
 //   → grava base.json, carteira.json e entradas.json (padrão: ~/.claude/producao/carteira/)
+// Redistribuições combinadas e ainda não lançadas no CP: cada ~/.claude/producao/redistribuicoes/*.json
+// ({efetiva_em, trocas: [{mentorado, mentor_atual, copy_atual, novo_mentor, novo_copy}]}) troca o responsável
+// só onde o CSV ainda mostra o responsável antigo. Depois que o CP for atualizado, o arquivo não muda mais nada.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -20,7 +23,7 @@ for (let i = 0; i < txt.length; i++) { const ch = txt[i];
 if (f || row.length) { row.push(f); rows.push(row) }
 const H = rows[0].map(h => h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
 const col = n => H.findIndex(h => h.startsWith(n));
-const C = { p: col('produto'), s: col('situacao'), cp: col('responsavel copy'), m: col('responsavel mentor'), d: col('data de entrada') };
+const C = { n: col('nome'), p: col('produto'), s: col('situacao'), cp: col('responsavel copy'), m: col('responsavel mentor'), d: col('data de entrada') };
 const linhaDe = p => {
   if (/audience 2\.0/i.test(p) && !/scale/i.test(p)) return 'Audience 2.0';
   if (/audience 1\.0/i.test(p)) return 'Audience 1.0';
@@ -31,6 +34,19 @@ const linhaDe = p => {
   return 'Outros';
 };
 const pessoa = v => { v = (v || '').trim(); return v && v.toLowerCase() !== 'a definir' ? v : null; };
+const norm = v => (v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const redDir = path.join(os.homedir(), '.claude', 'producao', 'redistribuicoes');
+const trocas = new Map(); const redArqs = [];
+for (const a of fs.existsSync(redDir) ? fs.readdirSync(redDir).filter(x => x.endsWith('.json')).sort() : []) {
+  const j = JSON.parse(fs.readFileSync(path.join(redDir, a), 'utf8')); redArqs.push(a);
+  for (const t of j.trocas || []) trocas.set(norm(t.mentorado), t);
+}
+let trocou = 0;
+for (const r of rows.slice(1)) {
+  const t = trocas.get(norm(r[C.n])); if (!t) continue;
+  if (t.novo_mentor && norm(r[C.m]) === norm(t.mentor_atual) && norm(t.novo_mentor) !== norm(r[C.m])) { r[C.m] = t.novo_mentor; trocou++; }
+  if (t.novo_copy && norm(r[C.cp]) === norm(t.copy_atual) && norm(t.novo_copy) !== norm(r[C.cp])) { r[C.cp] = t.novo_copy; trocou++; }
+}
 const ativos = rows.slice(1).filter(r => (r[C.s] || '').trim().toLowerCase() === 'ativo');
 const base = {}, cart = {};
 for (const r of ativos) {
@@ -58,10 +74,11 @@ for (const r of rows.slice(1).filter(r => r.length > 3)) {
 }
 const self = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
 const meta = [{ label: 'carteira.mjs', value: self, type: 'code', lang: 'javascript' },
-  { label: 'Entrada', value: path.basename(csvPath) + ' (Controle de Produção → Clientes → Exportar CSV)' }];
+  { label: 'Entrada', value: path.basename(csvPath) + ' (Controle de Produção → Clientes → Exportar CSV)' },
+  ...(redArqs.length ? [{ label: 'Redistribuição aplicada', value: redArqs.join(', ') + ` · ${trocou} trocas de responsável ainda não lançadas no CP` }] : [])];
 const ord = (a, b) => Object.values(a).join('|').localeCompare(Object.values(b).join('|'));
 fs.writeFileSync(path.join(outDir, 'base.json'), JSON.stringify({ rows: Object.values(base).sort(ord), meta }));
 fs.writeFileSync(path.join(outDir, 'carteira.json'), JSON.stringify({ rows: Object.values(cart).sort(ord), meta }));
 fs.writeFileSync(path.join(outDir, 'entradas.json'), JSON.stringify({ rows: Object.values(ent).sort(ord), meta }));
 console.log('ativos', ativos.length, 'produtos', Object.keys(base).length, 'linhas carteira', Object.keys(cart).length,
-  'estrategistas', new Set(Object.values(cart).map(x => x.estrategista)).size);
+  'estrategistas', new Set(Object.values(cart).map(x => x.estrategista)).size, 'trocas', trocou);

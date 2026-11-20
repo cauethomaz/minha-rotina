@@ -1588,7 +1588,7 @@ function renderProjetos(main,banner){
   const feitas=Store.all().filter(t=>isDone(t)&&t.completed_at).map(t=>iso(new Date(t.completed_at))).filter(d=>d>=dias[0]);
   const porDia=dias.map(d=>feitas.filter(x=>x===d).length),mx=Math.max(1,...porDia),nSem=feitas.length;
   const animarSemana=ui.pjSemanaVista!==td;ui.pjSemanaVista=td;
-  main.innerHTML=`<header class="mhead"><div><h1>Projetos</h1><div class="sub">${esc(fmtDay(td,true))}</div></div><div class="grow"></div><button class="btn" data-act="pjNovo">+ Novo projeto</button></header>${banner}
+  main.innerHTML=`<header class="mhead"><div><h1>Projetos</h1><div class="sub">${(d=>`${WDL[d.getDay()]}, ${d.getDate()} de ${MON[d.getMonth()]}`)(new Date())}</div></div><div class="grow"></div><button class="btn" data-act="pjNovo">+ Novo projeto</button></header>${banner}
   <div class="pjv"><div class="pjhero">
     <div class="pjh"><h2>Sua semana</h2><div class="pjbig">${nSem}<small>demanda${nSem===1?'':'s'} concluída${nSem===1?'':'s'}</small></div>
       <div class="pjweek">${porDia.map((n,i)=>{const h=Math.max(4,Math.round(n/mx*52))+'px';return `<div class="pjwd ${n?'on':''} ${dias[i]===td?'hoje':''}"><i data-h="${h}" style="height:${animarSemana?'4px':h}"></i>${WD[(i+1)%7]}<b>${n||''}</b></div>`}).join('')}</div>
