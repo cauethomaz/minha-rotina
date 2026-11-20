@@ -25,7 +25,8 @@ const H = rows[0].map(h => h.trim().toLowerCase().normalize('NFD').replace(/[̀-
 const col = n => H.findIndex(h => h.startsWith(n));
 const C = { n: col('nome'), p: col('produto'), s: col('situacao'), cp: col('responsavel copy'), m: col('responsavel mentor'), d: col('data de entrada') };
 const linhaDe = p => {
-  if (/audience 2\.0/i.test(p) && !/scale/i.test(p)) return 'Audience 2.0';
+  // Core Scale (Audience 2.0 + Sales) conta como Audience 2.0 (escolha do Cauê, 21/11/2026)
+  if (/audience 2\.0/i.test(p)) return 'Audience 2.0';
   if (/audience 1\.0/i.test(p)) return 'Audience 1.0';
   // Experience 3.0, 2.0 e 1.0 são um produto só nas visualizações (escolha do Cauê, 21/11/2026)
   if (/experience/i.test(p)) return 'Experience';
