@@ -890,8 +890,8 @@ window.addEventListener('pagehide',()=>Store.flushAll());
 
 /* ---------- UI state ---------- */
 const ui={prodFiltro:'',estFb:null,estAba:'aprovar',estOpen:null,estCfg:false,estNota:false,collapsed:[],view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
-try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;if(Array.isArray(s.collapsed))ui.collapsed=s.collapsed;if(s.estAba)ui.estAba=s.estAba;if(s.mentAba)ui.mentAba=s.mentAba}catch(e){}
-const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,collapsed:ui.collapsed,estAba:ui.estAba,mentAba:ui.mentAba}))}catch(e){}};
+try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;if(Array.isArray(s.collapsed))ui.collapsed=s.collapsed;if(s.estAba)ui.estAba=s.estAba;if(s.mentAba)ui.mentAba=s.mentAba;if(s.prodAba)ui.prodAba=s.prodAba}catch(e){}
+const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,collapsed:ui.collapsed,estAba:ui.estAba,mentAba:ui.mentAba,prodAba:ui.prodAba}))}catch(e){}};
 const listViews=['inbox','revisar','pdia','psemana','hoje','atrasados','acompanhamento','semana','todas','concluidas'];
 // Delegadas: o responsável não é o Cauê. Saem de Hoje, Semana, Atrasados e da conta de tempo; vivem na aba Acompanhamento.
 const EU='Cauê';
@@ -2007,10 +2007,10 @@ function cardCarteira(){
   const kpi=(n,l,bad)=>`<div class="pkpi ${bad?'bad':''}"><b>${n}</b><span>${l}</span></div>`;
   const selo=u=>`<span class="pselo ${u>=100?'crit':u>=85?'warn':'ok'}">${cnum(u)}%</span>`;
   const rows=ps.slice().sort((a,b)=>a.pct_uso-b.pct_uso||a.estrategista.localeCompare(b.estrategista)).map(x=>`<tr><td>${esc(x.estrategista)}${x.evitar?' <span class="meta-line">(fora da sugestão)</span>':''}</td><td class="r">${x.total}</td><td class="r">${cnum(x.carga)}</td><td class="r">${selo(x.pct_uso)}</td><td class="r">${x.vagas_aud2}</td><td class="r">${x.vagas_rot}</td><td class="r">${x.finalizar_cp??'—'}</td></tr>`);
-  return `<section class="card wide"><h2>Carteira dos estrategistas</h2>
+  return `<section class="card wide"><h2>Quem recebe o próximo mentorado</h2>
     <p class="meta-line" style="margin:-4px 0 10px">Quem recebe o próximo mentorado: menor carga primeiro. Mentor vale ${cnum(M.mentor&&M.mentor['Boost 2.0'])} no Boost, ${cnum(M.mentor&&M.mentor['Audience 2.0'])} no Audience 2.0, ${cnum(M.mentor&&M.mentor['Audience 1.0'])} no Audience 1.0, Ouro e Outros, ${cnum(M.mentor&&M.mentor['Experience 3.0'])} no Experience; ser copy soma ${cnum(M.copy)}. Limite de ${cnum(M.limite)} pontos por pessoa.${(M.evitar||[]).length?` Fora da sugestão por enquanto: ${M.evitar.map(esc).join(', ')}.`:''}</p>
     <div class="pkpis">${top||'<span class="meta-line">Ninguém disponível na sugestão.</span>'}</div>
-    <h3 class="ph3">Capacidade do time</h3>
+    </section><section class="card wide"><h2>Capacidade do time</h2>
     <div class="pkpis">${kpi(cnum(P.pct_uso)+'%',`da capacidade em uso (${cnum(P.carga_time)} de ${cnum(P.cap_time)} pontos)`,P.pct_uso>=100)}${kpi(P.acima??'—','pessoas no limite ou acima',P.acima>0)}${kpi(P.saidas_30d??'—',`finalizações em 30 dias pelo CP (${P.saidas_60d??'—'} em 60)`)}${kpi(P.faltam_hoje??'—','pessoas faltando hoje para caber no limite',P.faltam_hoje>0)}</div>
     ${P.frase_meio?`<p class="meta-line">Com cerca de ${P.ritmo_entradas} mentorados novos por mês, metade com roteiros, ${esc(P.frase_meio)}${P.contratar_mes?`; a falta cresce cerca de ${cnum(P.contratar_mes)} pessoa por mês`:''}.</p>`:''}
     ${tbl([{t:'Estrategista'},{t:'Mentorados',r:1},{t:'Carga',r:1},{t:'Uso do limite',r:1},{t:'Vagas Audience 2.0',r:1},{t:'Vagas com roteiros',r:1},{t:'A finalizar (CP)',r:1}],rows)}
@@ -2019,8 +2019,11 @@ function cardCarteira(){
 }
 function renderProducao(main,banner){
   main.dataset.view='producao';
-  const D=Producao.data;
-  const head=`<header class="mhead"><div><h1>Produção</h1><div class="sub">${D?`Prazos e pontos de atenção · base de ${brData(D.base)} · atualizado ${Producao.updated?fmtStamp(Producao.updated):''}`:'Controle de Produção Core'}</div></div></header>${banner}`;
+  const D=Producao.data,cart=ui.prodAba==='carteiras';
+  const abas=`<div class="seg" role="group" aria-label="Ver" style="margin-top:8px"><button data-act="prodAba" data-aba="atrasados" class="${cart?'':'on'}" aria-pressed="${!cart}">Atrasados</button><button data-act="prodAba" data-aba="carteiras" class="${cart?'on':''}" aria-pressed="${cart}">Carteiras</button></div>`;
+  const sub=cart?`Quem recebe o próximo mentorado e capacidade do time${Carteira.updated?' · atualizado '+fmtStamp(Carteira.updated):''}`:D?`Prazos e pontos de atenção · base de ${brData(D.base)} · atualizado ${Producao.updated?fmtStamp(Producao.updated):''}`:'Controle de Produção Core';
+  const head=`<header class="mhead"><div><h1>Produção</h1><div class="sub">${sub}</div>${abas}</div></header>${banner}`;
+  if(cart){main.innerHTML=head+`<div class="scroll"><div class="painel prod">${cardCarteira()||'<div class="empty"><h2>A carteira ainda não chegou</h2><p>Ela aparece aqui depois da atualização diária do Controle de Produção.</p></div>'}</div></div>`;return}
   if(!D){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O relatório ainda não chegou</h2><p>Ele aparece aqui depois da exportação diária do Controle de Produção.</p></div></div>`;return}
   const todos=D.clientes||[];const [tipo,valor]=(ui.prodFiltro||'').split('|');
   const rows=tipo==='m'?todos.filter(c=>c.m===valor):tipo==='cs'?todos.filter(c=>c.cs===valor):todos;
@@ -2059,7 +2062,6 @@ function renderProducao(main,banner){
       <div class="pkpis">${kpi(v,`ativos com prazo vencido (${pctf(v,a)} dos ${a} ativos)`,1)}${kpi(R.hoje.length,`vencem hoje, ${brData(D.base)}`)}${kpi(R.prox.length,'vencem nos próximos 7 dias')}${kpi(R.pcVenc.length,'pausados e churn com prazo vencido')}${kpi(R.semPrazo.total,`sem prazo (${R.semTudo.length} ativos sem etapa, mentor e prazo)`)}</div>
       <ul class="pachados">${prodAchados(R).map(x=>`<li>${x}</li>`).join('')}</ul></section>
     ${cardDonos(R)}
-    ${!ui.prodFiltro?cardCarteira():''}
     ${!ui.prodFiltro?`<section class="card wide"><h2>Evolução dos ativos vencidos</h2>${sparkVenc(Producao.hist)}</section>`:''}
     <section class="card wide"><h2>Prazos</h2>
       <h3 class="ph3">Tempo de atraso dos ${v} ativos vencidos</h3>${tbl([{t:'Faixa'},{t:''},{t:'Clientes',r:1},{t:'%',r:1}],R.fx.map(x=>`<tr><td>${x.f}</td><td style="width:45%"><span class="pbarra" style="width:${x.n/maxF*100}%"></span></td><td class="r">${x.n}</td><td class="r">${pctf(x.n,v)}</td></tr>`))}
@@ -2276,6 +2278,7 @@ main.addEventListener('click',e=>{
   const act=el.dataset.act;const id=el.dataset.id||(el.closest('[data-id]')||{}).dataset?.id;
   if(act==='toggle'){const era=Store.get(id)&&isDone(Store.get(id));toggleDone(id);if(!era&&ui.view.startsWith('pj:'))pjCelebrar(id);return}
   if(act==='estAba'){ui.estAba=el.dataset.aba;saveUi();return renderMain()}
+  if(act==='prodAba'){ui.prodAba=el.dataset.aba;saveUi();return renderMain()}
   if(act==='estAbrir'){ui.estOpen=el.dataset.id;ui.estCfg=false;ui.estNota=false;ui.estFb=null;return renderMain()}
   if(act==='estCfg'){ui.estCfg=true;ui.estOpen=null;return renderMain()}
   if(act==='estFechar'){ui.estOpen=null;ui.estCfg=false;ui.estNota=false;ui.estFb=null;return renderMain()}
