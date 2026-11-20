@@ -2114,6 +2114,15 @@ function cardLogica(C){
       <p class="meta-line">“Cabem” é quantos mentorados daquele produto, sozinhos, enchem uma carteira de ${LIM} pontos. Numa carteira mista os pontos se somam: por exemplo, 20 Audience 2.0 (20) + 6 Experience só mentor (12) + 4 Experience como mentor e copy (20) = 52 pontos, sobram ${LIM-52}.</p></div></div>
     <p class="meta-line">Uso do limite: verde até 85%, amarelo de 85% a 100%, vermelho acima. Sugestão de quem recebe o próximo: menor carga primeiro, entre quem tem 20 ou mais mentorados${(M.incluir||[]).length?` e mais ${M.incluir.map(esc).join(', ')}`:''}.</p></section>`;
 }
+/* Mentorados com copy "A definir" num produto com roteiro: os pontos de copy foram para o mentor. Lista para conferir no CP. */
+function cardCopyAssumido(C){
+  const L=C.copy_assumido;if(!L||!L.length)return '';
+  const porM=contar(L,x=>x.mentor);
+  return `<section class="card wide"><h2>Copy “A definir” contado para o mentor · ${L.length}</h2>
+    <p class="meta-line" style="margin:-2px 0 10px">Mentorados ativos de produto com roteiro sem copy definido no Controle de Produção. Nesses casos o mentor recebe também os pontos de copy. Confira se é ele mesmo quem faz os roteiros; se não for, preencha o copy no CP e a conta corrige na próxima atualização.</p>
+    <div class="pv-chips">${porM.map(([k,n])=>`<span class="pv-chip">${esc(k)} · ${n}</span>`).join('')}</div>
+    <details><summary class="meta-line" style="cursor:pointer">Ver os ${L.length} mentorados</summary>${tbl([{t:'#',r:1},{t:'Mentorado'},{t:'Produto'},{t:'Mentor (recebe os pontos)'},{t:'Copy no CP'}],L.map((x,i)=>`<tr><td class="r">${i+1}</td><td>${esc(x.mentorado)}</td><td>${esc(x.produto)}</td><td>${esc(x.mentor)}</td><td>${esc(x.copy_no_cp)}</td></tr>`))}</details></section>`;
+}
 function cardCarteira(){
   const C=Carteira.data;if(!C||!C.pessoas)return '';
   const M=C.modelo||{},P=C.projecao||{},LIM=M.limite||65,ps=C.pessoas,sug=ps.filter(x=>!x.evitar);
@@ -2168,6 +2177,7 @@ function cardCarteira(){
       <div class="pv-leg"><span><i style="background:var(--tO)"></i>pontos como mentor</span><span><i style="background:var(--tC)"></i>pontos como copy</span><span>┆ limite</span><span style="opacity:.55">esmaecido: fora da sugestão</span></div>${barras}${det}</section>
     ${cardFluxo(C)}
     ${cardLogica(C)}
+    ${cardCopyAssumido(C)}
     <section class="card wide"><details><summary class="meta-line" style="cursor:pointer">Ver a tabela completa</summary>${tbl([{t:'Estrategista'},{t:'Mentorados',r:1},{t:'Carga',r:1},{t:'Uso do limite',r:1},{t:'Vagas Audience 2.0',r:1},{t:'Vagas com roteiros',r:1},{t:'A finalizar (CP)',r:1}],rows)}</details>
       <p class="meta-line">${C.redistribuicao?`Redistribuição aplicada antes de ir para o CP: ${esc(C.redistribuicao)}. `:''}Base: ${esc(C.origem||'exportação do CP')}${Carteira.updated?' · atualizado '+fmtStamp(Carteira.updated):''}. <a href="https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr" target="_blank" rel="noopener">Abrir o dashboard completo</a></p></section>`;
 }

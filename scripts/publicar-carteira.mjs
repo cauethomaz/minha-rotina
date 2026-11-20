@@ -151,8 +151,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   try {
     const j = { carteira: ler('carteira'), base: ler('base'), entradas: ler('entradas'), saidas_cp: ler('saidas_cp') };
     let sem = []; try { sem = ler('semanas').rows || []; } catch { /* semanas.json ainda não existe */ }
+    let copyAssumido = []; try { copyAssumido = ler('copy_assumido').rows || []; } catch { /* ainda não existe */ }
     const metaVal = (k) => ((j.carteira.meta || []).find((m) => m.label === k) || {}).value || null;
     const montar = (hist) => ({ geradoEm: new Date().toISOString(), origem: metaVal('Entrada'), redistribuicao: metaVal('Redistribuição aplicada'),
+      copy_assumido: copyAssumido,
       ...calcular({ carteira: j.carteira.rows, base: j.base.rows, entradas: j.entradas.rows, saidas_cp: j.saidas_cp.rows, semanas: sem, hist }) });
     if (process.env.CARTEIRA_SECO) {
       const hist = process.env.CARTEIRA_HIST ? JSON.parse(fs.readFileSync(process.env.CARTEIRA_HIST, 'utf8')) : [];
