@@ -12,7 +12,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 export const MODELO = {
-  mentor: { 'Audience 2.0': 1, 'Boost 2.0': 0.5, 'Audience 1.0': 1.5, 'Mentoria Ouro': 1.5, 'Outros': 1.5, 'Experience 3.0': 2, 'Experience 2.0/1.0': 2 },
+  mentor: { 'Audience 2.0': 1, 'Audience 2.0 com roteiros': 1.5, 'Boost 2.0': 0.5, 'Audience 1.0': 1.5, 'Mentoria Ouro': 1.5, 'Outros': 1.5, 'Experience 3.0': 2, 'Experience 2.0/1.0': 2 },
   copy: 3,
   // Produtos sem roteiro: ser copy não soma nada (o Cauê decidiu em 21/11/2026)
   semCopy: ['Audience 2.0', 'Boost 2.0'],
@@ -36,7 +36,7 @@ export function calcular({ carteira, base, entradas, saidas_cp, semanas = [], hi
     if (r.funcao !== 'Só copy') { e.carga += n * peso(r.linha); e.pm += n * peso(r.linha); }
     if (r.funcao !== 'Só mentor') { e.carga += n * pesoCopy(r.linha); e.pc += n * pesoCopy(r.linha); e.copy += n; }
     e.mix[r.linha] = (e.mix[r.linha] || 0) + n;
-    if (r.linha === 'Audience 2.0') e.aud2 += n;
+    if (r.linha.startsWith('Audience 2.0')) e.aud2 += n;
     if (r.linha.startsWith('Experience')) e.exp += n;
   }
   const fin = {};

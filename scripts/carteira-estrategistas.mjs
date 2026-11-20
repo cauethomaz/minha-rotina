@@ -51,6 +51,8 @@ const ativos = rows.slice(1).filter(r => (r[C.s] || '').trim().toLowerCase() ===
 const base = {}, cart = {};
 for (const r of ativos) {
   const produto = (r[C.p] || '').trim() || 'Sem produto', linha = linhaDe(produto);
+  // Audience 2.0 com roteiros: o CP marca com "Roteiros" no nome do mentorado (ex.: "Fulano - Roteiros"); pesa como Audience 1.0
+  const linhaCart = linha === 'Audience 2.0' && /roteiro/i.test(r[C.n] || '') ? 'Audience 2.0 com roteiros' : linha;
   const m = pessoa(r[C.m]), c = pessoa(r[C.cp]);
   const b = base[produto] ??= { linha, produto, ativos: 0, sem_mentor: 0, sem_copy: 0 };
   b.ativos++; if (!m) b.sem_mentor++; if (!c) b.sem_copy++;
@@ -58,8 +60,8 @@ for (const r of ativos) {
   if (m) papeis[m] = 'Só mentor';
   if (c) papeis[c] = papeis[c] ? 'Mentor e copy' : 'Só copy';
   for (const [estrategista, funcao] of Object.entries(papeis)) {
-    const k = [estrategista, funcao, linha].join('|');
-    (cart[k] ??= { estrategista, funcao, linha, mentorados: 0 }).mentorados++;
+    const k = [estrategista, funcao, linhaCart].join('|');
+    (cart[k] ??= { estrategista, funcao, linha: linhaCart, mentorados: 0 }).mentorados++;
   }
 }
 // Entradas por mês (qualquer situação), pela data de entrada no produto: base da projeção de capacidade.

@@ -2097,7 +2097,7 @@ function cardLogica(C){
   const M=C.modelo;if(!M||!M.mentor)return '';
   const LIM=M.limite,cp=M.copy,mt=M.mentor,sc=M.semCopy||[];
   const semR=l=>sc.includes(l)?0:cp;
-  const prods=[['Audience 2.0 sem roteiros',mt['Audience 2.0'],'a régua: 1 mentorado = 1 ponto; sem roteiro, copy não soma',semR('Audience 2.0')],['Boost 2.0',mt['Boost 2.0'],'processo mais curto; sem roteiro, copy não soma',semR('Boost 2.0')],['Audience 2.0 com roteiros',mt['Audience 1.0'],'pesa como o Audience 1.0',cp],
+  const prods=[['Audience 2.0 sem roteiros',mt['Audience 2.0'],'a régua: 1 mentorado = 1 ponto; sem roteiro, copy não soma',semR('Audience 2.0')],['Boost 2.0',mt['Boost 2.0'],'processo mais curto; sem roteiro, copy não soma',semR('Boost 2.0')],['Audience 2.0 com roteiros',mt['Audience 2.0 com roteiros']??mt['Audience 1.0'],'“Roteiros” no nome do mentorado no CP; pesa como o Audience 1.0',semR('Audience 2.0 com roteiros')],
     ['Audience 1.0',mt['Audience 1.0'],'',semR('Audience 1.0')],['Mentoria Ouro',mt['Mentoria Ouro'],'',semR('Mentoria Ouro')],['Outros produtos',mt['Outros'],'',semR('Outros')],['Experience (1.0, 2.0 e 3.0)',mt['Experience 3.0'],'o mais pesado',semR('Experience 3.0')]];
   const cabe=v=>v?Math.floor(LIM/v+1e-9):'—';
   const rows=prods.map(([n,v,obs,c])=>`<tr><td><b>${n}</b>${obs?`<div class="meta-line">${obs}</div>`:''}</td><td class="r">${pvNum(v)}</td><td class="r">${pvNum(v+c)}</td><td class="r"><b>${cabe(v)}</b></td><td class="r">${cabe(v+c)}</td><td class="r">${pvNum(v/mt['Audience 2.0'])}</td></tr>`);
@@ -2117,7 +2117,7 @@ function cardLogica(C){
 function cardCarteira(){
   const C=Carteira.data;if(!C||!C.pessoas)return '';
   const M=C.modelo||{},P=C.projecao||{},LIM=M.limite||65,ps=C.pessoas,sug=ps.filter(x=>!x.evitar);
-  const LIN=[['Audience 2.0','var(--ok)'],['Boost 2.0','var(--tA)'],['Audience 1.0','var(--tO)'],['Mentoria Ouro','var(--accent)'],['Outros','var(--faint)'],['Experience 3.0','var(--tC)'],['Experience 2.0/1.0','var(--tE)']];
+  const LIN=[['Audience 2.0','var(--ok)'],['Audience 2.0 com roteiros','var(--tA)'],['Boost 2.0','#7fb7a4'],['Audience 1.0','var(--tO)'],['Mentoria Ouro','var(--accent)'],['Outros','var(--faint)'],['Experience 3.0','var(--tC)'],['Experience 2.0/1.0','var(--tE)']];
   const cor=u=>u>=100?'var(--p1)':u>=85?'var(--accent)':'var(--ok)',selo=u=>u>=100?'crit':u>=85?'warn':'ok';
   const mix=(x)=>x.mix?`<div class="pv-mix" role="img" aria-label="Mix de produtos">${LIN.map(([l,c])=>x.mix[l]?`<i style="width:${x.mix[l]/x.total*100}%;background:${c}" title="${l}: ${x.mix[l]}"></i>`:'').join('')}</div>`:'';
   const pod=sug.slice(0,3).map((x,i)=>`<div class="pv-op ${i===0?'first':''}"><span class="pos">${i+1}ª opção</span><span class="nm">${esc(x.estrategista)}</span>
