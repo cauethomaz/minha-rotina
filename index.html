@@ -1997,6 +1997,26 @@ function cardDonos(R){
     <details class="panexo"><summary><b>Quem responde por cada etapa</b> <span class="meta-line">(ajuste se alguma etapa estiver no dono errado)</span></summary>${tbl([{t:'Etapa atual'},{t:'Vencidos',r:1},{t:'Responsável'}],cfg)}</details>
     <details class="panexo"><summary><b>Lista dos ${L.length} vencidos${sel==='todos'?'':' com '+esc(nome)}</b></summary>${listaClientes(L,R,{dias:1})}</details></section>`;
 }
+/* ---------- Carteira dos estrategistas: quem recebe o próximo mentorado e capacidade (scripts/publicar-carteira.mjs) ---------- */
+const Carteira={data:null,updated:null};
+const cnum=v=>v==null?'—':String(Math.round(v*10)/10).replace('.',',');
+function cardCarteira(){
+  const C=Carteira.data;if(!C||!C.pessoas)return '';
+  const M=C.modelo||{},P=C.projecao||{},ps=C.pessoas,sug=ps.filter(x=>!x.evitar);
+  const top=sug.slice(0,3).map((x,i)=>`<div class="pkpi ${i===0?'mentor':''}"><span>${i+1}ª opção</span><b style="font-size:19px">${esc(x.estrategista)}</b><span>${cnum(x.carga)} pontos · ${x.total} mentorados · ${cnum(x.pct_aud2)}% Audience 2.0 · ${cnum(x.pct_exp)}% Experience · ${cnum(x.pct_copy)}% copy</span></div>`).join('');
+  const kpi=(n,l,bad)=>`<div class="pkpi ${bad?'bad':''}"><b>${n}</b><span>${l}</span></div>`;
+  const selo=u=>`<span class="pselo ${u>=100?'crit':u>=85?'warn':'ok'}">${cnum(u)}%</span>`;
+  const rows=ps.slice().sort((a,b)=>a.pct_uso-b.pct_uso||a.estrategista.localeCompare(b.estrategista)).map(x=>`<tr><td>${esc(x.estrategista)}${x.evitar?' <span class="meta-line">(fora da sugestão)</span>':''}</td><td class="r">${x.total}</td><td class="r">${cnum(x.carga)}</td><td class="r">${selo(x.pct_uso)}</td><td class="r">${x.vagas_aud2}</td><td class="r">${x.vagas_rot}</td><td class="r">${x.finalizar_cp??'—'}</td></tr>`);
+  return `<section class="card wide"><h2>Carteira dos estrategistas</h2>
+    <p class="meta-line" style="margin:-4px 0 10px">Quem recebe o próximo mentorado: menor carga primeiro. Mentor vale ${cnum(M.mentor&&M.mentor['Boost 2.0'])} no Boost, ${cnum(M.mentor&&M.mentor['Audience 2.0'])} no Audience 2.0, ${cnum(M.mentor&&M.mentor['Audience 1.0'])} no Audience 1.0, Ouro e Outros, ${cnum(M.mentor&&M.mentor['Experience 3.0'])} no Experience; ser copy soma ${cnum(M.copy)}. Limite de ${cnum(M.limite)} pontos por pessoa.${(M.evitar||[]).length?` Fora da sugestão por enquanto: ${M.evitar.map(esc).join(', ')}.`:''}</p>
+    <div class="pkpis">${top||'<span class="meta-line">Ninguém disponível na sugestão.</span>'}</div>
+    <h3 class="ph3">Capacidade do time</h3>
+    <div class="pkpis">${kpi(cnum(P.pct_uso)+'%',`da capacidade em uso (${cnum(P.carga_time)} de ${cnum(P.cap_time)} pontos)`,P.pct_uso>=100)}${kpi(P.acima??'—','pessoas no limite ou acima',P.acima>0)}${kpi(P.saidas_30d??'—',`finalizações em 30 dias pelo CP (${P.saidas_60d??'—'} em 60)`)}${kpi(P.faltam_hoje??'—','pessoas faltando hoje para caber no limite',P.faltam_hoje>0)}</div>
+    ${P.frase_meio?`<p class="meta-line">Com cerca de ${P.ritmo_entradas} mentorados novos por mês, metade com roteiros, ${esc(P.frase_meio)}${P.contratar_mes?`; a falta cresce cerca de ${cnum(P.contratar_mes)} pessoa por mês`:''}.</p>`:''}
+    ${tbl([{t:'Estrategista'},{t:'Mentorados',r:1},{t:'Carga',r:1},{t:'Uso do limite',r:1},{t:'Vagas Audience 2.0',r:1},{t:'Vagas com roteiros',r:1},{t:'A finalizar (CP)',r:1}],rows)}
+    <p class="meta-line">${C.redistribuicao?`Redistribuição aplicada antes de ir para o CP: ${esc(C.redistribuicao)}. `:''}Base: ${esc(C.origem||'exportação do CP')}${Carteira.updated?' · atualizado '+fmtStamp(Carteira.updated):''}. <a href="https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr" target="_blank" rel="noopener">Abrir o dashboard completo</a></p>
+  </section>`;
+}
 function renderProducao(main,banner){
   main.dataset.view='producao';
   const D=Producao.data;
@@ -2039,6 +2059,7 @@ function renderProducao(main,banner){
       <div class="pkpis">${kpi(v,`ativos com prazo vencido (${pctf(v,a)} dos ${a} ativos)`,1)}${kpi(R.hoje.length,`vencem hoje, ${brData(D.base)}`)}${kpi(R.prox.length,'vencem nos próximos 7 dias')}${kpi(R.pcVenc.length,'pausados e churn com prazo vencido')}${kpi(R.semPrazo.total,`sem prazo (${R.semTudo.length} ativos sem etapa, mentor e prazo)`)}</div>
       <ul class="pachados">${prodAchados(R).map(x=>`<li>${x}</li>`).join('')}</ul></section>
     ${cardDonos(R)}
+    ${!ui.prodFiltro?cardCarteira():''}
     ${!ui.prodFiltro?`<section class="card wide"><h2>Evolução dos ativos vencidos</h2>${sparkVenc(Producao.hist)}</section>`:''}
     <section class="card wide"><h2>Prazos</h2>
       <h3 class="ph3">Tempo de atraso dos ${v} ativos vencidos</h3>${tbl([{t:'Faixa'},{t:''},{t:'Clientes',r:1},{t:'%',r:1}],R.fx.map(x=>`<tr><td>${x.f}</td><td style="width:45%"><span class="pbarra" style="width:${x.n/maxF*100}%"></span></td><td class="r">${x.n}</td><td class="r">${pctf(x.n,v)}</td></tr>`))}
@@ -2755,6 +2776,7 @@ function routeSpecial(row){
   if(row.id==='assistente:status'){Chat.status=row.data;chatRender();return}
   if(row.id==='painel:producao'){Producao.data=row.data;Producao.updated=row.updated_at;Producao.cache=null;return}
   if(row.id==='painel:producao-hist'){Producao.hist=(row.data&&row.data.dias)||[];return}
+  if(row.id==='painel:carteira'){Carteira.data=row.data;Carteira.updated=row.updated_at;if(ui.view==='producao')renderMain();return}
   if(row.id.startsWith('mentorados:')){Painel.mt[row.id.slice(11)]=row.data||null;if(ui.view==='mentorados')renderMain();return}
   if(row.id.startsWith('caso:')){Casos.itens.set(row.id.slice(5),Object.assign({},row.data,{id:row.id.slice(5)}));return}
   if(row.id==='insat:analise'){Casos.analise=row.data;return}
