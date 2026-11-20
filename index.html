@@ -31,6 +31,7 @@
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,Roboto,"Helvetica Neue",sans-serif;
   --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif;
   --hour:48px;
+  --f1:#f6c7c4; --f2:#ec8f89; --f3:#e0453f; --f4:#a8231e;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e131d; --panel:#141a26; --panel2:#1a2131; --line:#252e42; --fg:#e7eaf1; --muted:#8d95a9; --faint:#5f677b;
@@ -38,7 +39,7 @@
   --tE:#cf5fae; --tO:#4d86e8; --tA:#2ea37f; --tC:#d06a30;
   --tE-soft:#3a1d33; --tO-soft:#1a2a4a; --tA-soft:#12302a; --tC-soft:#3a2216;
   --p1:#ff6a63; --p2:#f5b638; --p3:#8189a0;
-  --warn-soft:#3a1f22; --ok-soft:#153024; --ok:#46c98d;
+  --warn-soft:#3a1f22; --ok-soft:#153024; --ok:#46c98d; --f1:#5a2a2a; --f2:#93403c; --f3:#e0574f; --f4:#ff8a83;
   --shadow:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -47,7 +48,7 @@
   --tE:#cf5fae; --tO:#4d86e8; --tA:#2ea37f; --tC:#d06a30;
   --tE-soft:#3a1d33; --tO-soft:#1a2a4a; --tA-soft:#12302a; --tC-soft:#3a2216;
   --p1:#ff6a63; --p2:#f5b638; --p3:#8189a0;
-  --warn-soft:#3a1f22; --ok-soft:#153024; --ok:#46c98d;
+  --warn-soft:#3a1f22; --ok-soft:#153024; --ok:#46c98d; --f1:#5a2a2a; --f2:#93403c; --f3:#e0574f; --f4:#ff8a83;
   --shadow:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
 }
 html,body{height:100%}
@@ -594,6 +595,48 @@ textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
 .cnota{display:grid;gap:8px;width:100%}
 @media (max-width:820px){.cdrawer{width:100%}.cdrawer .dtop{padding-top:calc(10px + env(safe-area-inset-top,0px))}}
 /* Produção */
+.pv-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.pv-lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.pv-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.pv-grid{grid-template-columns:minmax(0,1fr)}}
+.pv-col{display:grid;gap:14px;min-width:0}
+.pv-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);margin:2px 0 8px}
+.pv-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.pv-svg{width:100%;height:auto;display:block}
+.pv-svg text{fill:var(--fg);font-family:var(--font)}
+.pv-svg .mut{fill:var(--muted)}
+.pv-svg [data-act]{cursor:pointer}
+.pv-svg [data-act]:hover .hit{fill:var(--panel2)}
+.pv-svg .sel .hit{fill:var(--accent-soft)}
+.pv-meter{height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:4px}
+.pv-meter i{display:block;height:100%;background:var(--p1);border-radius:4px}
+.pv-who{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pv-who b{font-family:var(--display);font-size:20px}
+.pv-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.pv-chip{font-size:12px;border-radius:999px;padding:3px 9px;background:var(--panel2)}
+.pv-chip.r{background:var(--warn-soft);color:var(--p1);font-weight:600}
+.pv-lista{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.pv-lista td{white-space:normal;vertical-align:top}
+.pv-pod{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:900px){.pv-pod{grid-template-columns:minmax(0,1fr)}}
+.pv-op{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:7px;align-content:start;background:var(--panel)}
+.pv-op.first{border-color:var(--accent);background:linear-gradient(var(--accent-soft),var(--panel) 75%)}
+.pv-op .pos{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.pv-op .nm{font-family:var(--display);font-size:18px;font-weight:700}
+.pv-op.first .nm{font-size:24px}
+.pv-op .meta{font-size:12.5px;color:var(--muted)}
+.pv-cap{height:10px;border-radius:6px;background:var(--panel2);overflow:hidden}
+.pv-cap i{display:block;height:100%;border-radius:6px}
+.pv-mix{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--panel2)}
+.pv-mix i{display:block;height:100%}
+.pv-gauge{display:grid;grid-template-columns:190px minmax(0,1fr);gap:16px;align-items:center}
+@media (max-width:560px){.pv-gauge{grid-template-columns:minmax(0,1fr)}}
+.pv-fact{display:flex;gap:10px;align-items:baseline;margin:0 0 8px}
+.pv-fact b{font-family:var(--display);font-size:22px;min-width:44px;font-variant-numeric:tabular-nums}
+.pv-fact span{color:var(--muted);font-size:13px}
+.pv-frase{background:var(--warn-soft);border-radius:10px;padding:9px 12px;font-size:13px}
+.pv-frase.ok{background:var(--ok-soft)}
+.pv-det{background:var(--panel2);border-radius:12px;padding:12px 14px;margin-top:10px}
 .pfiltro{display:grid;gap:4px;max-width:420px;margin-bottom:12px}
 .pkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .pkpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:2px}
@@ -890,8 +933,8 @@ window.addEventListener('pagehide',()=>Store.flushAll());
 
 /* ---------- UI state ---------- */
 const ui={prodFiltro:'',estFb:null,estAba:'aprovar',estOpen:null,estCfg:false,estNota:false,collapsed:[],view:'hoje',sel:null,q:'',cal:'semana',anchor:iso(new Date()),confirmDel:false,banner:'',scrolled:false,aiPending:new Set()};
-try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;if(Array.isArray(s.collapsed))ui.collapsed=s.collapsed;if(s.estAba)ui.estAba=s.estAba;if(s.mentAba)ui.mentAba=s.mentAba;if(s.prodAba)ui.prodAba=s.prodAba}catch(e){}
-const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,collapsed:ui.collapsed,estAba:ui.estAba,mentAba:ui.mentAba,prodAba:ui.prodAba}))}catch(e){}};
+try{const s=JSON.parse(localStorage.getItem('minharotina.ui')||'{}');if(s.view)ui.view=s.view;if(s.cal)ui.cal=s.cal;if(Array.isArray(s.collapsed))ui.collapsed=s.collapsed;if(s.estAba)ui.estAba=s.estAba;if(s.mentAba)ui.mentAba=s.mentAba;if(s.prodAba)ui.prodAba=s.prodAba;if(s.prodPapel)ui.prodPapel=s.prodPapel}catch(e){}
+const saveUi=()=>{try{localStorage.setItem('minharotina.ui',JSON.stringify({view:ui.view,cal:ui.cal,collapsed:ui.collapsed,estAba:ui.estAba,mentAba:ui.mentAba,prodAba:ui.prodAba,prodPapel:ui.prodPapel}))}catch(e){}};
 const listViews=['inbox','revisar','pdia','psemana','hoje','atrasados','acompanhamento','semana','todas','concluidas'];
 // Delegadas: o responsável não é o Cauê. Saem de Hoje, Semana, Atrasados e da conta de tempo; vivem na aba Acompanhamento.
 const EU='Cauê';
@@ -1956,8 +1999,8 @@ const tbl=(cols,rows,cls='')=>`<div class="tbl-wrap"><table class="ptable ${cls}
 const sitPill=s=>`<span class="pselo ${s==='ativo'?'ok':s==='pausado'?'warn':s==='churn'?'crit':'mute'}">${esc(s?s[0].toUpperCase()+s.slice(1):'—')}</span>`;
 function contTbl(titulo,lista,total){return `<div><h3 class="ph3">${titulo}</h3>${tbl([{t:'Nome'},{t:'Registros',r:1},{t:'%',r:1}],lista.map(([k,n])=>`<tr><td>${esc(k)}</td><td class="r">${n}</td><td class="r">${pctf(n,total)}</td></tr>`))}</div>`}
 function listaClientes(rows,R,opts={}){
-  const cols=[{t:'#',r:1},{t:'Cliente'},{t:'Produto'},{t:'Situação'},{t:'Leva'},{t:'Etapa'},{t:'CS'},{t:'Mentor'},{t:'Prazo'}];if(opts.dias)cols.push({t:'Dias',r:1});
-  return tbl(cols,rows.map((c,i)=>`<tr><td class="r">${i+1}</td><td>${esc(c.n)}</td><td>${esc(c.p)}</td><td>${sitPill(c.s)}</td><td>${esc(c.l||'—')}</td><td>${esc(c.e||'—')}</td><td>${esc(c.cs||'—')}</td><td>${esc(c.m||'—')}</td><td>${brData(c.z)}</td>${opts.dias?`<td class="r"><b>${R.dias(c.z)}</b></td>`:''}</tr>`),'pcli')}
+  const cols=[{t:'#',r:1},{t:'Cliente'},{t:'Produto'},{t:'Situação'},{t:'Leva'},{t:'Etapa'},{t:'CS'},{t:'Mentor'},{t:'Copy'},{t:'Prazo'}];if(opts.dias)cols.push({t:'Dias',r:1});
+  return tbl(cols,rows.map((c,i)=>`<tr><td class="r">${i+1}</td><td>${esc(c.n)}</td><td>${esc(c.p)}</td><td>${sitPill(c.s)}</td><td>${esc(c.l||'—')}</td><td>${esc(c.e||'—')}</td><td>${esc(c.cs||'—')}</td><td>${esc(c.m||'—')}</td><td>${esc(c.cp||'—')}</td><td>${brData(c.z)}</td>${opts.dias?`<td class="r"><b>${R.dias(c.z)}</b></td>`:''}</tr>`),'pcli')}
 function sparkVenc(hist){
   if(!hist||hist.length<2)return `<p class="meta-line">A evolução diária dos vencidos aparece a partir da segunda leitura.</p>`;
   const W=600,H=120,p=24,xs=hist.map((_,i)=>p+i*(W-2*p)/(hist.length-1)),mx=Math.max(...hist.map(h=>h.vencidos),1);
@@ -2002,20 +2045,107 @@ const Carteira={data:null,updated:null};
 const cnum=v=>v==null?'—':String(Math.round(v*10)/10).replace('.',',');
 function cardCarteira(){
   const C=Carteira.data;if(!C||!C.pessoas)return '';
-  const M=C.modelo||{},P=C.projecao||{},ps=C.pessoas,sug=ps.filter(x=>!x.evitar);
-  const top=sug.slice(0,3).map((x,i)=>`<div class="pkpi ${i===0?'mentor':''}"><span>${i+1}ª opção</span><b style="font-size:19px">${esc(x.estrategista)}</b><span>${cnum(x.carga)} pontos · ${x.total} mentorados · ${cnum(x.pct_aud2)}% Audience 2.0 · ${cnum(x.pct_exp)}% Experience · ${cnum(x.pct_copy)}% copy</span></div>`).join('');
-  const kpi=(n,l,bad)=>`<div class="pkpi ${bad?'bad':''}"><b>${n}</b><span>${l}</span></div>`;
-  const selo=u=>`<span class="pselo ${u>=100?'crit':u>=85?'warn':'ok'}">${cnum(u)}%</span>`;
-  const rows=ps.slice().sort((a,b)=>a.pct_uso-b.pct_uso||a.estrategista.localeCompare(b.estrategista)).map(x=>`<tr><td>${esc(x.estrategista)}${x.evitar?' <span class="meta-line">(fora da sugestão)</span>':''}</td><td class="r">${x.total}</td><td class="r">${cnum(x.carga)}</td><td class="r">${selo(x.pct_uso)}</td><td class="r">${x.vagas_aud2}</td><td class="r">${x.vagas_rot}</td><td class="r">${x.finalizar_cp??'—'}</td></tr>`);
-  return `<section class="card wide"><h2>Quem recebe o próximo mentorado</h2>
-    <p class="meta-line" style="margin:-4px 0 10px">Quem recebe o próximo mentorado: menor carga primeiro. Mentor vale ${cnum(M.mentor&&M.mentor['Boost 2.0'])} no Boost, ${cnum(M.mentor&&M.mentor['Audience 2.0'])} no Audience 2.0, ${cnum(M.mentor&&M.mentor['Audience 1.0'])} no Audience 1.0, Ouro e Outros, ${cnum(M.mentor&&M.mentor['Experience 3.0'])} no Experience; ser copy soma ${cnum(M.copy)}. Limite de ${cnum(M.limite)} pontos por pessoa.${(M.evitar||[]).length?` Fora da sugestão por enquanto: ${M.evitar.map(esc).join(', ')}.`:''}</p>
-    <div class="pkpis">${top||'<span class="meta-line">Ninguém disponível na sugestão.</span>'}</div>
-    </section><section class="card wide"><h2>Capacidade do time</h2>
-    <div class="pkpis">${kpi(cnum(P.pct_uso)+'%',`da capacidade em uso (${cnum(P.carga_time)} de ${cnum(P.cap_time)} pontos)`,P.pct_uso>=100)}${kpi(P.acima??'—','pessoas no limite ou acima',P.acima>0)}${kpi(P.saidas_30d??'—',`finalizações em 30 dias pelo CP (${P.saidas_60d??'—'} em 60)`)}${kpi(P.faltam_hoje??'—','pessoas faltando hoje para caber no limite',P.faltam_hoje>0)}</div>
-    ${P.frase_meio?`<p class="meta-line">Com cerca de ${P.ritmo_entradas} mentorados novos por mês, metade com roteiros, ${esc(P.frase_meio)}${P.contratar_mes?`; a falta cresce cerca de ${cnum(P.contratar_mes)} pessoa por mês`:''}.</p>`:''}
-    ${tbl([{t:'Estrategista'},{t:'Mentorados',r:1},{t:'Carga',r:1},{t:'Uso do limite',r:1},{t:'Vagas Audience 2.0',r:1},{t:'Vagas com roteiros',r:1},{t:'A finalizar (CP)',r:1}],rows)}
-    <p class="meta-line">${C.redistribuicao?`Redistribuição aplicada antes de ir para o CP: ${esc(C.redistribuicao)}. `:''}Base: ${esc(C.origem||'exportação do CP')}${Carteira.updated?' · atualizado '+fmtStamp(Carteira.updated):''}. <a href="https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr" target="_blank" rel="noopener">Abrir o dashboard completo</a></p>
-  </section>`;
+  const M=C.modelo||{},P=C.projecao||{},LIM=M.limite||65,ps=C.pessoas,sug=ps.filter(x=>!x.evitar);
+  const LIN=[['Audience 2.0','var(--ok)'],['Boost 2.0','var(--tA)'],['Audience 1.0','var(--tO)'],['Mentoria Ouro','var(--accent)'],['Outros','var(--faint)'],['Experience 3.0','var(--tC)'],['Experience 2.0/1.0','var(--tE)']];
+  const cor=u=>u>=100?'var(--p1)':u>=85?'var(--accent)':'var(--ok)',selo=u=>u>=100?'crit':u>=85?'warn':'ok';
+  const mix=(x)=>x.mix?`<div class="pv-mix" role="img" aria-label="Mix de produtos">${LIN.map(([l,c])=>x.mix[l]?`<i style="width:${x.mix[l]/x.total*100}%;background:${c}" title="${l}: ${x.mix[l]}"></i>`:'').join('')}</div>`:'';
+  const pod=sug.slice(0,3).map((x,i)=>`<div class="pv-op ${i===0?'first':''}"><span class="pos">${i+1}ª opção</span><span class="nm">${esc(x.estrategista)}</span>
+    <div><div class="pv-cap" role="img" aria-label="${pvNum(x.pct_uso)}% do limite"><i style="width:${Math.min(100,x.pct_uso)}%;background:${cor(x.pct_uso)}"></i></div>
+    <div class="meta" style="margin-top:5px"><b style="color:var(--fg)">${pvNum(x.carga)}</b> de ${LIM} pontos · cabem mais ${x.vagas_aud2} de Audience 2.0</div></div>${mix(x)}
+    <span class="meta">${x.total} mentorados · ${pvNum(x.pct_aud2)}% Audience 2.0 · ${pvNum(x.pct_exp)}% Experience · ${pvNum(x.pct_copy)}% como copy</span></div>`).join('');
+  // Medidor do time
+  const R0=78,cx=95,cy=100,ang=v=>Math.PI*(1-Math.min(Math.max(v,0),130)/130),pt=(a,r)=>[cx+r*Math.cos(a),cy-r*Math.sin(a)].map(n=>n.toFixed(1));
+  const arco=(a,b,c)=>{const p0=pt(ang(a),R0),p1=pt(ang(b),R0);return `<path d="M${p0} A${R0},${R0} 0 0 1 ${p1}" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`};
+  const t1=pt(ang(100),R0-12),t2=pt(ang(100),R0+12),t3=pt(ang(100),R0+16);
+  const gauge=`<svg class="pv-svg" viewBox="0 0 190 120" role="img" aria-label="${pvNum(P.pct_uso)}% da capacidade em uso">${arco(0,130,'var(--panel2)')}${arco(0,P.pct_uso||0,cor(P.pct_uso))}
+    <line x1="${t1[0]}" y1="${t1[1]}" x2="${t2[0]}" y2="${t2[1]}" stroke="var(--fg)" stroke-width="2"/><text x="${t3[0]}" y="${t3[1]}" font-size="10" class="mut">100%</text>
+    <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="28" font-weight="700">${pvNum(P.pct_uso)}%</text><text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="11" class="mut">em uso</text></svg>`;
+  const okF=/fica dentro do limite pelos/.test(P.frase_meio||'');
+  const facts=`<div class="pv-fact"><b style="color:var(--p1)">${P.acima??'—'}</b><span>pessoas no limite ou acima</span></div>
+    <div class="pv-fact"><b>${P.faltam_hoje??'—'}</b><span>pessoa${P.faltam_hoje===1?'':'s'} faltando hoje para caber no limite</span></div>
+    <div class="pv-fact"><b>${P.saidas_30d??'—'}</b><span>finalizações em 30 dias, pelo CP (${P.saidas_60d??'—'} em 60)</span></div>
+    ${P.frase_meio?`<div class="pv-frase ${okF?'ok':''}">Com cerca de ${P.ritmo_entradas} mentorados novos por mês, metade com roteiros, ${esc(P.frase_meio)}${P.contratar_mes?`; a falta cresce cerca de ${pvNum(P.contratar_mes)} pessoa por mês`:''}.</div>`:''}`;
+  // Projeção
+  const cv=P.curva||[];let proj='<p class="meta-line">A projeção aparece depois da próxima atualização.</p>';
+  if(cv.length>1){const w=420,h=220,m={l:44,r:12,t:14,b:26},vals=cv.map(c=>c.carga).concat([P.cap_time]);
+    const ymax=Math.max(...vals)*1.06,ymin=Math.min(...vals)*0.92,X=i=>m.l+i/(cv.length-1)*(w-m.l-m.r),Y=v=>m.t+(1-(v-ymin)/(ymax-ymin))*(h-m.t-m.b),cy0=Y(P.cap_time);
+    let g='';for(let k=0;k<=4;k++){const v=ymin+(ymax-ymin)*k/4;g+=`<line x1="${m.l}" x2="${w-m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--line)"/><text x="${m.l-6}" y="${(Y(v)+4).toFixed(1)}" text-anchor="end" font-size="10.5" class="mut">${Math.round(v)}</text>`}
+    const area=`M${X(0)},${cy0} `+cv.map((c,i)=>`L${X(i).toFixed(1)},${Math.min(cy0,Y(c.carga)).toFixed(1)}`).join(' ')+` L${X(cv.length-1)},${cy0} Z`;
+    const linha=cv.map((c,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(c.carga).toFixed(1)}`).join(' ');
+    proj=`<svg class="pv-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Carga projetada do time contra a capacidade">${g}<path d="${area}" fill="var(--warn-soft)"/>
+      <line x1="${m.l}" x2="${w-m.r}" y1="${cy0.toFixed(1)}" y2="${cy0.toFixed(1)}" stroke="var(--fg)" stroke-dasharray="4 4" stroke-width="1.2"/><text x="${w-m.r}" y="${(cy0-6).toFixed(1)}" text-anchor="end" font-size="11" class="mut">capacidade ${P.cap_time}</text>
+      <path d="${linha}" stroke="var(--p1)" stroke-width="2.5" fill="none"/>${cv.map((c,i)=>i%2===0||i===cv.length-1?`<text x="${X(i).toFixed(1)}" y="${h-8}" text-anchor="${i===cv.length-1?'end':i===0?'start':'middle'}" font-size="10.5" class="mut">${c.mes}</text>`:'').join('')}
+      <circle cx="${X(0)}" cy="${Y(cv[0].carga).toFixed(1)}" r="4" fill="var(--p1)"/><circle cx="${X(cv.length-1).toFixed(1)}" cy="${Y(cv[cv.length-1].carga).toFixed(1)}" r="4" fill="var(--p1)"/>
+      <text x="${X(0)+2}" y="${(Y(cv[0].carga)-12).toFixed(1)}" font-size="11" font-weight="600">hoje ${Math.round(cv[0].carga)}</text></svg>`}
+  // Carga por pessoa
+  const lista=ps.slice().sort((a,b)=>a.carga-b.carga),w=640,rh=26,cl=160,cmax=Math.max(LIM,...lista.map(x=>x.carga))*1.02,sx=v=>v/cmax*(w-cl-50),H=lista.length*rh+22;
+  const barras=`<svg class="pv-svg" viewBox="0 0 ${w} ${H}" role="img" aria-label="Carga por pessoa contra o limite">${lista.map((x,i)=>{const pm=x.pts_mentor??x.carga,pc=x.pts_copy??0;
+    return `<g transform="translate(0,${i*rh})" opacity="${x.evitar?.5:1}" data-act="cartSel" data-k="${esc(x.estrategista)}" class="${ui.cartSel===x.estrategista?'sel':''}" role="button" tabindex="0" aria-label="${esc(x.estrategista)}: ${pvNum(x.carga)} pontos"><rect class="hit" x="0" y="1" width="${w}" height="${rh-2}" rx="6" fill="transparent"/>
+    <text x="${cl-10}" y="${rh/2+4}" text-anchor="end" font-size="12.5">${esc(x.estrategista)}</text><rect x="${cl}" y="6" width="${Math.max(1,sx(pm)).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tO)"/>
+    ${pc?`<rect x="${(cl+sx(pm)).toFixed(1)}" y="6" width="${sx(pc).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tC)"/>`:''}
+    <text x="${(cl+sx(x.carga)+6).toFixed(1)}" y="${rh/2+4}" font-size="12" font-weight="600" ${x.carga>LIM?'style="fill:var(--p1)"':''}>${pvNum(x.carga)}</text></g>`}).join('')}
+    <line x1="${(cl+sx(LIM)).toFixed(1)}" x2="${(cl+sx(LIM)).toFixed(1)}" y1="0" y2="${lista.length*rh}" stroke="var(--fg)" stroke-dasharray="3 3" stroke-width="1.3"/><text x="${(cl+sx(LIM)).toFixed(1)}" y="${lista.length*rh+15}" text-anchor="middle" font-size="11" class="mut">limite ${LIM}</text></svg>`;
+  const d=ps.find(x=>x.estrategista===ui.cartSel);
+  const det=d?`<div class="pv-det"><div class="pv-who"><b>${esc(d.estrategista)}</b><span class="pselo ${selo(d.pct_uso)}">${pvNum(d.pct_uso)}% do limite</span>${d.evitar?'<span class="pv-chip">fora da sugestão</span>':''}</div>
+    <div class="pv-chips"><span class="pv-chip">${d.total} mentorados</span>${d.pts_mentor!=null?`<span class="pv-chip">${pvNum(d.pts_mentor)} pontos como mentor</span><span class="pv-chip">${pvNum(d.pts_copy)} como copy</span>`:''}<span class="pv-chip">${d.vagas_aud2} vagas de Audience 2.0</span><span class="pv-chip">${d.finalizar_cp??0} a finalizar pelo CP</span></div>
+    ${mix(d)}${d.mix?`<div class="pv-leg" style="margin:6px 0 0">${LIN.filter(([l])=>d.mix[l]).map(([l,c])=>`<span><i style="background:${c}"></i>${l} ${d.mix[l]}</span>`).join('')}</div>`:''}</div>`:'';
+  const rows=ps.slice().sort((a,b)=>a.pct_uso-b.pct_uso||a.estrategista.localeCompare(b.estrategista)).map(x=>`<tr><td>${esc(x.estrategista)}${x.evitar?' <span class="meta-line">(fora da sugestão)</span>':''}</td><td class="r">${x.total}</td><td class="r">${pvNum(x.carga)}</td><td class="r"><span class="pselo ${selo(x.pct_uso)}">${pvNum(x.pct_uso)}%</span></td><td class="r">${x.vagas_aud2}</td><td class="r">${x.vagas_rot}</td><td class="r">${x.finalizar_cp??'—'}</td></tr>`);
+  return `<section class="card wide"><div class="pv-bar" style="margin-bottom:10px"><span class="pv-lbl">Próximo mentorado vai para</span>${(M.evitar||[]).length?`<span class="meta-line">Fora da sugestão por enquanto: ${M.evitar.map(esc).join(', ')}</span>`:''}</div><div class="pv-pod">${pod||'<span class="meta-line">Ninguém disponível na sugestão.</span>'}</div></section>
+    <div class="pv-grid wide"><section class="card"><h2>Capacidade do time</h2><p class="meta-line" style="margin:-2px 0 10px">Limite de ${LIM} pontos por pessoa, ${ps.length} pessoas na conta.</p><div class="pv-gauge"><div>${gauge}</div><div>${facts}</div></div></section>
+      <section class="card"><h2>Para onde vai a carga</h2><p class="meta-line" style="margin:-2px 0 8px">Carga do time mês a mês: hoje, menos as finalizações previstas pelo CP, mais a entrada média de mentorados novos.</p>${proj}</section></div>
+    <section class="card wide"><h2>Carga por pessoa</h2><p class="meta-line" style="margin:-2px 0 6px">Mentor vale ${pvNum(M.mentor&&M.mentor['Boost 2.0'])} no Boost, ${pvNum(M.mentor&&M.mentor['Audience 2.0'])} no Audience 2.0, ${pvNum(M.mentor&&M.mentor['Audience 1.0'])} no Audience 1.0, Ouro e Outros e ${pvNum(M.mentor&&M.mentor['Experience 3.0'])} no Experience; ser copy soma ${pvNum(M.copy)}. Toque numa pessoa para ver o detalhe.</p>
+      <div class="pv-leg"><span><i style="background:var(--tO)"></i>pontos como mentor</span><span><i style="background:var(--tC)"></i>pontos como copy</span><span>┆ limite</span><span style="opacity:.55">esmaecido: fora da sugestão</span></div>${barras}${det}</section>
+    <section class="card wide"><details><summary class="meta-line" style="cursor:pointer">Ver a tabela completa</summary>${tbl([{t:'Estrategista'},{t:'Mentorados',r:1},{t:'Carga',r:1},{t:'Uso do limite',r:1},{t:'Vagas Audience 2.0',r:1},{t:'Vagas com roteiros',r:1},{t:'A finalizar (CP)',r:1}],rows)}</details>
+      <p class="meta-line">${C.redistribuicao?`Redistribuição aplicada antes de ir para o CP: ${esc(C.redistribuicao)}. `:''}Base: ${esc(C.origem||'exportação do CP')}${Carteira.updated?' · atualizado '+fmtStamp(Carteira.updated):''}. <a href="https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr" target="_blank" rel="noopener">Abrir o dashboard completo</a></p></section>`;
+}
+/* ---------- Produção visual: atrasados por pessoa (mentor, copy, os dois ou CS) e por etapa ---------- */
+const PV_FX=[[0,7,'var(--f1)','até 7 dias'],[8,30,'var(--f2)','8 a 30'],[31,60,'var(--f3)','31 a 60'],[61,1e9,'var(--f4)','mais de 60']];
+const PV_PAPEL={m:['Mentor','mentor','Sem mentor'],cp:['Copy','copy','Sem copy'],tot:['Mentor + copy','mentor ou copy','Sem mentor e sem copy'],cs:['CS','CS','Sem CS']};
+const pvP=v=>aDefinir(v)?'':v;
+function pvDonos(c,p){if(p==='tot'){const s=[...new Set([pvP(c.m),pvP(c.cp)].filter(Boolean))];return s.length?s:['']}return [pvP(c[p])]}
+const pvFaixa=d=>PV_FX.findIndex(([a,b])=>d>=a&&d<=b);
+const pvNum=v=>String(Math.round(v*10)/10).replace('.',',');
+const pvMed=a=>{if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
+function pvBarras(lista,{act,sel,lab,w=520,left=150,rowH=26,extra,fs=12.5}){
+  const nomeados=lista.filter(o=>o.k),max=Math.max(1,...(nomeados.length?nomeados:lista).map(o=>o.n)),cc=Math.floor(left/6.6),H=lista.length*rowH+4;
+  return `<svg class="pv-svg" viewBox="0 0 ${w} ${H}" role="img">${lista.map((o,i)=>{let x=left;const f=o.n>max?max/o.n:1,sx=n=>n*f/max*(w-left-80);
+    const segs=o.fx.map((n,k)=>{if(!n)return '';const r=`<rect x="${x.toFixed(1)}" y="6" width="${Math.max(1,sx(n)).toFixed(1)}" height="${rowH-12}" rx="2" fill="${PV_FX[k][2]}"/>`;x+=sx(n);return r}).join('');
+    const nome=lab(o),curto=nome.length>cc?nome.slice(0,cc-1)+'…':nome;
+    return `<g transform="translate(0,${i*rowH})" ${act?`data-act="${act}" data-k="${esc(o.k)}" class="${sel===o.k?'sel':''}" role="button" tabindex="0" aria-label="${esc(nome)}: ${o.n}"`:''}><rect class="hit" x="0" y="1" width="${w}" height="${rowH-2}" rx="6" fill="transparent"/>
+      <text x="${left-10}" y="${rowH/2+4}" text-anchor="end" font-size="${fs}" class="${o.k?'':'mut'}"><title>${esc(nome)}</title>${esc(curto)}</text>${segs}
+      <text x="${(x+6).toFixed(1)}" y="${rowH/2+4}" font-size="${fs}" font-weight="600">${o.n}</text>${extra?extra(o,x):''}</g>`}).join('')}</svg>`;
+}
+function pvAtrasados(todos,base,R,papel,pessoa){
+  const dias=z=>Math.round((fromIso(base)-fromIso(z))/864e5),b7=iso(addDays(fromIso(base),7));
+  const at=todos.filter(c=>c.s==='ativo'),venc=at.filter(c=>c.z&&c.z<base),prox=at.filter(c=>c.z&&c.z>=base&&c.z<=b7);
+  const m=new Map(),add=k=>{if(!m.has(k))m.set(k,{k,n:0,fx:[0,0,0,0],prox:0});return m.get(k)};
+  venc.forEach(c=>pvDonos(c,papel).forEach(k=>{const o=add(k);o.n++;o.fx[pvFaixa(dias(c.z))]++}));
+  prox.forEach(c=>pvDonos(c,papel).forEach(k=>{if(m.has(k))m.get(k).prox++}));
+  const lista=[...m.values()].sort((a,b)=>(!a.k)-(!b.k)||b.n-a.n||a.k.localeCompare(b.k));
+  const [rot,rotM,semN]=PV_PAPEL[papel],lab=o=>o.k||semN;
+  const seg=`<div class="seg" role="group" aria-label="Contar por">${Object.entries(PV_PAPEL).map(([k,[l]])=>`<button data-act="prodPapel" data-k="${k}" class="${papel===k?'on':''}" aria-pressed="${papel===k}">${l}</button>`).join('')}</div>`;
+  // Números do recorte (time inteiro ou a pessoa escolhida)
+  const v=R.venc.length,a=R.at.length,dd=R.venc.map(c=>R.dias(c.z)),m30=dd.filter(x=>x>30).length;
+  const kpi=(n,l,cls,extra)=>`<div class="pkpi ${cls||''}"><b>${n}</b><span>${l}</span>${extra||''}</div>`;
+  const kpis=`<div class="pkpis">${kpi(v,`ativos com prazo vencido (${pctf(v,a)} dos ${a})`,'bad',`<div class="pv-meter"><i style="width:${a?v/a*100:0}%"></i></div>`)}${kpi(R.hoje.length+R.prox.length,`vencem hoje ou nos próximos 7 dias`)}${kpi(m30,'vencidos há mais de 30 dias',m30?'bad':'')}${kpi(pvMed(dd)+' dias','atraso típico (mediana)')}${kpi(R.pcVenc.length,'pausados e churn com prazo vencido')}</div>`;
+  const leg=`<div class="pv-leg">${PV_FX.map(f=>`<span><i style="background:${f[2]}"></i>${f[3]}</span>`).join('')}<span>○ vencem em 7 dias</span></div>`;
+  const grafPessoas=pvBarras(lista,{act:'prodPessoa',sel:pessoa,lab,extra:(o,x)=>o.prox?`<text x="${(x+12+String(o.n).length*8).toFixed(1)}" y="17" font-size="11.5" class="mut">○${o.prox}</text>`:''});
+  // Etapas do recorte
+  const et=new Map();R.venc.forEach(c=>{const k=c.e||'Sem etapa';if(!et.has(k))et.set(k,{k,n:0,fx:[0,0,0,0]});const o=et.get(k);o.n++;o.fx[pvFaixa(R.dias(c.z))]++});
+  let ets=[...et.values()].sort((a,b)=>b.n-a.n);
+  if(ets.length>10){const resto={k:`Outras ${ets.length-9} etapas`,n:0,fx:[0,0,0,0]};ets.slice(9).forEach(o=>{resto.n+=o.n;o.fx.forEach((x,i)=>resto.fx[i]+=x)});ets=ets.slice(0,9).concat([resto])}
+  const grafEtapas=ets.length?pvBarras(ets,{lab:o=>o.k,w:380,left:180,rowH:24,fs:12}):'<p class="meta-line">Nenhum vencido.</p>';
+  const nomeSel=pessoa===null?'':(pessoa||semN);
+  const foco=pessoa!==null?`<section class="card"><div class="pv-who"><b>${esc(nomeSel)}</b><span class="meta-line">como ${rotM}</span><button class="btn" data-act="prodPessoa" data-k="${esc(pessoa)}" style="margin-left:auto">Ver o time inteiro</button></div>
+      <div class="pv-chips"><span class="pv-chip r">${v} vencidos</span>${m30?`<span class="pv-chip r">${m30} há mais de 30 dias</span>`:''}<span class="pv-chip">${R.hoje.length+R.prox.length} vencem em até 7 dias</span><span class="pv-chip">${a} ativos na carteira</span></div>
+      ${v?`<div class="pv-lista">${tbl([{t:'Cliente'},{t:'Etapa'},{t:'Prazo'},{t:'Dias',r:1}],R.venc.slice().sort((x,y)=>x.z.localeCompare(y.z)).map(c=>`<tr><td><b>${esc(c.n)}</b><div class="meta-line">${esc(c.p)}${papel!=='m'&&pvP(c.m)?' · mentor '+esc(c.m):''}${papel!=='cp'&&pvP(c.cp)?' · copy '+esc(c.cp):''}</div></td><td>${esc(c.e||'—')}</td><td>${brData(c.z)}</td><td class="r"><b class="late">${R.dias(c.z)}</b></td></tr>`))}</div>`:'<p class="meta-line">Nenhum vencido. 🎉</p>'}</section>`
+    :`<section class="card"><div class="pv-who"><b>Time inteiro</b><span class="meta-line">por ${rotM}</span></div>
+      <div class="pv-chips"><span class="pv-chip r">${lista.filter(o=>o.k).length} pessoas com vencidos</span>${lista[0]&&lista[0].k?`<span class="pv-chip">mais vencidos: ${esc(lista[0].k)} (${lista[0].n})</span>`:''}${lista.some(o=>!o.k)?`<span class="pv-chip">${lista.find(o=>!o.k).n} ${semN.toLowerCase()} definido</span>`:''}</div>
+      <p class="meta-line">Toque numa pessoa no gráfico para ver os vencidos dela, com nome, etapa, prazo e dias de atraso, e o resto da página filtrado para ela.</p>
+      <ul class="pachados">${prodAchados(R).map(x=>`<li>${x}</li>`).join('')}</ul></section>`;
+  return `<section class="card wide" style="display:grid;gap:12px"><div class="pv-bar"><span class="pv-lbl">Contar por</span>${seg}${papel==='tot'?'<span class="meta-line">Um mentorado conta para as duas pessoas quando mentor e copy são diferentes.</span>':''}</div>${kpis}</section>
+    <div class="pv-grid wide"><section class="card"><h2>Quem tem mais atrasados, por ${rotM}</h2><p class="meta-line" style="margin:-2px 0 6px">A cor mostra há quanto tempo o prazo venceu. Toque numa pessoa para filtrar.</p>${leg}${grafPessoas}</section>
+      <div class="pv-col">${foco}<section class="card"><h2>Em que etapa estão</h2><p class="meta-line" style="margin:-2px 0 8px">${pessoa===null?'Ativos com prazo vencido, por etapa atual.':`Só os vencidos de ${esc(nomeSel)}, por etapa atual.`}</p>${grafEtapas}</section></div></div>`;
 }
 function renderProducao(main,banner){
   main.dataset.view='producao';
@@ -2025,16 +2155,13 @@ function renderProducao(main,banner){
   const head=`<header class="mhead"><div><h1>Produção</h1><div class="sub">${sub}</div>${abas}</div></header>${banner}`;
   if(cart){main.innerHTML=head+`<div class="scroll"><div class="painel prod">${cardCarteira()||'<div class="empty"><h2>A carteira ainda não chegou</h2><p>Ela aparece aqui depois da atualização diária do Controle de Produção.</p></div>'}</div></div>`;return}
   if(!D){main.innerHTML=head+`<div class="scroll"><div class="empty"><h2>O relatório ainda não chegou</h2><p>Ele aparece aqui depois da exportação diária do Controle de Produção.</p></div></div>`;return}
-  const todos=D.clientes||[];const [tipo,valor]=(ui.prodFiltro||'').split('|');
-  const rows=tipo==='m'?todos.filter(c=>c.m===valor):tipo==='cs'?todos.filter(c=>c.cs===valor):todos;
-  const key=D.base+'|'+ui.prodFiltro+'|'+todos.length;
+  const todos=D.clientes||[],papel=ui.prodPapel||'m',pessoa=ui.prodPessoa??null;
+  const rows=pessoa===null?todos:todos.filter(c=>pvDonos(c,papel).includes(pessoa));
+  const key=D.base+'|'+papel+'|'+pessoa+'|'+todos.length;
   if(!Producao.cache||Producao.cache.key!==key)Producao.cache={key,R:prodCalc(rows,D.base)};
   const R=Producao.cache.R,eu=Producao.meuNome();
   const mentores=contar(todos.filter(c=>c.s==='ativo'),c=>c.m).filter(x=>x[0]!=='—'),css=contar(todos.filter(c=>c.s==='ativo'),c=>c.cs).filter(x=>x[0]!=='—');
-  const filtro=`<div class="pfiltro"><label for="prod-filtro" class="flabel">Recorte</label><select class="inp" id="prod-filtro" data-act-change="prodFiltro">
-    <option value="">Toda a base (${todos.length} contratos)</option>${eu?`<option value="m|${esc(eu)}" ${ui.prodFiltro==='m|'+eu?'selected':''}>Só a minha carteira (${esc(eu)})</option>`:''}
-    <optgroup label="Por mentor">${mentores.map(([k,n])=>`<option value="m|${esc(k)}" ${ui.prodFiltro==='m|'+k?'selected':''}>${esc(k)} · ${n} ativos</option>`).join('')}</optgroup>
-    <optgroup label="Por CS">${css.map(([k,n])=>`<option value="cs|${esc(k)}" ${ui.prodFiltro==='cs|'+k?'selected':''}>${esc(k)} · ${n} ativos</option>`).join('')}</optgroup></select></div>`;
+
   const a=R.at.length,v=R.venc.length;
   const kpi=(n,l,bad)=>`<div class="pkpi ${bad?'bad':''}"><b>${n}</b><span>${l}</span></div>`;
   const maxF=Math.max(1,...R.fx.map(x=>x.n));
@@ -2058,11 +2185,9 @@ function renderProducao(main,banner){
   if(R.repetidos.length||R.curtos.length)pontos.push(`<b>Nomes repetidos e incompletos.</b> ${R.repetidos.length} nomes aparecem em mais de uma linha (com dois produtos é esperado; no mesmo produto merece conferência) e ${R.curtos.length} registros têm só um nome, o que dificulta cruzar com vendas ou contratos.${R.repetidos.length?mini(R.repetidos.flat(),[['Nome','n'],['Produto','p'],['Situação','s'],['Leva','l'],['Mentor','m']]):''}`);
   const anexo=(id,titulo,html,n)=>`<details class="panexo"><summary><b>Anexo ${id}</b> · ${titulo} <span class="meta-line">(${n})</span></summary>${html}</details>`;
   main.innerHTML=head+`<div class="scroll"><div class="painel prod">
-    <section class="card wide">${filtro}
-      <div class="pkpis">${kpi(v,`ativos com prazo vencido (${pctf(v,a)} dos ${a} ativos)`,1)}${kpi(R.hoje.length,`vencem hoje, ${brData(D.base)}`)}${kpi(R.prox.length,'vencem nos próximos 7 dias')}${kpi(R.pcVenc.length,'pausados e churn com prazo vencido')}${kpi(R.semPrazo.total,`sem prazo (${R.semTudo.length} ativos sem etapa, mentor e prazo)`)}</div>
-      <ul class="pachados">${prodAchados(R).map(x=>`<li>${x}</li>`).join('')}</ul></section>
+    ${pvAtrasados(todos,D.base,R,papel,pessoa)}
     ${cardDonos(R)}
-    ${!ui.prodFiltro?`<section class="card wide"><h2>Evolução dos ativos vencidos</h2>${sparkVenc(Producao.hist)}</section>`:''}
+    ${pessoa===null?`<section class="card wide"><h2>Evolução dos ativos vencidos</h2>${sparkVenc(Producao.hist)}</section>`:''}
     <section class="card wide"><h2>Prazos</h2>
       <h3 class="ph3">Tempo de atraso dos ${v} ativos vencidos</h3>${tbl([{t:'Faixa'},{t:''},{t:'Clientes',r:1},{t:'%',r:1}],R.fx.map(x=>`<tr><td>${x.f}</td><td style="width:45%"><span class="pbarra" style="width:${x.n/maxF*100}%"></span></td><td class="r">${x.n}</td><td class="r">${pctf(x.n,v)}</td></tr>`))}
       <h3 class="ph3">Prazos por mês e situação</h3>${tbl([{t:'Mês do prazo'},{t:'Ativo',r:1},{t:'Pausado',r:1},{t:'Churn',r:1},{t:'Finalizado',r:1},{t:'Total',r:1},{t:'Vencidos',r:1},{t:'A vencer',r:1}],mesesRows)}
@@ -2279,6 +2404,9 @@ main.addEventListener('click',e=>{
   if(act==='toggle'){const era=Store.get(id)&&isDone(Store.get(id));toggleDone(id);if(!era&&ui.view.startsWith('pj:'))pjCelebrar(id);return}
   if(act==='estAba'){ui.estAba=el.dataset.aba;saveUi();return renderMain()}
   if(act==='prodAba'){ui.prodAba=el.dataset.aba;saveUi();return renderMain()}
+  if(act==='prodPapel'){ui.prodPapel=el.dataset.k;ui.prodPessoa=null;saveUi();return renderMain()}
+  if(act==='prodPessoa'){const k=el.dataset.k??'';ui.prodPessoa=ui.prodPessoa===k?null:k;renderMain();const sc=document.querySelector('main .scroll');if(sc&&ui.prodPessoa!==null)sc.scrollTo({top:0,behavior:'smooth'});return}
+  if(act==='cartSel'){ui.cartSel=ui.cartSel===el.dataset.k?null:el.dataset.k;return renderMain()}
   if(act==='estAbrir'){ui.estOpen=el.dataset.id;ui.estCfg=false;ui.estNota=false;ui.estFb=null;return renderMain()}
   if(act==='estCfg'){ui.estCfg=true;ui.estOpen=null;return renderMain()}
   if(act==='estFechar'){ui.estOpen=null;ui.estCfg=false;ui.estNota=false;ui.estFb=null;return renderMain()}
@@ -2829,6 +2957,8 @@ const Painel={data:null,updated:null,loading:false,mt:{},
     const data=(rows||[]).find(r=>r.id==='painel:core');if(data)this.set(data);else if(ui.view==='mentorados')renderMain();
   }};
 /* Show/hide password while typing */
+// Itens de gráfico (SVG) com data-act: Enter ou Espaço funcionam como clique
+document.addEventListener('keydown',e=>{const t=e.target;if((e.key==='Enter'||e.key===' ')&&t instanceof SVGElement&&t.matches('[role="button"][data-act]')){e.preventDefault();t.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-peek]');if(!b)return;const i=document.getElementById(b.dataset.peek);if(!i)return;
   const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ocultar':'Mostrar'});
 /* ---------- Backup ---------- */

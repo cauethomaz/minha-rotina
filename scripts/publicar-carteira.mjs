@@ -28,10 +28,11 @@ export function calcular({ carteira, base, entradas, saidas_cp }, M = MODELO) {
   const por = {};
   for (const r of carteira) {
     const n = Number(r.mentorados);
-    const e = por[r.estrategista] ??= { estrategista: r.estrategista, total: 0, carga: 0, aud2: 0, exp: 0, copy: 0 };
+    const e = por[r.estrategista] ??= { estrategista: r.estrategista, total: 0, carga: 0, aud2: 0, exp: 0, copy: 0, pm: 0, pc: 0, mix: {} };
     e.total += n;
-    if (r.funcao !== 'Só copy') e.carga += n * peso(r.linha);
-    if (r.funcao !== 'Só mentor') { e.carga += n * M.copy; e.copy += n; }
+    if (r.funcao !== 'Só copy') { e.carga += n * peso(r.linha); e.pm += n * peso(r.linha); }
+    if (r.funcao !== 'Só mentor') { e.carga += n * M.copy; e.pc += n * M.copy; e.copy += n; }
+    e.mix[r.linha] = (e.mix[r.linha] || 0) + n;
     if (r.linha === 'Audience 2.0') e.aud2 += n;
     if (r.linha.startsWith('Experience')) e.exp += n;
   }
@@ -42,6 +43,7 @@ export function calcular({ carteira, base, entradas, saidas_cp }, M = MODELO) {
     return { estrategista: e.estrategista, total: e.total, carga, pct_uso: pct(carga, M.limite), livre,
       vagas_aud2: Math.floor(livre / M.mentor['Audience 2.0'] + 1e-9), vagas_rot: Math.floor(livre / M.mentor['Audience 1.0'] + 1e-9),
       pct_aud2: pct(e.aud2, e.total), pct_exp: pct(e.exp, e.total), pct_copy: pct(e.copy, e.total),
+      pts_mentor: um(e.pm), pts_copy: um(e.pc), mix: e.mix,
       finalizar_cp: fin[e.estrategista] ?? null, evitar: M.evitar.includes(e.estrategista) };
   }).sort((a, b) => a.evitar - b.evitar || a.carga - b.carga || a.pct_copy - b.pct_copy || a.estrategista.localeCompare(b.estrategista));
 
