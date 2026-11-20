@@ -4,7 +4,7 @@
 // Não leva nome, e-mail nem telefone de cliente: só contagens.
 // Alimenta o dashboard "Carteira dos Estrategistas" (https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr).
 //   node scripts/carteira-estrategistas.mjs <clientes_AAAA-MM-DD.csv> [pasta de saída]
-//   → grava base.json, carteira.json e entradas.json (padrão: ~/.claude/producao/carteira/)
+//   → grava base.json, carteira.json, entradas.json e semanas.json (padrão: ~/.claude/producao/carteira/)
 // Redistribuições combinadas e ainda não lançadas no CP: cada ~/.claude/producao/redistribuicoes/*.json
 // ({efetiva_em, trocas: [{mentorado, mentor_atual, copy_atual, novo_mentor, novo_copy}]}) troca o responsável
 // só onde o CSV ainda mostra o responsável antigo. Depois que o CP for atualizado, o arquivo não muda mais nada.
@@ -72,6 +72,18 @@ for (const r of rows.slice(1).filter(r => r.length > 3)) {
   const e = ent[mes + '|' + linha] ??= { mes, linha, entradas: 0, com_copy: 0 };
   e.entradas++; if (pessoa(r[C.cp])) e.com_copy++;
 }
+// Entradas por semana (segunda a domingo), últimas 26 semanas: mostra se o ritmo recente acelerou ou freou.
+const diaDe = v => { v = (v || '').trim(); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+const segunda = iso => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+const baseCsv = (path.basename(csvPath).match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || new Date().toISOString().slice(0, 10);
+const sem = {}, limiteSem = (() => { const d = new Date(segunda(baseCsv) + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - 7 * 25); return d.toISOString().slice(0, 10); })();
+for (const r of rows.slice(1).filter(r => r.length > 3)) {
+  const dia = diaDe(r[C.d]); if (!dia || dia > baseCsv) continue;
+  const s0 = segunda(dia); if (s0 < limiteSem) continue;
+  const e = sem[s0] ??= { semana: s0, entradas: 0, audience2: 0, com_copy: 0, completa: s0 < segunda(baseCsv) };
+  e.entradas++; if (linhaDe((r[C.p] || '').trim()) === 'Audience 2.0') e.audience2++; if (pessoa(r[C.cp])) e.com_copy++;
+}
 const self = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
 const meta = [{ label: 'carteira.mjs', value: self, type: 'code', lang: 'javascript' },
   { label: 'Entrada', value: path.basename(csvPath) + ' (Controle de Produção → Clientes → Exportar CSV)' },
@@ -80,5 +92,6 @@ const ord = (a, b) => Object.values(a).join('|').localeCompare(Object.values(b).
 fs.writeFileSync(path.join(outDir, 'base.json'), JSON.stringify({ rows: Object.values(base).sort(ord), meta }));
 fs.writeFileSync(path.join(outDir, 'carteira.json'), JSON.stringify({ rows: Object.values(cart).sort(ord), meta }));
 fs.writeFileSync(path.join(outDir, 'entradas.json'), JSON.stringify({ rows: Object.values(ent).sort(ord), meta }));
+fs.writeFileSync(path.join(outDir, 'semanas.json'), JSON.stringify({ base: baseCsv, rows: Object.values(sem).sort((a, b) => a.semana.localeCompare(b.semana)) }));
 console.log('ativos', ativos.length, 'produtos', Object.keys(base).length, 'linhas carteira', Object.keys(cart).length,
   'estrategistas', new Set(Object.values(cart).map(x => x.estrategista)).size, 'trocas', trocou);

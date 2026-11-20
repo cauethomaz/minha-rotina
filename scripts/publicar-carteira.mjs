@@ -23,7 +23,7 @@ export const MODELO = {
 const um = (v) => Math.round(v * 10) / 10;
 const pct = (n, t) => (t ? um((n / t) * 100) : 0);
 
-export function calcular({ carteira, base, entradas, saidas_cp }, M = MODELO) {
+export function calcular({ carteira, base, entradas, saidas_cp, semanas = [], hist = [] }, M = MODELO) {
   const peso = (l) => M.mentor[l] ?? 1.5;
   const por = {};
   for (const r of carteira) {
@@ -87,7 +87,59 @@ export function calcular({ carteira, base, entradas, saidas_cp }, M = MODELO) {
     saidas_30d: res.saidas_30d ?? null, saidas_60d: res.saidas_60d ?? null, saidas_lido_em: res.lido_em ?? null,
     ritmo_entradas: Math.round(ritmo), pontos_por_saida: um(porSaida), frase_meio: frase,
     faltam_hoje: Math.max(0, Math.ceil(carga0 / M.limite) - pessoas.length), contratar_mes: Math.max(0, um(ult / M.limite)), curva };
-  return { modelo: M, pessoas, projecao };
+
+  // Fluxo de mentorados: quantos entram (ritmo das últimas semanas e dos últimos meses) e quantos saem (CP), mês a mês.
+  const completas = semanas.filter((w) => w.completa);
+  const mediaSem = (n) => { const u = completas.slice(-n); return u.length ? u.reduce((t, w) => t + w.entradas, 0) / u.length : 0; };
+  const porSemanaMes = 52 / 12;
+  const ritmos = [
+    { id: 'semanas', nome: 'Ritmo das últimas 4 semanas', por_mes: um(mediaSem(4) * porSemanaMes) },
+    { id: 'meses', nome: 'Ritmo dos últimos 3 meses', por_mes: um(ritmo) },
+  ];
+  // Tendência real: quanto os ativos mudaram de fato nos últimos ~30 dias (histórico diário do painel de produção).
+  // Inclui o que o CP não prevê como finalização: pausas, churn e renovações.
+  let real = null;
+  const hs = hist.filter((h) => h && h.data && Number.isFinite(h.ativos)).sort((a, b) => a.data.localeCompare(b.data));
+  if (hs.length > 1) {
+    const ult = hs[hs.length - 1], alvo = new Date(new Date(ult.data).getTime() - 30 * 864e5).toISOString().slice(0, 10);
+    const ini = hs.find((h) => h.data >= alvo) || hs[0], dias = (new Date(ult.data) - new Date(ini.data)) / 864e5;
+    if (dias >= 14) real = { de: ini.data, ate: ult.data, ativos_de: ini.ativos, ativos_ate: ult.ativos, saldo_mes: um((ult.ativos - ini.ativos) / dias * 30.4) };
+  }
+  const saidasMes = (k) => Number((meses[k - 1] || meses[meses.length - 1] || { saidas: 0 }).saidas);
+  const media6 = meses.length ? [1, 2, 3, 4, 5, 6].reduce((t, k) => t + saidasMes(k), 0) / 6 : 0;
+  // Saídas reais observadas = entradas no ritmo recente − crescimento real dos ativos
+  if (real) { real.saidas_mes = um(Math.max(0, ritmos[0].por_mes - real.saldo_mes)); ritmos.push({ id: 'real', nome: 'Saídas reais dos últimos 30 dias', por_mes: ritmos[0].por_mes, real: true }); }
+  const cenarios = ritmos.map((rt) => {
+    const linhas = [];
+    let at = ativos, cg = carga0;
+    if (meses.length) {
+      const [ya, ym] = meses[0].mes.split('-').map(Number);
+      for (let k = 1; k <= 12; k++) {
+        // No cenário real, as saídas são as observadas (finalizações, pausas e churn), não as previstas pelo CP
+        const sai = rt.real ? real.saidas_mes : saidasMes(k), entra = rt.por_mes;
+        at += entra - sai; cg = Math.max(0, cg + entra * pesoMeio - sai * porSaida);
+        const d = new Date(Date.UTC(ya, ym - 2 + k, 1));
+        linhas.push({ mes: `${nomes[d.getUTCMonth()]}/${String(d.getUTCFullYear()).slice(2)}`, entram: Math.round(entra), saem: Math.round(sai),
+          ativos: Math.round(at), carga: um(cg), pct: pct(cg, cap), faltam: Math.max(0, Math.ceil(cg / M.limite) - pessoas.length), estimado: k > meses.length });
+      }
+    }
+    const passa = linhas.find((l) => l.carga > cap), volta = linhas.find((l) => l.carga <= cap);
+    const status = !linhas.length ? null : carga0 > cap
+      ? (!volta ? 'acima' : linhas.slice(linhas.indexOf(volta)).some((l) => l.carga > cap) ? 'oscila' : 'alivia')
+      : (passa ? 'estoura' : 'tranquilo');
+    const quando = status === 'estoura' ? passa.mes : status === 'alivia' || status === 'oscila' ? volta.mes : null;
+    return { ...rt, status, quando, saldo_mes: rt.real ? real.saldo_mes : um(rt.por_mes - media6), linhas };
+  });
+  const fluxo = {
+    ativos_hoje: ativos, real,
+    semanas: semanas.slice(-12).map((w) => ({ semana: w.semana, entradas: w.entradas, audience2: w.audience2, completa: !!w.completa })),
+    meses: ms.slice(-7).map((m, i, a) => ({ mes: m, entradas: porMes[m], parcial: i === a.length - 1 })),
+    saidas_media_6m: um(media6),
+    // Quantos novos por mês mantêm a carga do time parada (saídas × pontos por saída ÷ peso médio de um novo)
+    equilibrio_mes: pesoMeio ? Math.round(media6 * porSaida / pesoMeio) : null,
+    cenarios,
+  };
+  return { modelo: M, pessoas, projecao, fluxo };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -95,10 +147,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const ler = (n) => JSON.parse(fs.readFileSync(path.join(dir, n + '.json'), 'utf8'));
   try {
     const j = { carteira: ler('carteira'), base: ler('base'), entradas: ler('entradas'), saidas_cp: ler('saidas_cp') };
-    const out = calcular({ carteira: j.carteira.rows, base: j.base.rows, entradas: j.entradas.rows, saidas_cp: j.saidas_cp.rows });
+    let sem = []; try { sem = ler('semanas').rows || []; } catch { /* semanas.json ainda não existe */ }
     const metaVal = (k) => ((j.carteira.meta || []).find((m) => m.label === k) || {}).value || null;
-    const dados = { geradoEm: new Date().toISOString(), origem: metaVal('Entrada'), redistribuicao: metaVal('Redistribuição aplicada'), ...out };
-    if (process.env.CARTEIRA_SECO) { console.log(JSON.stringify({ ...dados, projecao: { ...dados.projecao, curva: undefined } }, null, 1)); process.exit(0); }
+    const montar = (hist) => ({ geradoEm: new Date().toISOString(), origem: metaVal('Entrada'), redistribuicao: metaVal('Redistribuição aplicada'),
+      ...calcular({ carteira: j.carteira.rows, base: j.base.rows, entradas: j.entradas.rows, saidas_cp: j.saidas_cp.rows, semanas: sem, hist }) });
+    if (process.env.CARTEIRA_SECO) {
+      const hist = process.env.CARTEIRA_HIST ? JSON.parse(fs.readFileSync(process.env.CARTEIRA_HIST, 'utf8')) : [];
+      const d = montar(hist); console.log(JSON.stringify({ ...d, projecao: { ...d.projecao, curva: undefined }, pessoas: undefined }, null, 1)); process.exit(0);
+    }
 
     const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
     const envFile = path.join(root, '.env');
@@ -123,6 +179,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     const s = await api('settings?select=user_id&limit=1');
     const uid = ENV.USER_ID || (s && s[0] && s[0].user_id);
     if (!uid) throw new Error('não encontrei o usuário (tabela settings vazia)');
+    const h = await api(`tasks?select=data&id=eq.painel:producao-hist&user_id=eq.${uid}`);
+    const dados = montar((h && h[0] && h[0].data && h[0].data.dias) || []);
+    const out = dados;
+    if (process.env.CARTEIRA_SO_LER) { console.log(JSON.stringify(out.fluxo, null, 1)); process.exit(0); }
     await api('tasks?on_conflict=id', {
       method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({ id: 'painel:carteira', user_id: uid, data: dados, updated_at: new Date().toISOString() }),

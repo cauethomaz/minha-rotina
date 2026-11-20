@@ -2043,6 +2043,76 @@ function cardDonos(R){
 /* ---------- Carteira dos estrategistas: quem recebe o próximo mentorado e capacidade (scripts/publicar-carteira.mjs) ---------- */
 const Carteira={data:null,updated:null};
 const cnum=v=>v==null?'—':String(Math.round(v*10)/10).replace('.',',');
+/* Entradas e saídas de mentorados: ritmo recente, saídas do CP e projeção de 12 meses (dados de scripts/publicar-carteira.mjs) */
+function cardFluxo(C){
+  const F=C.fluxo;if(!F||!F.cenarios||!F.cenarios.length)return '';
+  const cs=F.cenarios,cen=cs.find(c=>c.id===ui.fluxoCen)||cs[0],L=cen.linhas||[],LIM=(C.modelo||{}).limite||65;
+  const ST={tranquilo:['ok','Tranquilo','a carga fica dentro do limite nos próximos 12 meses'],estoura:['warn','Vai apertar',`a carga passa do limite em ${cen.quando}`],
+    alivia:['ok','Alivia',`a carga volta para dentro do limite em ${cen.quando}`],oscila:['warn','Oscila',`a carga volta ao limite em ${cen.quando}, mas passa de novo depois`],acima:['crit','Sobrecarga crescendo','a carga fica acima do limite e continua subindo']}[cen.status]||['mute','—',''];
+  const sem=F.semanas||[],comp=sem.filter(w=>w.completa),m4=comp.slice(-4).reduce((t,w)=>t+w.entradas,0)/Math.max(1,Math.min(4,comp.length));
+  const cp=cs.find(c=>c.id==='semanas'),ms=cs.find(c=>c.id==='meses');
+  const kpi=(n,l,cls)=>`<div class="pkpi ${cls||''}"><b>${n}</b><span>${l}</span></div>`;
+  const kpis=`<div class="pkpis">${kpi(pvNum(m4),`entram por semana (últimas 4) · ${cp?Math.round(cp.por_mes):'—'} por mês${ms?`; ${Math.round(ms.por_mes)} no ritmo de 3 meses`:''}`)}
+    ${kpi(pvNum(F.saidas_media_6m),`saem por mês pelo CP${F.real?` · ${pvNum(F.real.saidas_mes)} na prática nos últimos 30 dias`:''}`)}
+    ${kpi((cen.saldo_mes>0?'+':'')+pvNum(cen.saldo_mes),'ativos a mais por mês',cen.saldo_mes>0?'bad':'')}
+    ${kpi(F.equilibrio_mes??'—','novos por mês que mantêm a carga parada')}</div>`;
+  // Entradas por semana (12 últimas)
+  let gSem='';
+  if(sem.length>1){const w=520,h=150,m={l:28,r:8,t:14,b:24},mx=Math.max(...sem.map(x=>x.entradas),1)*1.15,bw=(w-m.l-m.r)/sem.length,Y=v=>m.t+(1-v/mx)*(h-m.t-m.b);
+    const md=Y(m4);
+    gSem=`<svg class="pv-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Mentorados que entraram por semana">${[0,.5,1].map(f=>{const v=Math.round(mx*f/1.15);return `<line x1="${m.l}" x2="${w-m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--line)"/><text x="${m.l-5}" y="${(Y(v)+4).toFixed(1)}" text-anchor="end" font-size="10" class="mut">${v}</text>`}).join('')}
+      ${sem.map((x,i)=>{const X=m.l+i*bw+bw*.15,bh=Y(0)-Y(x.entradas);const [,mm,dd]=x.semana.split('-');
+        return `<rect x="${X.toFixed(1)}" y="${Y(x.entradas).toFixed(1)}" width="${(bw*.7).toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="var(--ok)" opacity="${x.completa?1:.35}"><title>Semana de ${dd}/${mm}: ${x.entradas} entraram${x.completa?'':' (semana em andamento)'}</title></rect>
+        <text x="${(X+bw*.35).toFixed(1)}" y="${(Y(x.entradas)-3).toFixed(1)}" text-anchor="middle" font-size="10">${x.entradas}</text>${i%2===0||i===sem.length-1?`<text x="${(X+bw*.35).toFixed(1)}" y="${h-8}" text-anchor="middle" font-size="9.5" class="mut">${dd}/${mm}</text>`:''}`}).join('')}
+      <line x1="${m.l}" x2="${w-m.r}" y1="${md.toFixed(1)}" y2="${md.toFixed(1)}" stroke="var(--fg)" stroke-dasharray="4 3"/><text x="${w-m.r}" y="${(md-4).toFixed(1)}" text-anchor="end" font-size="10" class="mut">média 4 semanas ${pvNum(m4)}</text></svg>`}
+  // Próximos 12 meses: entram (para cima), saem (para baixo) e ativos (linha)
+  let gMes='';
+  if(L.length){const w=520,h=230,m={l:30,r:40,t:16,b:24},mxB=Math.max(...L.map(l=>Math.max(l.entram,l.saem)),1)*1.1,bw=(w-m.l-m.r)/L.length,mid=m.t+(h-m.t-m.b)/2,half=(h-m.t-m.b)/2-6;
+    const yB=v=>v/mxB*half,aMin=Math.min(F.ativos_hoje,...L.map(l=>l.ativos)),aMax=Math.max(F.ativos_hoje,...L.map(l=>l.ativos)),YA=v=>m.t+4+(1-(v-aMin)/Math.max(1,aMax-aMin))*(h-m.t-m.b-8);
+    const cx=i=>m.l+i*bw+bw/2;
+    gMes=`<svg class="pv-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Entradas, saídas e ativos projetados por mês">
+      <line x1="${m.l}" x2="${w-m.r}" y1="${mid}" y2="${mid}" stroke="var(--line)"/>
+      ${L.map((l,i)=>`<rect x="${(cx(i)-bw*.32).toFixed(1)}" y="${(mid-yB(l.entram)).toFixed(1)}" width="${(bw*.64).toFixed(1)}" height="${yB(l.entram).toFixed(1)}" rx="2" fill="var(--ok)" opacity=".85"><title>${l.mes}: entram ${l.entram}</title></rect>
+        <rect x="${(cx(i)-bw*.32).toFixed(1)}" y="${mid}" width="${(bw*.64).toFixed(1)}" height="${yB(l.saem).toFixed(1)}" rx="2" fill="var(--p1)" opacity="${l.estimado?.45:.85}"><title>${l.mes}: saem ${l.saem}${l.estimado?' (repete o último mês do CP)':''}</title></rect>
+        ${i%2===0||i===L.length-1?`<text x="${cx(i).toFixed(1)}" y="${h-8}" text-anchor="middle" font-size="10" class="mut">${l.mes}</text>`:''}`).join('')}
+      <path d="M${m.l},${YA(F.ativos_hoje).toFixed(1)} ${L.map((l,i)=>`L${cx(i).toFixed(1)},${YA(l.ativos).toFixed(1)}`).join(' ')}" stroke="var(--tO)" stroke-width="2.5" fill="none"/>
+      <circle cx="${cx(L.length-1).toFixed(1)}" cy="${YA(L[L.length-1].ativos).toFixed(1)}" r="4" fill="var(--tO)"/>
+      <text x="${(cx(L.length-1)+6).toFixed(1)}" y="${(YA(L[L.length-1].ativos)+4).toFixed(1)}" font-size="11" font-weight="600" style="fill:var(--tO)">${L[L.length-1].ativos}</text>
+      <text x="${m.l+2}" y="${(YA(F.ativos_hoje)-7).toFixed(1)}" font-size="10.5" style="fill:var(--tO)">hoje ${F.ativos_hoje}</text>
+      <text x="${m.l-4}" y="${m.t+8}" text-anchor="end" font-size="10" class="mut">entram</text><text x="${m.l-4}" y="${h-m.b-2}" text-anchor="end" font-size="10" class="mut">saem</text></svg>`}
+  const em=k=>L[k-1]?`<div class="pv-fact"><b>${L[k-1].ativos}</b><span>ativos em ${L[k-1].mes} (${L[k-1].ativos-F.ativos_hoje>=0?'+':''}${L[k-1].ativos-F.ativos_hoje}) · carga em ${pvNum(L[k-1].pct)}% do limite${L[k-1].faltam?` · faltam ${L[k-1].faltam} pessoa${L[k-1].faltam>1?'s':''}`:''}</span></div>`:'';
+  const segC=`<div class="seg" role="group" aria-label="Cenário">${cs.map(c=>`<button data-act="fluxoCen" data-k="${c.id}" class="${c===cen?'on':''}" aria-pressed="${c===cen}">${esc(c.nome)}</button>`).join('')}</div>`;
+  const expl=cen.id==='real'?`Entram ${Math.round(cen.por_mes)} por mês (ritmo das últimas 4 semanas) e saem ${pvNum(F.real.saidas_mes)}, o que de fato saiu entre ${brData(F.real.de)} e ${brData(F.real.ate)} (finalizações, pausas e churn): os ativos foram de ${F.real.ativos_de} para ${F.real.ativos_ate}.`
+    :`Entram ${Math.round(cen.por_mes)} por mês (${cen.id==='semanas'?'média das últimas 4 semanas':'média dos últimos 3 meses fechados'}) e saem as finalizações previstas pelo Controle de Produção; depois da tabela do CP, repete o último mês.`;
+  return `<section class="card wide"><div class="pv-who" style="margin-bottom:4px"><h2 style="margin:0">Entradas e saídas de mentorados</h2><span class="pselo ${ST[0]}">${ST[1]}</span></div>
+    <p class="meta-line" style="margin:0 0 10px">Com o ritmo escolhido, ${ST[2]}. Novo mentorado pesa em média ${pvNum(((C.modelo.mentor['Audience 2.0']+C.modelo.mentor['Audience 1.0'])/2))} ponto (metade com roteiros); quem sai libera em média ${pvNum((C.projecao||{}).pontos_por_saida)}.</p>
+    ${kpis}
+    <div class="pv-grid" style="margin-top:14px"><div><h3 class="ph3">Quantos entraram por semana</h3>${gSem||'<p class="meta-line">As semanas aparecem depois da próxima atualização.</p>'}</div>
+      <div><h3 class="ph3">Próximos 12 meses</h3><div class="pv-leg"><span><i style="background:var(--ok)"></i>entram</span><span><i style="background:var(--p1)"></i>saem</span><span><i style="background:var(--tO)"></i>ativos</span></div>${gMes}</div></div>
+    <div class="pv-bar" style="margin:12px 0 6px"><span class="pv-lbl">Ritmo</span>${segC}</div>
+    <p class="meta-line" style="margin:0 0 8px">${expl}</p>${em(3)}${em(6)}${em(12)}</section>`;
+}
+/* Como a carga é contada e o tamanho máximo da carteira, com o Audience 2.0 sem roteiros como régua */
+function cardLogica(C){
+  const M=C.modelo;if(!M||!M.mentor)return '';
+  const LIM=M.limite,cp=M.copy,mt=M.mentor;
+  const prods=[['Audience 2.0 sem roteiros',mt['Audience 2.0'],'a régua: 1 mentorado = 1 ponto'],['Boost 2.0',mt['Boost 2.0'],'processo mais curto'],['Audience 2.0 com roteiros',mt['Audience 1.0'],'pesa como o Audience 1.0'],
+    ['Audience 1.0',mt['Audience 1.0'],''],['Mentoria Ouro',mt['Mentoria Ouro'],''],['Outros produtos',mt['Outros'],''],['Experience (1.0, 2.0 e 3.0)',mt['Experience 3.0'],'o mais pesado']];
+  const cabe=v=>v?Math.floor(LIM/v+1e-9):'—';
+  const rows=prods.map(([n,v,obs])=>`<tr><td><b>${n}</b>${obs?`<div class="meta-line">${obs}</div>`:''}</td><td class="r">${pvNum(v)}</td><td class="r">${pvNum(v+cp)}</td><td class="r"><b>${cabe(v)}</b></td><td class="r">${cabe(v+cp)}</td><td class="r">${pvNum(v/mt['Audience 2.0'])}</td></tr>`);
+  const maxW=Math.max(...prods.map(p=>p[1]+cp)),w=520,rh=26,left=190,sx=v=>v/maxW*(w-left-50);
+  const barras=`<svg class="pv-svg" viewBox="0 0 ${w} ${prods.length*rh+4}" role="img" aria-label="Pontos por mentorado em cada produto">${prods.map(([n,v],i)=>`<g transform="translate(0,${i*rh})"><text x="${left-10}" y="${rh/2+4}" text-anchor="end" font-size="12">${n}</text>
+    <rect x="${left}" y="6" width="${sx(v).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tO)"/><rect x="${(left+sx(v)).toFixed(1)}" y="6" width="${sx(cp).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tC)" opacity=".35"/>
+    <text x="${(left+sx(v+cp)+6).toFixed(1)}" y="${rh/2+4}" font-size="11.5" class="mut">${pvNum(v)} · ${pvNum(v+cp)}</text></g>`).join('')}</svg>`;
+  return `<section class="card wide"><h2>Como a conta é feita</h2>
+    <p class="meta-line" style="margin:-2px 0 10px">Cada mentorado vale pontos conforme o produto e o papel da pessoa. A régua é o Audience 2.0 sem roteiros só como mentor, que vale 1 ponto. Ser copy soma ${pvNum(cp)} pontos em qualquer produto, porque a copy toma mais tempo.</p>
+    <div style="display:grid;gap:14px"><div>
+      <div class="pkpis" style="margin-bottom:12px"><div class="pkpi mentor"><b>${LIM} pontos</b><span>carteira máxima por pessoa = ${LIM} mentorados de Audience 2.0 sem roteiros, só como mentor</span></div></div>
+      <div class="pv-leg"><span><i style="background:var(--tO)"></i>como mentor</span><span><i style="background:var(--tC);opacity:.35"></i>+ copy</span></div><div style="max-width:640px">${barras}</div></div>
+      <div>${tbl([{t:'Produto'},{t:'Mentor',r:1},{t:'Mentor + copy',r:1},{t:'Cabem só mentor',r:1},{t:'Cabem com copy',r:1},{t:'Equivale a Aud. 2.0',r:1}],rows)}
+      <p class="meta-line">“Cabem” é quantos mentorados daquele produto, sozinhos, enchem uma carteira de ${LIM} pontos. Numa carteira mista os pontos se somam: por exemplo, 20 Audience 2.0 (20) + 6 Experience (15) + 5 Audience 2.0 como copy (20) = 55 pontos, sobram ${LIM-55}.</p></div></div>
+    <p class="meta-line">Uso do limite: verde até 85%, amarelo de 85% a 100%, vermelho acima. Sugestão de quem recebe o próximo: menor carga primeiro, entre quem tem 20 ou mais mentorados${(M.incluir||[]).length?` e mais ${M.incluir.map(esc).join(', ')}`:''}.</p></section>`;
+}
 function cardCarteira(){
   const C=Carteira.data;if(!C||!C.pessoas)return '';
   const M=C.modelo||{},P=C.projecao||{},LIM=M.limite||65,ps=C.pessoas,sug=ps.filter(x=>!x.evitar);
@@ -2095,6 +2165,8 @@ function cardCarteira(){
       <section class="card"><h2>Para onde vai a carga</h2><p class="meta-line" style="margin:-2px 0 8px">Carga do time mês a mês: hoje, menos as finalizações previstas pelo CP, mais a entrada média de mentorados novos.</p>${proj}</section></div>
     <section class="card wide"><h2>Carga por pessoa</h2><p class="meta-line" style="margin:-2px 0 6px">Mentor vale ${pvNum(M.mentor&&M.mentor['Boost 2.0'])} no Boost, ${pvNum(M.mentor&&M.mentor['Audience 2.0'])} no Audience 2.0, ${pvNum(M.mentor&&M.mentor['Audience 1.0'])} no Audience 1.0, Ouro e Outros e ${pvNum(M.mentor&&M.mentor['Experience 3.0'])} no Experience; ser copy soma ${pvNum(M.copy)}. Toque numa pessoa para ver o detalhe.</p>
       <div class="pv-leg"><span><i style="background:var(--tO)"></i>pontos como mentor</span><span><i style="background:var(--tC)"></i>pontos como copy</span><span>┆ limite</span><span style="opacity:.55">esmaecido: fora da sugestão</span></div>${barras}${det}</section>
+    ${cardFluxo(C)}
+    ${cardLogica(C)}
     <section class="card wide"><details><summary class="meta-line" style="cursor:pointer">Ver a tabela completa</summary>${tbl([{t:'Estrategista'},{t:'Mentorados',r:1},{t:'Carga',r:1},{t:'Uso do limite',r:1},{t:'Vagas Audience 2.0',r:1},{t:'Vagas com roteiros',r:1},{t:'A finalizar (CP)',r:1}],rows)}</details>
       <p class="meta-line">${C.redistribuicao?`Redistribuição aplicada antes de ir para o CP: ${esc(C.redistribuicao)}. `:''}Base: ${esc(C.origem||'exportação do CP')}${Carteira.updated?' · atualizado '+fmtStamp(Carteira.updated):''}. <a href="https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr" target="_blank" rel="noopener">Abrir o dashboard completo</a></p></section>`;
 }
@@ -2406,6 +2478,7 @@ main.addEventListener('click',e=>{
   if(act==='prodAba'){ui.prodAba=el.dataset.aba;saveUi();return renderMain()}
   if(act==='prodPapel'){ui.prodPapel=el.dataset.k;ui.prodPessoa=null;saveUi();return renderMain()}
   if(act==='prodPessoa'){const k=el.dataset.k??'';ui.prodPessoa=ui.prodPessoa===k?null:k;renderMain();const sc=document.querySelector('main .scroll');if(sc&&ui.prodPessoa!==null)sc.scrollTo({top:0,behavior:'smooth'});return}
+  if(act==='fluxoCen'){ui.fluxoCen=el.dataset.k;return renderMain()}
   if(act==='cartSel'){ui.cartSel=ui.cartSel===el.dataset.k?null:el.dataset.k;return renderMain()}
   if(act==='estAbrir'){ui.estOpen=el.dataset.id;ui.estCfg=false;ui.estNota=false;ui.estFb=null;return renderMain()}
   if(act==='estCfg'){ui.estCfg=true;ui.estOpen=null;return renderMain()}
