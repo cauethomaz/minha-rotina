@@ -51,6 +51,7 @@ async function contexto() {
     `${t.estimated_duration || 30}min`, t.deadline ? 'prazo ' + t.deadline : '', t.responsible && t.responsible !== 'Cauê' ? 'resp ' + t.responsible : '',
     (t.acomp !== false && ((t.responsible && t.responsible !== 'Cauê') || ACOMP.test(t.title || ''))) ? 'ACOMPANHAMENTO' : '',
     t.focus_week ? 'semana:' + t.focus_week : '', t.focus_day ? 'dia:' + t.focus_day : '', t.repeat ? 'repete ' + t.repeat : '',
+    t.project ? 'projeto ' + t.project : '',
     (t.subtasks || []).length ? `checklist ${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}` : ''].filter(Boolean).join(' | ');
   const ord = (a, b) => ((a.planned_date || '9') + (a.planned_time || '99')).localeCompare((b.planned_date || '9') + (b.planned_time || '99'));
   const horas = Object.entries(C.hours || {}).map(([d, h]) => `${WD[d]}: ${h.on ? `${h.start}–${h.end}` : 'não trabalha'}`).join(' · ');
@@ -78,6 +79,11 @@ PESSOAS: ${(C.people || []).filter(p => p.name).map(p => `${p.name} (${p.role ||
 REGRA DE P1: ${C.p1 || ''}
 OBSERVAÇÕES DO CAUÊ: ${C.notes || ''}
 PROJETOS: ${(C.projects || []).join(', ')}
+PROJETOS COM OBJETIVO (tela Projetos; o resto são áreas):
+${Object.entries(C.projInfo || {}).filter(([n, i]) => i && i.ativo !== false && (C.projects || []).includes(n)).map(([n, i]) => {
+  const feitas = rows.filter(r => !r.id.includes(':') && r.data.project === n && r.data.status === 'concluida').map(r => r.data.title).slice(-25);
+  return `- ${n} (P${i.prio || 2}): ${i.obj || 'sem objetivo escrito'}${feitas.length ? `\n  já feito: ${feitas.join('; ')}` : ''}`;
+}).join('\n') || '(nenhum)'}
 
 DEMANDAS (id | estado | título | tipo | prioridade | planejado | duração | prazo | ...), ordenadas por data:
 ${tarefas.sort(ord).map(linha).join('\n')}`;
@@ -100,9 +106,10 @@ REGRAS DE AGENDA (obrigatórias):
 - Demanda nova sem tipo: E estratégico, O operacional, A analítico, C conversa. Duração padrão: C 15, O 30, A 60, E 90 (reunião: 60).
 - Se faltar informação essencial (ex.: duração de uma reunião), assuma o padrão e diga na resposta o que assumiu. Se o pedido for só uma pergunta, responda sem ações.
 - Se não couber tudo, diga o que ficou de fora e para quando sugere.
+- Sugestões para um projeto (botão Sugestões da tela Projetos): leia o objetivo, as demandas abertas e o que já foi feito nele e proponha de 3 a 6 demandas que faltam (etapas esquecidas, testes, validação com pessoas, comunicação ao time, métricas, documentação, próximos passos). Cada uma vira "criar" com projeto = nome exato do projeto, tipo, prioridade, duração e descrição curta com o porquê; sem data e sem hora (ele decide quando). Não repita o que já existe nem o que já foi feito. Na resposta, diga em 1 linha a lógica geral.
 
 FORMATO DAS AÇÕES:
-- "criar": campos titulo (obrigatório), tipo, prioridade (1–3), data (AAAA-MM-DD), hora (HH:MM), duracao (min), prazo (AAAA-MM-DD), pessoas, responsavel, descricao, checklist (lista de itens), semana (true = prioridade da semana), dia (true = prioridade do dia).
+- "criar": campos titulo (obrigatório), tipo, prioridade (1–3), data (AAAA-MM-DD), hora (HH:MM), duracao (min), prazo (AAAA-MM-DD), pessoas, responsavel, descricao, checklist (lista de itens), semana (true = prioridade da semana), dia (true = prioridade do dia), projeto (nome exato de um dos PROJETOS).
 - "editar": id + os campos que mudam (os mesmos nomes acima; hora null tira o horário).
 - "concluir": id.
 - Cada ação tem "resumo": uma linha que o Cauê lê para aprovar, ex.: "Reunião com o Juan: qua 28/10 às 11h30 (60 min)".
@@ -115,7 +122,7 @@ const SCHEMA = JSON.stringify({ type: 'object', required: ['resposta', 'acoes'],
     titulo: { type: 'string' }, tipo: { type: 'string', enum: ['E', 'O', 'A', 'C'] }, prioridade: { type: 'integer' },
     data: { type: 'string' }, hora: { type: ['string', 'null'] }, duracao: { type: 'integer' }, prazo: { type: 'string' },
     pessoas: { type: 'array', items: { type: 'string' } }, responsavel: { type: 'string' }, descricao: { type: 'string' },
-    checklist: { type: 'array', items: { type: 'string' } }, semana: { type: 'boolean' }, dia: { type: 'boolean' } } } } } });
+    checklist: { type: 'array', items: { type: 'string' } }, semana: { type: 'boolean' }, dia: { type: 'boolean' }, projeto: { type: 'string' } } } } } });
 
 function perguntarClaude(prompt) {
   return new Promise((resolve, reject) => {

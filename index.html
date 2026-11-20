@@ -107,6 +107,14 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .levstrip{display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--muted);padding:2px 0 14px;flex-wrap:wrap}
 .levstrip .stack{width:160px}
 .levstrip b{color:var(--fg);font-weight:600}
+/* Projetos: mesmos componentes da Alavancagem (card, rhythm, badge, stack) e linhas de demanda das listas */
+.pjc{cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:10px}.pjc:hover{border-color:var(--faint)}
+.pjc .t{display:flex;gap:8px;align-items:center}.pjc .t b{font-family:var(--display);font-size:16px;letter-spacing:-.01em;flex:1;min-width:0}
+.pjc p{margin:0;color:var(--muted);font-size:13px}.pjc .stack i{background:var(--accent)}
+.pjnums{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}.pjnums b{color:var(--fg);font-variant-numeric:tabular-nums}
+.pjnext{border-top:1px dashed var(--line);padding-top:10px;font-size:13px}
+.pjnovo{border-style:dashed;color:var(--muted);align-items:center;justify-content:center;min-height:150px}
+.pjcard-rows .row{padding-left:0;padding-right:0}.pjcard-rows .row:last-child{border-bottom:0}
 .levstrip .warn{color:var(--p1)}
 
 .capture{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:18px}
@@ -806,7 +814,7 @@ const Store={
 };
 /* ---------- Context: who's who, projects, hours, fixed commitments (one settings doc) ---------- */
 function normalizeCtx(c){
-  c=Object.assign({ai:true,goalE:30,countFixed:true,learned:{},people:[],projects:[],p1:'',deadlineRule:'',notes:'',hours:{},fixed:[]},c||{});
+  c=Object.assign({ai:true,goalE:30,countFixed:true,learned:{},people:[],projects:[],projInfo:{},p1:'',deadlineRule:'',notes:'',hours:{},fixed:[]},c||{});
   for(let wd=0;wd<7;wd++)c.hours[wd]=Object.assign({on:wd>0&&wd<6,start:'09:00',end:'18:00',prod:true},c.hours[wd]||{});
   c.fixed=c.fixed.map(f=>Object.assign({id:uid(),wd:1,time:'09:00',dur:60,title:'',type:''},f));
   return c;
@@ -1235,6 +1243,7 @@ function renderSide(){
     <nav class="nav">
       ${item('inbox','Caixa de entrada',svg('inbox','ico'),b.inbox.length||'')}
       ${item('revisar','A revisar',svg('sublist','ico'),Store.all().filter(toReview).length||'')}
+      ${item('projetos','Projetos',svg('folder','ico'),pjAtivos().length||'')}
       ${sec('prioridades','Prioridades',item('pdia','Prioridades do dia',svg('star','ico'),b.open.filter(inDay).length||'')+item('psemana','Prioridades da semana',svg('star','ico'),b.open.filter(inWeek).length||''))}
       ${sec('listas','Listas',item('hoje','Hoje',svg('sun','ico'),(b.late.length+b.tod.length)||'')+item('atrasados','Atrasados',svg('flag','ico'),b.late.length||'')+item('acompanhamento','Acompanhamento',svg('person','ico'),b.cobrar.length||'')+item('semana','Semana',svg('week','ico'),b.week.length||'')+item('todas','Todas as notas',svg('notes','ico'),b.open.length)+item('concluidas','Concluídas',svg('check','ico'),b.done.length||''))}
       ${sec('tipos','Tipos',TK.map(k=>item('tipo:'+k,TYPES[k],`<span class="ico" style="display:grid;place-items:center"><span class="dot d${k}"></span></span>`,lev.c[k]||'')).join(''))}
@@ -1329,6 +1338,8 @@ function renderMain(){
   if(Store.mode==='loading'){main.innerHTML='<div class="loading">Abrindo suas notas…</div>';return}
   const banner=ui.banner?`<div class="banner">${esc(ui.banner)}</div>`:'';
   if(ui.view==='calendario')return renderCalendar(main,banner);
+  if(ui.view==='projetos')return renderProjetos(main,banner);
+  if(ui.view.startsWith('pj:'))return renderProjeto(main,banner,ui.view.slice(3));
   if(ui.view==='alavancagem')return renderLeverage(main,banner);
   if(ui.view==='contexto')return renderContext(main,banner);
   if(ui.view==='mentorados')return renderMentorados(main,banner);
@@ -1497,6 +1508,83 @@ function historyChart(goal){
   return `<div class="hist" id="hist"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Percentual do tempo por tipo nas últimas semanas">${grid}${bars}${goalLine}${labels}</svg><div class="tip" id="histTip" hidden></div>
     <div class="legend-row">${order.map(k=>`<span><span class="dot d${k}"></span>${k==='N'?'Sem tipo':TYPES[k]}</span>`).join('')}</div>
     <details><summary>Ver em tabela</summary><div class="tbl-wrap"><table><thead><tr><th>Semana</th><th>Estratégico</th><th>Operacional</th><th>Analítico</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div></details></div>`;
+}
+
+/* ---------- Projetos: painel visual. Projeto = item de Contexto→Projetos com objetivo em Ctx.data.projInfo; o resto (CORE, Pessoal) é área ---------- */
+const pjInfo=n=>(Ctx.data.projInfo||{})[n];
+const pjAtivos=()=>Ctx.data.projects.filter(n=>{const i=pjInfo(n);return i&&i.ativo!==false});
+function pjCalc(n){
+  const t0=today(),all=Store.all().filter(t=>t.project===n),done=all.filter(isDone),open=all.filter(t=>!isDone(t));
+  const mine=open.filter(t=>!isDeleg(t)).sort(cmp),deleg=open.filter(isDeleg).sort(cmp);
+  const lateF=x=>(x.planned_date&&x.planned_date<t0)||(x.deadline&&x.deadline<t0);
+  const late=mine.filter(lateF),p1=mine.filter(t=>t.priority===1);
+  const fut=mine.filter(t=>!lateF(t)&&t.planned_date).sort((a,b)=>((a.planned_date||'')+(a.planned_time||'')).localeCompare((b.planned_date||'')+(b.planned_time||'')));
+  const ult=done.map(t=>(t.completed_at||'').slice(0,10)).sort().pop()||'';
+  const ativo=(ult&&dd(ult,t0)<=10)||fut.some(t=>dd(t0,t.planned_date)<=7);
+  const status=late.length?['Atenção','at']:open.length&&!ativo?['Parado','']:!open.length&&done.length?['Sem pendências','ok']:['Em ritmo','ok'];
+  return {all,done:done.sort((a,b)=>(b.completed_at||'').localeCompare(a.completed_at||'')),open,mine,deleg,late,p1,lateF,
+    pct:all.length?Math.round(done.length/all.length*100):0,next:fut[0]||late[0]||mine[0],status};
+}
+const pjQuando=(t,lateF)=>{const d=t.planned_date||t.deadline;if(!d)return 'sem data';const s=fmtDay(d)+(t.planned_time&&t.planned_date?' · '+t.planned_time:'');return lateF&&lateF(t)?'atrasada · '+s:s};
+const pjBadge=c=>`<span class="badge ${c.status[1]==='at'?'mid':c.status[1]==='ok'?'lead':'op'}">${c.status[0]}</span>`;
+function renderProjetos(main,banner){
+  main.dataset.view='projetos';
+  const L=pjAtivos(),cs=L.map(pjCalc),areas=Ctx.data.projects.filter(n=>!L.includes(n));
+  const sum=k=>cs.reduce((a,c)=>a+c[k].length,0);
+  main.innerHTML=`<header class="mhead"><div><h1>Projetos</h1><div class="sub">O que cada projeto precisa entregar e em que pé está</div></div><div class="grow"></div><button class="btn" data-act="pjNovo">+ Novo projeto</button></header>${banner}
+  <div class="lev">
+    <section class="card wide"><h2>Resumo</h2><div class="rhythm"><div><b>${L.length}</b><span>projetos ativos</span></div><div><b style="color:var(--p1)">${sum('p1')}</b><span>P1 abertas</span></div><div><b style="color:${sum('late')?'var(--p1)':'inherit'}">${sum('late')}</b><span>atrasadas</span></div><div><b>${sum('deleg')}</b><span>no Acompanhamento</span></div></div></section>
+    ${L.map((n,k)=>{const c=cs[k],i=pjInfo(n),nx=c.next;
+    return `<section class="card pjc" data-act="pjAbrir" data-i="${Ctx.data.projects.indexOf(n)}" role="button" tabindex="0">
+      <div class="t"><b>${esc(n)}</b><span class="pri pri${i.prio||2}">P${i.prio||2}</span>${pjBadge(c)}</div>
+      <p>${esc(i.obj||'Sem objetivo escrito')}</p>
+      <div class="stack"><i style="width:${c.pct}%"></i></div>
+      <div class="pjnums"><span><b>${c.pct}%</b> feito (${c.done.length} de ${c.all.length})</span><span><b class="pri1">${c.p1.length}</b> P1</span><span><b>${c.late.length}</b> atrasadas</span><span><b>${c.deleg.length}</b> acompanhar</span></div>
+      <div class="pjnext"><span class="meta-line">Próxima</span><br>${nx?`${esc(nx.title)} <span class="meta-line">· ${pjQuando(nx,c.lateF)}</span>`:'<span class="meta-line">nenhuma demanda aberta</span>'}</div></section>`}).join('')}
+    <button class="card pjc pjnovo" data-act="pjNovo">+ Novo projeto</button>
+    ${areas.length?`<section class="card wide"><h2>Áreas</h2><p class="meta-line" style="margin:-4px 0 10px">Continuam como hoje, sem objetivo nem etapas.</p><div class="tags">${areas.map(n=>`<button class="chip" data-view-go="proj:${esc(n)}">${esc(n)} · ${Store.all().filter(t=>t.project===n&&!isDone(t)).length}</button>`).join('')}</div></section>`:''}
+  </div>`;
+}
+function renderProjeto(main,banner,i){
+  const n=Ctx.data.projects[+i],info=n&&pjInfo(n);
+  if(!info){ui.view='projetos';return renderProjetos(main,banner)}
+  main.dataset.view='pj:'+i;
+  const c=pjCalc(n),agora=c.mine.filter(t=>t.priority===1||c.lateF(t)),prox=c.mine.filter(t=>!agora.includes(t));
+  const feito=ui.pjFeito?c.done:c.done.slice(0,8);
+  const sec=(t,arr,extra='')=>`<section class="card"><h2>${t} · ${arr.length}</h2><div class="pjcard-rows">${arr.map(rowHtml).join('')||'<p class="meta-line">nada</p>'}</div>${extra}</section>`;
+  main.innerHTML=`<header class="mhead"><div><h1>${esc(n)}</h1><div class="sub">${esc(info.obj||'Sem objetivo escrito')}</div></div><div class="grow"></div><button class="btn" data-view-go="projetos">‹ Projetos</button></header>${banner}
+  <div class="lev">
+    <section class="card wide"><div class="verdict"><span class="badge ${c.status[1]==='at'?'mid':c.status[1]==='ok'?'lead':'op'}">${c.status[0]}</span><div style="flex:1;min-width:240px">
+      <div class="stack" style="max-width:420px"><i style="width:${c.pct}%;background:var(--accent)"></i></div>
+      <div class="pjnums" style="margin-top:8px"><span><b>${c.pct}%</b> feito (${c.done.length} de ${c.all.length})</span><span><b class="pri1">${c.p1.length}</b> P1</span><span><b>${c.late.length}</b> atrasadas</span><span><span class="pri pri${info.prio||2}">P${info.prio||2}</span> prioridade do projeto</span></div></div>
+      <div class="tags"><button class="btn pri-b" data-act="pjAdd" data-i="${i}">+ Demanda</button><button class="btn" data-act="pjSugerir" data-i="${i}">✦ Sugestões</button><button class="btn" data-act="pjEditar" data-i="${i}">Editar</button><button class="btn" data-act="pjArquivar" data-i="${i}">Arquivar</button></div></div></section>
+    ${sec('Agora · P1 e atrasadas',agora)}${sec('Próximas',prox)}${sec('Acompanhar',c.deleg)}
+    ${sec('Feito',feito,c.done.length>feito.length?`<button class="btn" style="margin-top:8px" data-act="pjMaisFeito">Ver todas (${c.done.length})</button>`:'')}
+  </div>`;
+}
+function pjAcao(act,el){
+  const c=Ctx.data;c.projInfo=c.projInfo||{};const n=c.projects[+el.dataset.i];
+  if(act==='pjAbrir'){ui.view='pj:'+el.dataset.i;ui.pjFeito=false;saveUi();return renderAll()}
+  if(act==='pjMaisFeito'){ui.pjFeito=true;return renderMain()}
+  if(act==='pjNovo'){const nome=(prompt('Nome do projeto')||'').trim();if(!nome)return;
+    if(pjInfo(nome)&&pjInfo(nome).ativo!==false)return toast('Esse projeto já existe.');
+    const obj=(prompt('Objetivo do projeto (o que ele precisa entregar)')||'').trim();
+    if(!c.projects.includes(nome))c.projects.push(nome);
+    c.projInfo[nome]=Object.assign({},pjInfo(nome),{obj,prio:2,ativo:true,criado:today()});
+    Ctx.save();ui.view='pj:'+c.projects.indexOf(nome);saveUi();return renderAll()}
+  if(!n||!pjInfo(n))return;const info=pjInfo(n);
+  if(act==='pjEditar'){const obj=prompt('Objetivo do projeto',info.obj||'');if(obj===null)return;
+    const pr=prompt('Prioridade do projeto (1, 2 ou 3)',String(info.prio||2));if(pr===null)return;
+    info.obj=obj.trim();info.prio=Math.min(3,Math.max(1,+pr||2));Ctx.save();return renderAll()}
+  if(act==='pjArquivar'){if(!confirm(`Arquivar o projeto "${n}"? Ele sai da tela Projetos; as demandas continuam no app.`))return;
+    info.ativo=false;Ctx.save();ui.view='projetos';saveUi();toast('Projeto arquivado','Desfazer',()=>{info.ativo=true;Ctx.save();renderAll()});return renderAll()}
+  if(act==='pjAdd'){const v=(prompt(`Nova demanda em "${n}"`)||'').trim();if(!v)return;
+    const p=parseCapture(v);const base={title:p.title||v,project:n};
+    ['type','priority','estimated_duration','deadline','planned_date','planned_time','responsible'].forEach(k=>{if(p[k]!=null)base[k]=p[k]});
+    const t=newTask(base);Store.put(t);renderAll();if(aiReady())classify([t.id]);return}
+  if(act==='pjSugerir'){
+    Chat.save('chat:'+uid()+'-u',{role:'user',texto:`Sugestões para o projeto "${n}": analise o objetivo, as demandas abertas e o que já foi feito, e sugira demandas que eu esqueci ou que valeria agregar.`,status:'pendente',criadoEm:new Date().toISOString()});
+    ui.chatAberto=true;chatRender();return toast('Pedido enviado ao assistente. As sugestões chegam no chat para você aplicar.')}
 }
 function renderLeverage(main,banner){
   main.dataset.view='alavancagem';
@@ -2145,6 +2233,7 @@ main.addEventListener('click',e=>{
     return}
   if(act==='organizeInbox')return classify(buckets().inbox.sort(cmp).map(t=>t.id),true);
   if(act==='open')return openTask(id);
+  if(act&&act.startsWith('pj'))return pjAcao(act,el);
   if(act==='acompModo'){ui.acompPessoa=!!el.dataset.v;return renderMain()}
   if(act==='cobrei'){const t=Store.get(id);if(!t)return;update(id,{cobrancas:(t.cobrancas||[]).concat(today()),cobrar_em:diaUtil(today(),1)},{detail:ui.sel===id});return toast(`Cobrança registrada. Próxima: ${fmtDay(diaUtil(today(),1)).toLowerCase()}`)}
   if(act==='copiaCob'){const t=Store.get(id);if(!t)return;const txt=textoCobranca(t);if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast('Cobrança copiada. Depois de mandar, toque em Cobrei.'),()=>toast(txt));else toast(txt);return}
@@ -2513,7 +2602,7 @@ const Chat={msgs:new Map(),status:null,
     if(error){toast('Não salvou a mensagem. Verifique a conexão.');return false}return true},
   async limpar(){const ids=[...this.msgs.keys()];this.msgs.clear();chatRender();if(sb&&currentUser&&ids.length)await sb.from('tasks').delete().in('id',ids);else this.local()}};
 try{if(!window.SUPABASE_URL)JSON.parse(localStorage.getItem('minharotina.chat')||'[]').forEach(m=>Chat.msgs.set(m.id,m))}catch(e){}
-const CAMPOS_CHAT={titulo:'title',tipo:'type',prioridade:'priority',data:'planned_date',hora:'planned_time',duracao:'estimated_duration',prazo:'deadline',pessoas:'people',responsavel:'responsible',descricao:'description'};
+const CAMPOS_CHAT={titulo:'title',tipo:'type',prioridade:'priority',data:'planned_date',hora:'planned_time',duracao:'estimated_duration',prazo:'deadline',pessoas:'people',responsavel:'responsible',descricao:'description',projeto:'project'};
 function chatPatch(a){const p={};Object.entries(CAMPOS_CHAT).forEach(([k,f])=>{if(k in a&&a[k]!==undefined)p[f]=a[k]});
   if('semana' in a)p.focus_week=a.semana?weekKey():null;if('dia' in a)p.focus_day=a.dia?today():null;
   if(Array.isArray(a.checklist))p.subtasks=a.checklist.map(t=>({t,done:false}));
