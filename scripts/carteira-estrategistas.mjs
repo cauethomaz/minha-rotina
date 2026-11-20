@@ -4,7 +4,7 @@
 // Não leva nome, e-mail nem telefone de cliente: só contagens.
 // Alimenta o dashboard "Carteira dos Estrategistas" (https://claude.ai/artifact/Bwaa4Te9mwxoib9ZspCnJr).
 //   node scripts/carteira-estrategistas.mjs <clientes_AAAA-MM-DD.csv> [pasta de saída]
-//   → grava base.json e carteira.json (padrão: ~/.claude/producao/carteira/)
+//   → grava base.json, carteira.json e entradas.json (padrão: ~/.claude/producao/carteira/)
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -20,7 +20,7 @@ for (let i = 0; i < txt.length; i++) { const ch = txt[i];
 if (f || row.length) { row.push(f); rows.push(row) }
 const H = rows[0].map(h => h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
 const col = n => H.findIndex(h => h.startsWith(n));
-const C = { p: col('produto'), s: col('situacao'), cp: col('responsavel copy'), m: col('responsavel mentor') };
+const C = { p: col('produto'), s: col('situacao'), cp: col('responsavel copy'), m: col('responsavel mentor'), d: col('data de entrada') };
 const linhaDe = p => {
   if (/audience 2\.0/i.test(p) && !/scale/i.test(p)) return 'Audience 2.0';
   if (/audience 1\.0/i.test(p)) return 'Audience 1.0';
@@ -46,11 +46,22 @@ for (const r of ativos) {
     (cart[k] ??= { estrategista, funcao, linha, mentorados: 0 }).mentorados++;
   }
 }
+// Entradas por mês (qualquer situação), pela data de entrada no produto: base da projeção de capacidade.
+const mesDe = v => { v = (v || '').trim(); let m = v.match(/^(\d{4})-(\d{2})/); if (m) return `${m[1]}-${m[2]}`;
+  m = v.match(/^\d{2}\/(\d{2})\/(\d{4})/); return m ? `${m[2]}-${m[1]}` : null; };
+const ent = {};
+for (const r of rows.slice(1).filter(r => r.length > 3)) {
+  const mes = mesDe(r[C.d]); if (!mes) continue;
+  const linha = linhaDe((r[C.p] || '').trim());
+  const e = ent[mes + '|' + linha] ??= { mes, linha, entradas: 0, com_copy: 0 };
+  e.entradas++; if (pessoa(r[C.cp])) e.com_copy++;
+}
 const self = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
 const meta = [{ label: 'carteira.mjs', value: self, type: 'code', lang: 'javascript' },
   { label: 'Entrada', value: path.basename(csvPath) + ' (Controle de Produção → Clientes → Exportar CSV)' }];
 const ord = (a, b) => Object.values(a).join('|').localeCompare(Object.values(b).join('|'));
 fs.writeFileSync(path.join(outDir, 'base.json'), JSON.stringify({ rows: Object.values(base).sort(ord), meta }));
 fs.writeFileSync(path.join(outDir, 'carteira.json'), JSON.stringify({ rows: Object.values(cart).sort(ord), meta }));
+fs.writeFileSync(path.join(outDir, 'entradas.json'), JSON.stringify({ rows: Object.values(ent).sort(ord), meta }));
 console.log('ativos', ativos.length, 'produtos', Object.keys(base).length, 'linhas carteira', Object.keys(cart).length,
   'estrategistas', new Set(Object.values(cart).map(x => x.estrategista)).size);
