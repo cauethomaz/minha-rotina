@@ -12,8 +12,10 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 export const MODELO = {
-  mentor: { 'Audience 2.0': 1, 'Boost 2.0': 0.5, 'Audience 1.0': 1.5, 'Mentoria Ouro': 1.5, 'Outros': 1.5, 'Experience 3.0': 2.5, 'Experience 2.0/1.0': 2.5 },
+  mentor: { 'Audience 2.0': 1, 'Boost 2.0': 0.5, 'Audience 1.0': 1.5, 'Mentoria Ouro': 1.5, 'Outros': 1.5, 'Experience 3.0': 2, 'Experience 2.0/1.0': 2 },
   copy: 3,
+  // Produtos sem roteiro: ser copy não soma nada (o Cauê decidiu em 21/11/2026)
+  semCopy: ['Audience 2.0', 'Boost 2.0'],
   limite: 65,
   minimo: 20,
   incluir: ['Henrique Sanchez', 'Domênica de Jesus'],
@@ -25,13 +27,14 @@ const pct = (n, t) => (t ? um((n / t) * 100) : 0);
 
 export function calcular({ carteira, base, entradas, saidas_cp, semanas = [], hist = [] }, M = MODELO) {
   const peso = (l) => M.mentor[l] ?? 1.5;
+  const pesoCopy = (l) => ((M.semCopy || []).includes(l) ? 0 : M.copy);
   const por = {};
   for (const r of carteira) {
     const n = Number(r.mentorados);
     const e = por[r.estrategista] ??= { estrategista: r.estrategista, total: 0, carga: 0, aud2: 0, exp: 0, copy: 0, pm: 0, pc: 0, mix: {} };
     e.total += n;
     if (r.funcao !== 'Só copy') { e.carga += n * peso(r.linha); e.pm += n * peso(r.linha); }
-    if (r.funcao !== 'Só mentor') { e.carga += n * M.copy; e.pc += n * M.copy; e.copy += n; }
+    if (r.funcao !== 'Só mentor') { e.carga += n * pesoCopy(r.linha); e.pc += n * pesoCopy(r.linha); e.copy += n; }
     e.mix[r.linha] = (e.mix[r.linha] || 0) + n;
     if (r.linha === 'Audience 2.0') e.aud2 += n;
     if (r.linha.startsWith('Experience')) e.exp += n;
@@ -52,7 +55,7 @@ export function calcular({ carteira, base, entradas, saidas_cp, semanas = [], hi
   for (const r of carteira) {
     const n = Number(r.mentorados);
     if (r.funcao !== 'Só copy') cargaTodos += n * peso(r.linha);
-    if (r.funcao !== 'Só mentor') cargaTodos += n * M.copy;
+    if (r.funcao !== 'Só mentor') cargaTodos += n * pesoCopy(r.linha);
   }
   for (const r of base) ativos += Number(r.ativos);
   const porSaida = ativos ? cargaTodos / ativos : 0;

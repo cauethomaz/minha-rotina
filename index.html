@@ -2095,22 +2095,23 @@ function cardFluxo(C){
 /* Como a carga é contada e o tamanho máximo da carteira, com o Audience 2.0 sem roteiros como régua */
 function cardLogica(C){
   const M=C.modelo;if(!M||!M.mentor)return '';
-  const LIM=M.limite,cp=M.copy,mt=M.mentor;
-  const prods=[['Audience 2.0 sem roteiros',mt['Audience 2.0'],'a régua: 1 mentorado = 1 ponto'],['Boost 2.0',mt['Boost 2.0'],'processo mais curto'],['Audience 2.0 com roteiros',mt['Audience 1.0'],'pesa como o Audience 1.0'],
-    ['Audience 1.0',mt['Audience 1.0'],''],['Mentoria Ouro',mt['Mentoria Ouro'],''],['Outros produtos',mt['Outros'],''],['Experience (1.0, 2.0 e 3.0)',mt['Experience 3.0'],'o mais pesado']];
+  const LIM=M.limite,cp=M.copy,mt=M.mentor,sc=M.semCopy||[];
+  const semR=l=>sc.includes(l)?0:cp;
+  const prods=[['Audience 2.0 sem roteiros',mt['Audience 2.0'],'a régua: 1 mentorado = 1 ponto; sem roteiro, copy não soma',semR('Audience 2.0')],['Boost 2.0',mt['Boost 2.0'],'processo mais curto; sem roteiro, copy não soma',semR('Boost 2.0')],['Audience 2.0 com roteiros',mt['Audience 1.0'],'pesa como o Audience 1.0',cp],
+    ['Audience 1.0',mt['Audience 1.0'],'',semR('Audience 1.0')],['Mentoria Ouro',mt['Mentoria Ouro'],'',semR('Mentoria Ouro')],['Outros produtos',mt['Outros'],'',semR('Outros')],['Experience (1.0, 2.0 e 3.0)',mt['Experience 3.0'],'o mais pesado',semR('Experience 3.0')]];
   const cabe=v=>v?Math.floor(LIM/v+1e-9):'—';
-  const rows=prods.map(([n,v,obs])=>`<tr><td><b>${n}</b>${obs?`<div class="meta-line">${obs}</div>`:''}</td><td class="r">${pvNum(v)}</td><td class="r">${pvNum(v+cp)}</td><td class="r"><b>${cabe(v)}</b></td><td class="r">${cabe(v+cp)}</td><td class="r">${pvNum(v/mt['Audience 2.0'])}</td></tr>`);
-  const maxW=Math.max(...prods.map(p=>p[1]+cp)),w=520,rh=26,left=190,sx=v=>v/maxW*(w-left-50);
-  const barras=`<svg class="pv-svg" viewBox="0 0 ${w} ${prods.length*rh+4}" role="img" aria-label="Pontos por mentorado em cada produto">${prods.map(([n,v],i)=>`<g transform="translate(0,${i*rh})"><text x="${left-10}" y="${rh/2+4}" text-anchor="end" font-size="12">${n}</text>
-    <rect x="${left}" y="6" width="${sx(v).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tO)"/><rect x="${(left+sx(v)).toFixed(1)}" y="6" width="${sx(cp).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tC)" opacity=".35"/>
-    <text x="${(left+sx(v+cp)+6).toFixed(1)}" y="${rh/2+4}" font-size="11.5" class="mut">${pvNum(v)} · ${pvNum(v+cp)}</text></g>`).join('')}</svg>`;
+  const rows=prods.map(([n,v,obs,c])=>`<tr><td><b>${n}</b>${obs?`<div class="meta-line">${obs}</div>`:''}</td><td class="r">${pvNum(v)}</td><td class="r">${pvNum(v+c)}</td><td class="r"><b>${cabe(v)}</b></td><td class="r">${cabe(v+c)}</td><td class="r">${pvNum(v/mt['Audience 2.0'])}</td></tr>`);
+  const maxW=Math.max(...prods.map(p=>p[1]+p[3])),w=520,rh=26,left=190,sx=v=>v/maxW*(w-left-50);
+  const barras=`<svg class="pv-svg" viewBox="0 0 ${w} ${prods.length*rh+4}" role="img" aria-label="Pontos por mentorado em cada produto">${prods.map(([n,v,,c],i)=>`<g transform="translate(0,${i*rh})"><text x="${left-10}" y="${rh/2+4}" text-anchor="end" font-size="12">${n}</text>
+    <rect x="${left}" y="6" width="${sx(v).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tO)"/>${c?`<rect x="${(left+sx(v)).toFixed(1)}" y="6" width="${sx(c).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tC)" opacity=".35"/>`:''}
+    <text x="${(left+sx(v+c)+6).toFixed(1)}" y="${rh/2+4}" font-size="11.5" class="mut">${c?`${pvNum(v)} · ${pvNum(v+c)}`:`${pvNum(v)} (mentor ou copy)`}</text></g>`).join('')}</svg>`;
   return `<section class="card wide"><h2>Como a conta é feita</h2>
-    <p class="meta-line" style="margin:-2px 0 10px">Cada mentorado vale pontos conforme o produto e o papel da pessoa. A régua é o Audience 2.0 sem roteiros só como mentor, que vale 1 ponto. Ser copy soma ${pvNum(cp)} pontos em qualquer produto, porque a copy toma mais tempo.</p>
+    <p class="meta-line" style="margin:-2px 0 10px">Cada mentorado vale pontos conforme o produto e o papel da pessoa. A régua é o Audience 2.0 sem roteiros só como mentor, que vale 1 ponto. Ser copy soma ${pvNum(cp)} pontos nos produtos com roteiro, porque a copy toma mais tempo; no Audience 2.0 sem roteiros e no Boost não soma nada.</p>
     <div style="display:grid;gap:14px"><div>
       <div class="pkpis" style="margin-bottom:12px"><div class="pkpi mentor"><b>${LIM} pontos</b><span>carteira máxima por pessoa = ${LIM} mentorados de Audience 2.0 sem roteiros, só como mentor</span></div></div>
       <div class="pv-leg"><span><i style="background:var(--tO)"></i>como mentor</span><span><i style="background:var(--tC);opacity:.35"></i>+ copy</span></div><div style="max-width:640px">${barras}</div></div>
       <div>${tbl([{t:'Produto'},{t:'Mentor',r:1},{t:'Mentor + copy',r:1},{t:'Cabem só mentor',r:1},{t:'Cabem com copy',r:1},{t:'Equivale a Aud. 2.0',r:1}],rows)}
-      <p class="meta-line">“Cabem” é quantos mentorados daquele produto, sozinhos, enchem uma carteira de ${LIM} pontos. Numa carteira mista os pontos se somam: por exemplo, 20 Audience 2.0 (20) + 6 Experience (15) + 5 Audience 2.0 como copy (20) = 55 pontos, sobram ${LIM-55}.</p></div></div>
+      <p class="meta-line">“Cabem” é quantos mentorados daquele produto, sozinhos, enchem uma carteira de ${LIM} pontos. Numa carteira mista os pontos se somam: por exemplo, 20 Audience 2.0 (20) + 6 Experience só mentor (12) + 4 Experience como mentor e copy (20) = 52 pontos, sobram ${LIM-52}.</p></div></div>
     <p class="meta-line">Uso do limite: verde até 85%, amarelo de 85% a 100%, vermelho acima. Sugestão de quem recebe o próximo: menor carga primeiro, entre quem tem 20 ou mais mentorados${(M.incluir||[]).length?` e mais ${M.incluir.map(esc).join(', ')}`:''}.</p></section>`;
 }
 function cardCarteira(){
@@ -2163,7 +2164,7 @@ function cardCarteira(){
   return `<section class="card wide"><div class="pv-bar" style="margin-bottom:10px"><span class="pv-lbl">Próximo mentorado vai para</span>${(M.evitar||[]).length?`<span class="meta-line">Fora da sugestão por enquanto: ${M.evitar.map(esc).join(', ')}</span>`:''}</div><div class="pv-pod">${pod||'<span class="meta-line">Ninguém disponível na sugestão.</span>'}</div></section>
     <div class="pv-grid wide"><section class="card"><h2>Capacidade do time</h2><p class="meta-line" style="margin:-2px 0 10px">Limite de ${LIM} pontos por pessoa, ${ps.length} pessoas na conta.</p><div class="pv-gauge"><div>${gauge}</div><div>${facts}</div></div></section>
       <section class="card"><h2>Para onde vai a carga</h2><p class="meta-line" style="margin:-2px 0 8px">Carga do time mês a mês: hoje, menos as finalizações previstas pelo CP, mais a entrada média de mentorados novos.</p>${proj}</section></div>
-    <section class="card wide"><h2>Carga por pessoa</h2><p class="meta-line" style="margin:-2px 0 6px">Mentor vale ${pvNum(M.mentor&&M.mentor['Boost 2.0'])} no Boost, ${pvNum(M.mentor&&M.mentor['Audience 2.0'])} no Audience 2.0, ${pvNum(M.mentor&&M.mentor['Audience 1.0'])} no Audience 1.0, Ouro e Outros e ${pvNum(M.mentor&&M.mentor['Experience 3.0'])} no Experience; ser copy soma ${pvNum(M.copy)}. Toque numa pessoa para ver o detalhe.</p>
+    <section class="card wide"><h2>Carga por pessoa</h2><p class="meta-line" style="margin:-2px 0 6px">Mentor vale ${pvNum(M.mentor&&M.mentor['Boost 2.0'])} no Boost, ${pvNum(M.mentor&&M.mentor['Audience 2.0'])} no Audience 2.0, ${pvNum(M.mentor&&M.mentor['Audience 1.0'])} no Audience 1.0, Ouro e Outros e ${pvNum(M.mentor&&M.mentor['Experience 3.0'])} no Experience; ser copy soma ${pvNum(M.copy)} nos produtos com roteiro (no Audience 2.0 e no Boost não soma). Toque numa pessoa para ver o detalhe.</p>
       <div class="pv-leg"><span><i style="background:var(--tO)"></i>pontos como mentor</span><span><i style="background:var(--tC)"></i>pontos como copy</span><span>┆ limite</span><span style="opacity:.55">esmaecido: fora da sugestão</span></div>${barras}${det}</section>
     ${cardFluxo(C)}
     ${cardLogica(C)}
