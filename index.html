@@ -2105,13 +2105,24 @@ function cardLogica(C){
   const barras=`<svg class="pv-svg" viewBox="0 0 ${w} ${prods.length*rh+4}" role="img" aria-label="Pontos por mentorado em cada produto">${prods.map(([n,v,,c],i)=>`<g transform="translate(0,${i*rh})"><text x="${left-10}" y="${rh/2+4}" text-anchor="end" font-size="12">${n}</text>
     <rect x="${left}" y="6" width="${sx(v).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tO)"/>${c?`<rect x="${(left+sx(v)).toFixed(1)}" y="6" width="${sx(c).toFixed(1)}" height="${rh-12}" rx="2" fill="var(--tC)" opacity=".35"/>`:''}
     <text x="${(left+sx(v+c)+6).toFixed(1)}" y="${rh/2+4}" font-size="11.5" class="mut">${c?`${pvNum(v)} · ${pvNum(v+c)}`:`${pvNum(v)} (mentor ou copy)`}</text></g>`).join('')}</svg>`;
+  // Migrar um mentorado do Experience para o Audience 2.0: quanto espaço abre (em mentorados de Audience 2.0)
+  const eX=mt['Experience']??mt['Experience 3.0'],a2=mt['Audience 2.0'],rot=mt['Audience 2.0 com roteiros']??mt['Audience 1.0'],cpRot=semR('Audience 2.0 com roteiros');
+  const capT=(C.projecao||{}).cap_time,lib=eX+cp-a2,lib10=lib*10;
+  const migRows=[['Mentor faz a copy (ou copy “A definir”)',eX+cp,a2,`${pvNum(lib)}`,'tudo com o mentor'],
+    ['Mentor e copy são pessoas diferentes',eX+cp,a2,`${pvNum(lib)}`,`${pvNum(eX-a2)} com o mentor e ${pvNum(cp)} com quem fazia a copy, que deixa de ter o mentorado`],
+    ['Migra mas continua recebendo roteiros',eX+cp,rot+cpRot,`${pvNum(eX+cp-rot-cpRot)}`,'quase nada: no CP precisa de “Roteiros” no nome']].map(([n,a,d,l,o])=>`<tr><td><b>${n}</b><div class="meta-line">${o}</div></td><td class="r">${pvNum(a)}</td><td class="r">${pvNum(d)}</td><td class="r"><b>${l}</b></td></tr>`);
+  const migra=`<div><h3 style="margin:6px 0 4px;font-size:14px">Migrar um Experience para o Audience 2.0</h3>
+    <p class="meta-line" style="margin:0 0 8px">O mentorado continua contando ${pvNum(a2)} ponto, mas deixa de pesar como Experience e a copy sai da conta. <b>Cada Experience com copy que migra sem roteiro abre espaço para ${pvNum(lib)} Audience 2.0 novos.</b></p>
+    ${tbl([{t:'Caso'},{t:'Pontos antes',r:1},{t:'Pontos depois',r:1},{t:'Abre espaço (Aud. 2.0)',r:1}],migRows)}
+    <p class="meta-line">Exemplo: 10 Experience com copy migrando sem roteiro liberam ${pvNum(lib10)} pontos${capT?`, ${pvNum(Math.round(lib10/capT*1000)/10)}% da capacidade do time`:''}.</p></div>`;
   return `<section class="card wide"><h2>Como a conta é feita</h2>
     <p class="meta-line" style="margin:-2px 0 10px">Cada mentorado vale pontos conforme o produto e o papel da pessoa. A régua é o Audience 2.0 sem roteiros só como mentor, que vale 1 ponto. Ser copy soma ${pvNum(cp)} pontos nos produtos com roteiro, porque a copy toma mais tempo; no Audience 2.0 sem roteiros e no Boost não soma nada. Quando o copy está “A definir” ou vazio num produto com roteiro, os pontos de copy vão para o mentor, que é quem faz os roteiros.</p>
     <div style="display:grid;gap:14px"><div>
       <div class="pkpis" style="margin-bottom:12px"><div class="pkpi mentor"><b>${LIM} pontos</b><span>carteira máxima por pessoa = ${LIM} mentorados de Audience 2.0 sem roteiros, só como mentor</span></div></div>
       <div class="pv-leg"><span><i style="background:var(--tO)"></i>como mentor</span><span><i style="background:var(--tC);opacity:.35"></i>+ copy</span></div><div style="max-width:640px">${barras}</div></div>
       <div>${tbl([{t:'Produto'},{t:'Mentor',r:1},{t:'Mentor + copy',r:1},{t:'Cabem só mentor',r:1},{t:'Cabem com copy',r:1},{t:'Equivale a Aud. 2.0',r:1}],rows)}
-      <p class="meta-line">“Cabem” é quantos mentorados daquele produto, sozinhos, enchem uma carteira de ${LIM} pontos. Numa carteira mista os pontos se somam: por exemplo, 20 Audience 2.0 (20) + 6 Experience só mentor (12) + 4 Experience como mentor e copy (20) = 52 pontos, sobram ${LIM-52}.</p></div></div>
+      <p class="meta-line">“Cabem” é quantos mentorados daquele produto, sozinhos, enchem uma carteira de ${LIM} pontos. Numa carteira mista os pontos se somam: por exemplo, 20 Audience 2.0 (20) + 6 Experience só mentor (12) + 4 Experience como mentor e copy (20) = 52 pontos, sobram ${LIM-52}.</p></div>
+      ${migra}</div>
     <p class="meta-line">Uso do limite: verde até 85%, amarelo de 85% a 100%, vermelho acima. Sugestão de quem recebe o próximo: menor carga primeiro, entre quem tem 20 ou mais mentorados${(M.incluir||[]).length?` e mais ${M.incluir.map(esc).join(', ')}`:''}.</p></section>`;
 }
 /* Mentorados com copy "A definir" num produto com roteiro: os pontos de copy foram para o mentor. Lista para conferir no CP. */
