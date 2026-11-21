@@ -1602,7 +1602,7 @@ function historyChart(goal){
 
 /* ---------- Projetos: painel visual. Projeto = item de Contexto→Projetos com objetivo em Ctx.data.projInfo; o resto (CORE, Pessoal) é área ---------- */
 const pjInfo=n=>(Ctx.data.projInfo||{})[n];
-const pjAtivos=()=>Ctx.data.projects.filter(n=>{const i=pjInfo(n);return i&&i.ativo!==false});
+const pjAtivos=()=>Ctx.data.projects.filter(n=>{const i=pjInfo(n);return i&&i.ativo!==false}).sort((a,b)=>(pjInfo(a).prio||2)-(pjInfo(b).prio||2));
 function pjCalc(n){
   const t0=today(),all=Store.all().filter(t=>t.project===n),done=all.filter(isDone),open=all.filter(t=>!isDone(t));
   const mine=open.filter(t=>!isDeleg(t)).sort(cmp),deleg=open.filter(isDeleg).sort(cmp);
